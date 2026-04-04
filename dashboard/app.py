@@ -573,7 +573,7 @@ st.markdown("""
   ════════════════════════════════════════════════════════════════════════ */
 
   /* ── Google Fonts ────────────────────────────────────────────────────── */
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
   /* ── Design Tokens — Coastal Slate (readable, bright ocean dark) ─────────── */
   :root {
@@ -2939,6 +2939,146 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
+# ─── Godly.website Intelligence — v6.1 premium upgrade ───────────────────────
+# Applied from: Linear, Vercel, Railway, Twingate, Plausible, Resend (April 2026 research)
+st.markdown("""
+<style>
+  /* ── JetBrains Mono for KPI numbers (Twingate/Linear standard) ── */
+  .kpi-value,
+  [data-testid="stMetricValue"],
+  div[data-testid="metric-container"] [data-testid="stMetricValue"],
+  .hero-stat-val,
+  .event-val,
+  .pulse-ticker-val {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Outfit', monospace !important;
+    font-variant-numeric: tabular-nums !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  /* ── Chart container glow (Railway pattern — teal instead of indigo) ── */
+  [data-testid="stPlotlyChart"] {
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    box-shadow:
+      0 4px 24px rgba(0,0,0,0.35),
+      0 0 80px rgba(0,212,200,0.05),
+      0 0 0 1px rgba(255,255,255,0.03) !important;
+    transition: box-shadow 0.30s ease !important;
+  }
+  [data-testid="stPlotlyChart"]:hover {
+    box-shadow:
+      0 8px 40px rgba(0,0,0,0.45),
+      0 0 120px rgba(0,212,200,0.09),
+      0 0 0 1px rgba(0,212,200,0.10) !important;
+  }
+
+  /* ── Streamlit native metric delta — colored badge (Plausible style) ── */
+  [data-testid="stMetricDelta"] {
+    border-radius: 5px !important;
+    padding: 2px 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+  }
+  [data-testid="stMetricDelta"][data-direction="positive"],
+  [data-testid="stMetricDelta"].positive {
+    background: rgba(16,185,129,0.12) !important;
+    color: #10B981 !important;
+  }
+  [data-testid="stMetricDelta"][data-direction="negative"],
+  [data-testid="stMetricDelta"].negative {
+    background: rgba(239,68,68,0.12) !important;
+    color: #EF4444 !important;
+  }
+
+  /* ── Staggered slideUp on Streamlit native metrics (Linear style) ── */
+  div[data-testid="metric-container"] {
+    animation: pulse-fade-up 0.45s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(1) div[data-testid="metric-container"] { animation-delay: 0.04s; }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(2) div[data-testid="metric-container"] { animation-delay: 0.10s; }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(3) div[data-testid="metric-container"] { animation-delay: 0.16s; }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(4) div[data-testid="metric-container"] { animation-delay: 0.22s; }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(5) div[data-testid="metric-container"] { animation-delay: 0.28s; }
+
+  /* ── Rotating ambient conic gradient (Vercel hero pattern, subtle) ── */
+  [data-testid="stAppViewContainer"]::before {
+    content: '';
+    position: fixed;
+    top: -40%; left: -40%;
+    width: 180%; height: 180%;
+    background: conic-gradient(
+      from 0deg at 65% 35%,
+      rgba(0,212,200,0.04) 0deg,
+      rgba(56,189,248,0.03) 90deg,
+      rgba(167,139,250,0.03) 180deg,
+      rgba(0,212,200,0.04) 360deg
+    );
+    animation: slowSpin 40s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes slowSpin { to { transform: rotate(360deg); } }
+
+  /* ── Vercel-style subtle dot grid on hero ── */
+  .hero-banner {
+    background-image:
+      radial-gradient(circle at 78% 18%, rgba(0,212,200,0.24) 0%, transparent 50%),
+      radial-gradient(circle at 8% 80%, rgba(56,189,248,0.14) 0%, transparent 42%),
+      radial-gradient(circle at 50% 120%, rgba(167,139,250,0.10) 0%, transparent 40%),
+      radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(160deg, #0B1E38 0%, #132D50 60%, #162E52 100%) !important;
+    background-size: auto, auto, auto, 28px 28px, auto !important;
+  }
+
+  /* ── Railway gradient top-border on insight cards (replaces left bar) ── */
+  .insight-positive::before { background: linear-gradient(90deg, #10B981, #34D399, #10B981) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-warning::before  { background: linear-gradient(90deg, #F5B940, #FCD34D, #F5B940) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-negative::before { background: linear-gradient(90deg, #EF4444, #F87171, #EF4444) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-info::before     { background: linear-gradient(90deg, #00D4C8, #38BDF8, #00D4C8) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  @keyframes border-sweep { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+  /* Adjust insight card padding for top border (was left: 14px indent, now top: 3px bar) */
+  .insight-title { padding-left: 0 !important; padding-top: 8px !important; }
+  .insight-body  { padding-left: 0 !important; }
+
+  /* ── Monospace for data tables (Twingate terminal pattern) ── */
+  [data-testid="stDataFrame"] td,
+  [data-testid="stDataFrame"] th {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    font-variant-numeric: tabular-nums !important;
+    font-size: 12px !important;
+    letter-spacing: -0.01em !important;
+  }
+  [data-testid="stDataFrame"] th {
+    font-size: 10.5px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    font-weight: 600 !important;
+  }
+
+  /* ── Live pulse on sidebar pipeline green dots (Liveblocks style) ── */
+  [data-testid="stSidebar"] p {
+    font-size: 12px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* ── Plotly modebar button enhancement ── */
+  .modebar-btn path { fill: rgba(200,230,255,0.55) !important; }
+  .modebar-btn:hover path { fill: #00D4C8 !important; }
+
+  /* ── Resend-style warm gradient on AI panel ── */
+  .ai-command-panel {
+    background: linear-gradient(104deg,
+      rgba(0,212,200,0.06) 0%,
+      rgba(56,189,248,0.04) 50%,
+      rgba(167,139,250,0.04) 100%) !important;
+    border: 1px solid rgba(0,212,200,0.22) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 20px rgba(0,0,0,0.25) !important;
+  }
+
+</style>
+""", unsafe_allow_html=True)
+
 # ─── Dark mode: deep ocean ambient glow injected via CSS tokens above ─────────
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
@@ -4858,11 +4998,11 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         tickangle   = 0,
     )
     fig.update_yaxes(
-        gridcolor   = "rgba(255,255,255,0.05)",
+        gridcolor   = "rgba(255,255,255,0.04)",   # Linear-standard ultra-thin
         gridwidth   = 1,
         griddash    = "dot",
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#8AAEC6"),
+        tickfont    = dict(size=11, family="'JetBrains Mono', " + _font, color="#7A9EB8"),
         showline    = False,
         ticks       = "",
         automargin  = True,
