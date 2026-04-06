@@ -5788,9 +5788,9 @@ with st.sidebar:
     _later_fb_rows = len(df_later_fb_profile) + len(df_later_fb_posts)
     _later_tk_rows = len(df_later_tk_profile)
     _later_total   = _later_ig_rows + _later_fb_rows + _later_tk_rows
-    _ig_followers  = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
-    _fb_followers  = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
-    _tk_followers  = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+    _ig_followers  = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns and pd.notna(df_later_ig_profile.iloc[0]["followers"]) else 0
+    _fb_followers  = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns and pd.notna(df_later_fb_profile.iloc[0]["page_followers"]) else 0
+    _tk_followers  = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns and pd.notna(df_later_tk_profile.iloc[0]["followers"]) else 0
     # Fallback: query DB directly if cached DFs are empty (same guard as Visit CA)
     if _later_total == 0:
         try:
