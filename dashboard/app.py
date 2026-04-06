@@ -11032,8 +11032,9 @@ with tab_ev:
             st.markdown('<div class="chart-header">Instagram — Follower Growth</div>', unsafe_allow_html=True)
             if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns:
                 _ig_p = df_later_ig_profile.sort_values("data_date").tail(30).copy()
-                _ig_cur = int(_ig_p["followers"].iloc[-1]) if len(_ig_p) else 0
-                _ig_prev = int(_ig_p["followers"].iloc[0]) if len(_ig_p) else _ig_cur
+                _ig_vals = _ig_p["followers"].dropna()
+                _ig_cur = int(_ig_vals.iloc[-1]) if len(_ig_vals) else 0
+                _ig_prev = int(_ig_vals.iloc[0]) if len(_ig_vals) else _ig_cur
                 _ig_delta = _ig_cur - _ig_prev
                 st.metric("Followers", f"{_ig_cur:,}", delta=f"{_ig_delta:+,} (30d)")
                 fig_ig = go.Figure(go.Scatter(
@@ -11057,8 +11058,9 @@ with tab_ev:
             st.markdown('<div class="chart-header">Facebook — Follower Growth</div>', unsafe_allow_html=True)
             if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns:
                 _fb_p = df_later_fb_profile.sort_values("data_date").tail(30).copy()
-                _fb_cur = int(_fb_p["page_followers"].iloc[-1]) if len(_fb_p) else 0
-                _fb_prev = int(_fb_p["page_followers"].iloc[0]) if len(_fb_p) else _fb_cur
+                _fb_vals = _fb_p["page_followers"].dropna()
+                _fb_cur = int(_fb_vals.iloc[-1]) if len(_fb_vals) else 0
+                _fb_prev = int(_fb_vals.iloc[0]) if len(_fb_vals) else _fb_cur
                 _fb_delta = _fb_cur - _fb_prev
                 st.metric("Followers", f"{_fb_cur:,}", delta=f"{_fb_delta:+,} (30d)")
                 fig_fb = go.Figure(go.Scatter(
@@ -11082,8 +11084,9 @@ with tab_ev:
             st.markdown('<div class="chart-header">TikTok — Follower Growth</div>', unsafe_allow_html=True)
             if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns:
                 _tk_p = df_later_tk_profile.sort_values("data_date").tail(30).copy()
-                _tk_cur = int(_tk_p["followers"].iloc[-1]) if len(_tk_p) else 0
-                _tk_prev = int(_tk_p["followers"].iloc[0]) if len(_tk_p) else _tk_cur
+                _tk_vals = _tk_p["followers"].dropna()
+                _tk_cur = int(_tk_vals.iloc[-1]) if len(_tk_vals) else 0
+                _tk_prev = int(_tk_vals.iloc[0]) if len(_tk_vals) else _tk_cur
                 _tk_delta = _tk_cur - _tk_prev
                 st.metric("Followers", f"{_tk_cur:,}", delta=f"{_tk_delta:+,} (30d)")
                 fig_tk = go.Figure(go.Scatter(
