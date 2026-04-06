@@ -4,6 +4,7 @@ downloads/
 # Logs
 logs/*.png
 logs/*.log
+logs/*.json
 
 # Python
 __pycache__/
