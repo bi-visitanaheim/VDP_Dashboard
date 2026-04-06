@@ -7605,9 +7605,9 @@ with tab_ov:
                 else:
                     _ga4_lbl = "Run pipeline to load Datafy GA4 web analytics data."
                 # Later.com social stats for board report
-                _ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
-                _fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
-                _tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+                _ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns and pd.notna(df_later_ig_profile.iloc[0]["followers"]) else 0
+                _fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns and pd.notna(df_later_fb_profile.iloc[0]["page_followers"]) else 0
+                _tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns and pd.notna(df_later_tk_profile.iloc[0]["followers"]) else 0
                 _ig_posts_ct = len(df_later_ig_posts)
                 _ig_eng_avg  = float(df_later_ig_posts["engagement_rate"].mean()) if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns else 0.0
                 _social_reach_total = (
