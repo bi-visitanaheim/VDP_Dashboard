@@ -7626,6 +7626,28 @@ with tab_ov:
                 st.session_state.ai_prompt_label = _ai_lbl
                 st.session_state.ai_result = ""
                 st.session_state.ai_needs_call = True
+
+    # ── Demo: 4 Killer Questions ───────────────────────────────────────────────
+    st.markdown(
+        '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">'
+        '<span style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:#94A3B8;text-transform:uppercase;">🎯 Demo Questions</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    _DEMO_PROMPTS = [
+        ("📊 Rate Gap",         "Which feeder markets are sending the most visitors but capturing the least in ADR? Where is the rate gap and how much revenue is being left on the table?"),
+        ("🔄 Day Trip Convert", "We have 1.44 million day trippers. If we convert just 3% to overnight stays, what does that mean for room revenue, TBID, and TOT?"),
+        ("📅 Campaign Season",  "Is our marketing spend amplifying peak season or building shoulder demand? What does compression data say about where to shift media dollars?"),
+        ("🎶 Ohana Fest 2026",  "Based on Ohana Fest 2025 performance — $18.4M destination spend, 3.2x multiplier, +$139 ADR lift — what should our 2026 event marketing strategy look like?"),
+    ]
+    _demo_btn_cols = st.columns(4)
+    for _di, (_dl, _dq) in enumerate(_DEMO_PROMPTS):
+        with _demo_btn_cols[_di]:
+            if st.button(_dl, key=f"ov_demo_{_di}", use_container_width=True):
+                st.session_state.ai_current_prompt = build_custom_prompt(_dq, m)
+                st.session_state.ai_prompt_label   = f"🎯 {_dl}"
+                st.session_state.ai_result         = ""
+                st.session_state.ai_needs_call     = True
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── AI custom input and response — always visible ──────────────────────────
