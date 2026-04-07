@@ -125,7 +125,7 @@ async def find_str_section(page: Page) -> bool:
 
     # Step 3: Click VDP Select saved search
     try:
-        vdp = page.locator("a").filter(has_text="VDP Select").first
+        vdp = page.locator("div[title='VDP Select']").first
         await vdp.wait_for(state="visible", timeout=10_000)
         await vdp.click()
         await page.wait_for_timeout(3000)
@@ -170,9 +170,8 @@ async def export_period(page: Page, period: str, dest: Path) -> bool:
     try:
         combo = page.locator("input#autocomplete[role='combobox'], input[role='combobox']").first
         await combo.wait_for(state="visible", timeout=10_000)
-        await combo.click()
-        await page.keyboard.press("Meta+a")  # select all (Mac); Windows: Control+a
-        await combo.fill(period)
+        await combo.click()  # open dropdown (readonly — can't fill)
+        await page.wait_for_timeout(500)
         await page.locator(f"[role='option']:has-text('{period}')").first.click()
         await page.wait_for_timeout(1000)
         log(f"  ✓ Period set to '{period}'")
