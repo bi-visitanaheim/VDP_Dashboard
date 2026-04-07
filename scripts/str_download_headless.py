@@ -166,17 +166,34 @@ async def find_str_section(page: Page) -> bool:
 
 async def export_period(page: Page, period: str, dest: Path) -> bool:
     """Set period combobox, click Export → Data Export, capture download."""
-    log(f"[{period}] Setting period combobox...")
+    log(f"[{period}] Checking period combobox...")
     try:
         combo = page.locator("input#autocomplete[role='combobox'], input[role='combobox']").first
         await combo.wait_for(state="visible", timeout=10_000)
-        await combo.click()  # open dropdown (readonly — can't fill)
-        await page.wait_for_timeout(500)
-        await page.locator(f"[role='option']:has-text('{period}')").first.click()
-        await page.wait_for_timeout(1000)
-        log(f"  ✓ Period set to '{period}'")
+
+        current = await combo.get_attribute("value") or ""
+        log(f"  Combobox current value: '{current}'")
+
+        if current.strip().lower() != period.lower():
+            # Need to change period — click to open dropdown
+            await combo.click()
+            await page.wait_for_timeout(800)
+            # Try option by role first, then by text match in list items
+            option = page.locator(f"[role='option']:has-text('{period}'), li:has-text('{period}'), div[class*='option']:has-text('{period}')").first
+            try:
+                await option.wait_for(state="visible", timeout=5_000)
+                await option.click()
+                await page.wait_for_timeout(1000)
+                log(f"  ✓ Period changed to '{period}'")
+            except PWTimeout:
+                # Dropdown didn't show options — press Escape and continue anyway
+                await page.keyboard.press("Escape")
+                log(f"  – Could not find option '{period}' in dropdown, continuing with current value")
+        else:
+            log(f"  ✓ Period already set to '{period}' — skipping selection")
+
     except Exception as exc:
-        log(f"  ✗ Could not set period: {exc}")
+        log(f"  ✗ Combobox error: {exc}")
         await screenshot(page, f"err_{period.lower()}_combobox")
         return False
 
