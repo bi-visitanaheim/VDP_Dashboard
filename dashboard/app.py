@@ -1667,6 +1667,37 @@ st.markdown("""
     border-left-color: var(--dp-green);
   }
 
+  /* ── View Detail nav buttons — styled as teal text links ────────────── */
+  button[data-testid="stBaseButton-secondary"][kind="secondary"]:has(> div > p:only-child) {
+    /* fallback: target all secondary buttons in the PCC card area */
+  }
+  [data-testid="stVerticalBlock"] button[data-testid^="stBaseButton"]:is([id*="vd_"],[id*="vd_m_"]) {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #32B8C6 !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: .04em !important;
+    padding: 2px 4px !important;
+    min-height: unset !important;
+    height: auto !important;
+    text-align: right !important;
+    justify-content: flex-end !important;
+  }
+  /* Broader selector covering Streamlit button wrappers near KPI cards */
+  .kpi-card + div button, .kpi-card ~ div button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #32B8C6 !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: .04em !important;
+    padding: 2px 0 !important;
+    min-height: unset !important;
+  }
+
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
   .block-container { padding-top: 0 !important; overflow: visible !important; }
   [data-testid="stAppViewContainer"] > section > div:first-child { padding-top: 0 !important; }
@@ -7356,6 +7387,21 @@ def render_intel_panel(
                 del st.session_state[_ans_key]
 
 
+# ─── Tab navigation (triggered by KPI card "View Detail" buttons) ─────────────
+if "pending_tab_nav" in st.session_state:
+    _nav_idx = int(st.session_state.pop("pending_tab_nav"))
+    st.markdown(f"""<script>
+    (function(){{
+      function _clickTab(){{
+        var tabs = document.querySelectorAll('[role="tab"]');
+        if(!tabs.length) tabs = document.querySelectorAll('button[data-baseweb="tab"]');
+        if(tabs[{_nav_idx}]){{ tabs[{_nav_idx}].click(); window.scrollTo({{top:0,behavior:'smooth'}}); }}
+      }}
+      setTimeout(_clickTab, 80);
+      setTimeout(_clickTab, 300);
+    }})();
+    </script>""", unsafe_allow_html=True)
+
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
@@ -8629,14 +8675,10 @@ with tab_ov:
                                     "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
                                     "Demand": 1, "Supply": 1, "Revenue": 1}
                         _tab_idx = next((v for k,v in _tab_map.items() if k.lower() in _k["label"].lower()), 1)
-                        st.markdown(
-                            f'<div class="pcc-card-link" data-tab-idx="{_tab_idx}" '
-                            f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;border-radius:12px;">'
-                            f'{_card_html}'
-                            f'<div style="font-size:9px;color:#32B8C6;text-align:right;padding:2px 4px 0 0;font-weight:700;letter-spacing:.04em;">→ VIEW DETAIL</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown(_card_html, unsafe_allow_html=True)
+                        if st.button("→ View Detail", key=f"vd_{_ri}_{_idx}_{_k['label'].replace(' ','_')}", use_container_width=True):
+                            st.session_state["pending_tab_nav"] = _tab_idx
+                            st.rerun()
                     with _chart_col:
                         _spk = _k.get("sparkline") or []
                         st.plotly_chart(
@@ -8720,14 +8762,10 @@ with tab_ov:
                                            "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
                                            "Demand": 1, "Supply": 1, "Revenue": 1}
                             _mk_tab_idx = next((v for k,v in _mk_tab_map.items() if k.lower() in _mk["label"].lower()), 1)
-                            st.markdown(
-                                f'<div class="pcc-card-link" data-tab-idx="{_mk_tab_idx}" '
-                                f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;border-radius:12px;">'
-                                f'{_mk_card_html}'
-                                f'<div style="font-size:9px;color:#32B8C6;text-align:right;padding:2px 4px 0 0;font-weight:700;letter-spacing:.04em;">→ VIEW DETAIL</div>'
-                                f'</div>',
-                                unsafe_allow_html=True,
-                            )
+                            st.markdown(_mk_card_html, unsafe_allow_html=True)
+                            if st.button("→ View Detail", key=f"vd_m_{_mri}_{_mi}_{_mk['label'].replace(' ','_')}", use_container_width=True):
+                                st.session_state["pending_tab_nav"] = _mk_tab_idx
+                                st.rerun()
                         with _mcc:
                             _mspk = _mk.get("sparkline") or []
                             st.plotly_chart(
