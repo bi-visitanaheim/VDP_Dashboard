@@ -101,32 +101,40 @@ async def find_str_section(page: Page) -> bool:
     log("[2/5] Looking for STR / Analytics section...")
     await screenshot(page, "04_after_login")
 
-    # Try clicking top-level tabs that might contain STR data
-    for label in ["Properties", "Analytics", "STR", "Reports", "Data"]:
-        try:
-            btn = page.locator(f"[role='tab']:has-text('{label}'), a:has-text('{label}'), button:has-text('{label}')").first
-            if await btn.count() > 0:
-                await btn.click()
-                await page.wait_for_timeout(1500)
-                log(f"  Clicked '{label}' tab")
-                break
-        except Exception:
-            continue
-
-    await screenshot(page, "05_section_navigated")
-
-    # Try to find and click "VDP Select" saved search
+    # Step 1: Click Properties tab (top nav)
     try:
-        vdp = page.locator("a:has-text('VDP Select'), [class*='survey']:has-text('VDP Select'), span:has-text('VDP Select')").first
-        await vdp.wait_for(state="visible", timeout=8_000)
-        await vdp.click()
+        props = page.locator("span[role='tab'][content='Properties'], [role='tab']:has-text('Properties')").first
+        await props.wait_for(state="visible", timeout=15_000)
+        await props.click()
         await page.wait_for_timeout(2000)
+        log("  ✓ Properties tab clicked")
+    except Exception as exc:
+        log(f"  – Properties tab not found: {exc}")
+
+    await screenshot(page, "05_properties_tab")
+
+    # Step 2: Click Save button to open saved-search drawer
+    try:
+        save_btn = page.locator("span.placeholder-normal").filter(has_text="Save").first
+        await save_btn.wait_for(state="visible", timeout=10_000)
+        await save_btn.click()
+        await page.wait_for_timeout(1500)
+        log("  ✓ Save drawer opened")
+    except Exception as exc:
+        log(f"  – Save button not found: {exc}")
+
+    # Step 3: Click VDP Select saved search
+    try:
+        vdp = page.locator("a").filter(has_text="VDP Select").first
+        await vdp.wait_for(state="visible", timeout=10_000)
+        await vdp.click()
+        await page.wait_for_timeout(3000)
         log("  ✓ VDP Select loaded")
         await screenshot(page, "06_vdp_select")
     except PWTimeout:
         log("  – VDP Select not found by direct click, continuing...")
 
-    # Dismiss any popup
+    # Step 4: Dismiss any popup
     for popup_text in ["Okay, got it", "Got it", "Dismiss", "OK"]:
         try:
             btn = page.locator(f"button:has-text('{popup_text}')").first
@@ -136,18 +144,18 @@ async def find_str_section(page: Page) -> bool:
         except PWTimeout:
             pass
 
-    # Click Analytics sub-tab
+    # Step 5: Click Analytics sub-tab
     try:
         await page.locator("[role='tab']:has-text('Analytics')").first.click()
-        await page.wait_for_timeout(1500)
+        await page.wait_for_timeout(2000)
         log("  ✓ Analytics tab clicked")
     except Exception:
         pass
 
-    # Click Data sub-tab
+    # Step 6: Click Data sub-tab
     try:
         await page.locator("[role='tab']:has-text('Data')").first.click()
-        await page.wait_for_timeout(1500)
+        await page.wait_for_timeout(2000)
         log("  ✓ Data tab clicked")
     except Exception:
         pass
@@ -162,7 +170,8 @@ async def export_period(page: Page, period: str, dest: Path) -> bool:
     try:
         combo = page.locator("input#autocomplete[role='combobox'], input[role='combobox']").first
         await combo.wait_for(state="visible", timeout=10_000)
-        await combo.triple_click()
+        await combo.click()
+        await page.keyboard.press("Meta+a")  # select all (Mac); Windows: Control+a
         await combo.fill(period)
         await page.locator(f"[role='option']:has-text('{period}')").first.click()
         await page.wait_for_timeout(1000)
