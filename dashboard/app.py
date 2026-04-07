@@ -848,6 +848,10 @@ st.markdown("""
   [data-testid="stDecoration"]          { display:    none    !important; }
   [data-testid="stStatusWidget"]        { visibility: hidden !important; }
   [data-testid="stHeader"]              { background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; }
+  [data-testid="stBottom"]              { display:    none    !important; }
+  [data-testid="stAppDeployButton"]     { display:    none    !important; }
+  .stDeployButton                        { display:    none    !important; }
+  [data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
   .viewerBadge_container__1QSob        { display:    none    !important; }
   .styles_viewerBadge__CvC9N           { display:    none    !important; }
   a[href*="streamlit.io"]               { display:    none    !important; }
@@ -1659,7 +1663,9 @@ st.markdown("""
   }
 
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
-  .block-container { padding-top: 0.5rem !important; overflow: visible !important; }
+  .block-container { padding-top: 0 !important; overflow: visible !important; }
+  [data-testid="stAppViewContainer"] > section > div:first-child { padding-top: 0 !important; }
+  [data-testid="stMain"] { padding-top: 0 !important; }
   [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; width: 100% !important; }
   [data-testid="stPlotlyChart"] > div { width: 100% !important; }
   [data-testid="stPlotlyChart"] iframe { width: 100% !important; min-width: 100% !important; }
@@ -1883,7 +1889,7 @@ st.markdown("""
 
   @media screen and (max-width: 768px) {
     .main .block-container {
-      padding: 0.5rem 0.75rem 2rem 0.75rem !important;
+      padding: 0 0.75rem 2rem 0.75rem !important;
       max-width: 100% !important;
       width: 100% !important;
       box-sizing: border-box !important;
@@ -1918,6 +1924,11 @@ st.markdown("""
     .nlm-briefing { padding: 12px 14px !important; }
     .src-card { padding: 10px 12px !important; }
     .kpi-value { font-size: 24px !important; }
+    /* Demo question buttons: wrap to 2×2 grid on mobile */
+    div[data-testid="stHorizontalBlock"]:has(button[data-testid^="stBaseButton-secondary"]) > div {
+      min-width: calc(50% - 4px) !important;
+      flex: 1 1 calc(50% - 4px) !important;
+    }
     /* Charts scroll horizontally on mobile rather than overflow */
     .js-plotly-plot .plotly { overflow-x: auto !important; }
     /* Stacked columns on small screens */
@@ -1931,7 +1942,7 @@ st.markdown("""
   }
   @media screen and (max-width: 480px) {
     .hero-title { font-size: 1.15rem !important; }
-    .main .block-container { padding: 0.25rem 0.5rem 2rem 0.5rem !important; }
+    .main .block-container { padding: 0 0.5rem 2rem 0.5rem !important; }
     .sh-tag { display: none !important; }
     [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
     /* Single column on phones */
