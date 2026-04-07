@@ -852,6 +852,11 @@ st.markdown("""
   [data-testid="stAppDeployButton"]     { display:    none    !important; }
   .stDeployButton                        { display:    none    !important; }
   [data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
+  ._profileImage_gzau3_78              { display:    none    !important; }
+  ._link_gzau3_10                       { display:    none    !important; }
+  [class*="_profileImage_"]             { display:    none    !important; }
+  [class*="_link_gzau3"]                { display:    none    !important; }
+  [class*="_container_gzau3"]           { display:    none    !important; }
   .viewerBadge_container__1QSob        { display:    none    !important; }
   .styles_viewerBadge__CvC9N           { display:    none    !important; }
   a[href*="streamlit.io"]               { display:    none    !important; }
@@ -15787,6 +15792,25 @@ st.markdown(
     '</div>'
     '<div style="font-size:10px;opacity:0.30;margin-top:4px;">'
     'Data sources: STR · Datafy · CoStar · Later.com · Visit California · FRED · EIA · TSA · NOAA · Census ACS · BLS · Open-Meteo · Google Trends'
+    '</div>'
+    '<div style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;">'
+    '<a href="https://github.com/gloconllc" target="_blank" rel="noopener" '
+    'style="display:flex;align-items:center;gap:6px;text-decoration:none;opacity:0.45;transition:opacity .2s;" '
+    'onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'0.45\'">'
+    '<img src="https://avatars.githubusercontent.com/u/233848167?v=4" '
+    'style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);" alt="GloCon Solutions LLC"/>'
+    '<span style="font-size:11px;color:#94A3B8;">GloCon Solutions LLC</span>'
+    '</a>'
+    '<a href="https://streamlit.io" target="_blank" rel="noopener" '
+    'style="display:flex;align-items:center;gap:6px;text-decoration:none;opacity:0.35;transition:opacity .2s;" '
+    'onmouseover="this.style.opacity=\'0.75\'" onmouseout="this.style.opacity=\'0.35\'">'
+    '<svg width="18" height="10" viewBox="0 0 303 165" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    '<path d="M151.478 102.737L98.4421 74.7024L6.37999 26.0452C2.68239 24.3645 -0.763116 27.7259 0.497434 31.0874L47.4067 150.73C49.4824 155.571 53.6842 158.327 58.2558 159.411C121.295 166.446 181.803 166.446 240.926 160C243.01 159.899 245.973 159.274 248.083 158.45C251.371 156.354 251.986 155.857 251.986 155.857L151.478 102.737Z" fill="#FAFAFA"/>'
+    '<path d="M296.729 26.0464L204.549 74.7036L255.744 150.95L302.536 31.0886C303.712 27.391 300.098 24.1976 296.729 26.0464" fill="#A3A8B8"/>'
+    '<path d="M156.386 2.91088C154.033 -0.526222 148.906 -0.526222 146.638 2.91088L98.4424 74.7035L151.478 102.738L251.986 155.857C253.658 154.001 255.742 150.95 204.547 74.7035L156.386 2.91088Z" fill="#D5DAE5"/>'
+    '</svg>'
+    '<span style="font-size:11px;color:#94A3B8;">Built with Streamlit</span>'
+    '</a>'
     '</div>'
     '</div>',
     unsafe_allow_html=True,
