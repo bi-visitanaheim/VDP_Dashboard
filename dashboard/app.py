@@ -849,19 +849,38 @@ st.markdown("""
   [data-testid="stDecoration"]          { display:    none    !important; }
   [data-testid="stStatusWidget"]        { visibility: hidden !important; }
   [data-testid="stHeader"]              { background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; }
-  [data-testid="stBottom"]              { display:    none    !important; }
-  [data-testid="stAppDeployButton"]     { display:    none    !important; }
-  .stDeployButton                        { display:    none    !important; }
+  /* ── Kill ALL Streamlit floating bottom chrome ───────────────────────── */
+  [data-testid="stBottom"]              { display: none !important; }
+  [data-testid="stAppDeployButton"]     { display: none !important; }
+  [data-testid="appCreatorAvatar"]      { display: none !important; }
+  [data-testid="appCreatorName"]        { display: none !important; }
+  .stDeployButton                       { display: none !important; }
   [data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
-  ._profileImage_gzau3_78              { display:    none    !important; }
-  ._link_gzau3_10                       { display:    none    !important; }
-  [class*="_profileImage_"]             { display:    none    !important; }
-  [class*="_link_gzau3"]                { display:    none    !important; }
-  [class*="_container_gzau3"]           { display:    none    !important; }
-  .viewerBadge_container__1QSob        { display:    none    !important; }
-  .styles_viewerBadge__CvC9N           { display:    none    !important; }
-  a[href*="streamlit.io"]               { display:    none    !important; }
-  a[href*="github.com/streamlit"]       { display:    none    !important; }
+  /* hash-based classes — hide everything matching these patterns */
+  [class*="_profileImage_"]             { display: none !important; }
+  [class*="_link_gzau"]                 { display: none !important; }
+  [class*="_container_gzau"]            { display: none !important; }
+  [class*="_darkThemeShadow_"]          { display: none !important; }
+  [class*="appCreator"]                 { display: none !important; }
+  [class*="deployButton"]               { display: none !important; }
+  .viewerBadge_container__1QSob        { display: none !important; }
+  .styles_viewerBadge__CvC9N           { display: none !important; }
+  a[href*="streamlit.io"]               { display: none !important; }
+  a[href*="github.com/streamlit"]       { display: none !important; }
+  /* Sidebar toggle button */
+  #dp-sidebar-toggle {
+    position: fixed; bottom: 72px; left: 12px; z-index: 99999;
+    width: 36px; height: 36px; border-radius: 9px;
+    background: rgba(22,40,68,0.94); border: 1px solid rgba(0,212,200,0.30);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.40); backdrop-filter: blur(8px);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  #dp-sidebar-toggle:hover {
+    background: rgba(0,212,200,0.15);
+    box-shadow: 0 4px 18px rgba(0,212,200,0.22);
+  }
+  #dp-sidebar-toggle svg { width: 16px; height: 16px; fill: #00D4C8; pointer-events: none; }
 
   /* ── Inner containers: must NOT clip so sticky tabs can work ────────── */
   /* stMain/stMainBlockContainer are scroll containers — set above        */
@@ -1956,6 +1975,10 @@ st.markdown("""
       bottom: 70px !important; right: 14px !important;
       width: 42px !important; height: 42px !important;
     }
+    #dp-sidebar-toggle {
+      bottom: 116px !important; left: 10px !important;
+      width: 38px !important; height: 38px !important;
+    }
     .event-stat { padding: 14px 10px !important; }
     .event-val  { font-size: 22px !important; }
     .nlm-briefing { padding: 12px 14px !important; }
@@ -2506,6 +2529,48 @@ st.markdown("""
 <button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
 </button>
+<button id="dp-sidebar-toggle" title="Toggle sidebar / filters">
+  <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+</button>
+<script>
+(function(){
+  /* ── Nuke floating Streamlit badges via JS (CSS fallback) ── */
+  function killBadges(){
+    var sel = [
+      '[data-testid="stBottom"]','[data-testid="appCreatorAvatar"]',
+      '[data-testid="appCreatorName"]','[data-testid="stAppDeployButton"]',
+      '[class*="_profileImage_"]','[class*="_link_gzau"]',
+      '[class*="_container_gzau"]','[class*="appCreator"]','[class*="deployButton"]'
+    ];
+    sel.forEach(function(s){
+      document.querySelectorAll(s).forEach(function(el){ el.style.display='none'; });
+    });
+  }
+  killBadges();
+  setTimeout(killBadges, 800);
+  if(window.MutationObserver){
+    new MutationObserver(killBadges).observe(document.body,{childList:true,subtree:true});
+  }
+
+  /* ── Sidebar toggle ── */
+  function attachSidebarToggle(){
+    var btn = document.getElementById('dp-sidebar-toggle');
+    if(!btn){ setTimeout(attachSidebarToggle, 500); return; }
+    btn.addEventListener('click', function(){
+      var native = document.querySelector('[data-testid="collapsedControl"]') ||
+                   document.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
+                   document.querySelector('button[aria-label="Close sidebar"]') ||
+                   document.querySelector('button[aria-label="Open sidebar"]') ||
+                   document.querySelector('[data-testid="stSidebar"] button[kind="header"]');
+      if(native){ native.click(); return; }
+      /* Fallback: toggle sidebar width directly */
+      var sb = document.querySelector('[data-testid="stSidebar"]');
+      if(sb){ sb.style.display = (sb.style.display==='none') ? '' : 'none'; }
+    });
+  }
+  attachSidebarToggle();
+})();
+</script>
 <script>
 (function(){
   function attachBtn(){
