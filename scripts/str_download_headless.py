@@ -144,21 +144,28 @@ async def find_str_section(page: Page) -> bool:
         except PWTimeout:
             pass
 
-    # Step 5: Click Analytics sub-tab
+    # Step 5: Click Analytics sub-tab — wait for it to appear after VDP Select loads
     try:
-        await page.locator("[role='tab']:has-text('Analytics')").first.click()
-        await page.wait_for_timeout(2000)
+        analytics = page.locator("[role='tab']:has-text('Analytics')").first
+        await analytics.wait_for(state="visible", timeout=15_000)
+        await analytics.click()
+        await page.wait_for_timeout(3000)
         log("  ✓ Analytics tab clicked")
-    except Exception:
-        pass
+        await screenshot(page, "05b_analytics_tab")
+    except Exception as exc:
+        log(f"  ✗ Analytics tab error: {exc}")
+        await screenshot(page, "05b_analytics_tab_err")
 
-    # Step 6: Click Data sub-tab
+    # Step 6: Click Data sub-tab — use span[title='Data'] (exact DOM match)
     try:
-        await page.locator("[role='tab']:has-text('Data')").first.click()
-        await page.wait_for_timeout(2000)
+        data_tab = page.locator("span[title='Data'], [role='tab']:has-text('Data')").first
+        await data_tab.wait_for(state="visible", timeout=15_000)
+        await data_tab.click()
+        await page.wait_for_timeout(3000)
         log("  ✓ Data tab clicked")
-    except Exception:
-        pass
+    except Exception as exc:
+        log(f"  ✗ Data tab error: {exc}")
+        await screenshot(page, "06b_data_tab_err")
 
     await screenshot(page, "07_data_tab")
     return True
@@ -199,7 +206,8 @@ async def export_period(page: Page, period: str, dest: Path) -> bool:
 
     log(f"[{period}] Clicking Export...")
     try:
-        export_btn = page.locator("span.placeholder-normal, button, span").filter(has_text="Export").first
+        # Use exact automation-id from live DOM
+        export_btn = page.locator("button[automation-id='toolbar-button-export']").first
         await export_btn.wait_for(state="visible", timeout=10_000)
         await export_btn.click()
         await page.wait_for_timeout(800)
