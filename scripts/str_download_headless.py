@@ -3,6 +3,8 @@ Headless CoStar/STR export downloader.
 Downloads Daily and Monthly STR data exports → data/str/str_daily.xlsx + str_monthly.xlsx
 """
 
+from __future__ import annotations
+
 import asyncio
 import os
 import shutil
