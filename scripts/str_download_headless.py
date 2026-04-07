@@ -6,6 +6,7 @@ Downloads Daily and Monthly STR data exports → data/str/str_daily.xlsx + str_m
 import asyncio
 import os
 import shutil
+import urllib.parse
 from pathlib import Path
 from playwright.async_api import async_playwright, Page, TimeoutError as PWTimeout
 
@@ -14,6 +15,19 @@ PASSWORD  = os.getenv("COSTAR_PASS", "")
 LOGIN_URL = "https://product.costar.com"
 DL_DIR    = Path("downloads")
 STR_DIR   = Path("data/str")
+
+# Pull proxy config from environment (set by Claude Code runtime)
+def _get_proxy_config() -> dict | None:
+    raw = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or ""
+    if not raw:
+        return None
+    p = urllib.parse.urlparse(raw)
+    cfg = {"server": f"{p.scheme}://{p.hostname}:{p.port}"}
+    if p.username:
+        cfg["username"] = urllib.parse.unquote(p.username)
+    if p.password:
+        cfg["password"] = urllib.parse.unquote(p.password)
+    return cfg
 
 
 def log(msg: str) -> None:
@@ -201,15 +215,22 @@ async def main() -> None:
     log("=" * 52)
 
     async with async_playwright() as pw:
+        proxy_cfg = _get_proxy_config()
+        if proxy_cfg:
+            log(f"  Using proxy: {proxy_cfg['server']}")
+
         browser = await pw.chromium.launch(
             headless=True,
             args=["--no-sandbox", "--disable-dev-shm-usage"],
             downloads_path=str(DL_DIR),
+            proxy=proxy_cfg,
         )
         context = await browser.new_context(
             accept_downloads=True,
+            ignore_https_errors=True,
             viewport={"width": 1440, "height": 900},
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            proxy=proxy_cfg,
         )
         page = await context.new_page()
 
