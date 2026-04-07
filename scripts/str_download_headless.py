@@ -32,6 +32,26 @@ def _get_proxy_config() -> dict | None:
     return cfg
 
 
+async def _dismiss_popup(page: Page) -> None:
+    """Dismiss CoStar modal popups — handles both button and span[role=button]."""
+    for sel in [
+        "span[content='Okay, got it'][role='button']",
+        "span[role='button']:has-text('Okay, got it')",
+        "button:has-text('Okay, got it')",
+        "button:has-text('Got it')",
+        "button:has-text('Dismiss')",
+    ]:
+        try:
+            btn = page.locator(sel).first
+            await btn.wait_for(state="visible", timeout=2_000)
+            await btn.click(force=True)
+            log(f"  Dismissed popup via: {sel}")
+            await page.wait_for_timeout(500)
+            return
+        except PWTimeout:
+            pass
+
+
 def log(msg: str) -> None:
     import datetime
     ts = datetime.datetime.now().strftime("%H:%M:%S")
@@ -134,15 +154,8 @@ async def find_str_section(page: Page) -> bool:
     except PWTimeout:
         log("  – VDP Select not found by direct click, continuing...")
 
-    # Step 4: Dismiss any popup
-    for popup_text in ["Okay, got it", "Got it", "Dismiss", "OK"]:
-        try:
-            btn = page.locator(f"button:has-text('{popup_text}')").first
-            await btn.wait_for(state="visible", timeout=3_000)
-            await btn.click()
-            log(f"  Dismissed popup: '{popup_text}'")
-        except PWTimeout:
-            pass
+    # Step 4: Dismiss popup (before Analytics click)
+    await _dismiss_popup(page)
 
     # Step 5: Click Analytics tab — icon-only (SVG bar chart), no text label
     try:
@@ -160,6 +173,9 @@ async def find_str_section(page: Page) -> bool:
         log(f"  ✗ Analytics tab error: {exc}")
         await screenshot(page, "05b_analytics_tab_err")
 
+    # Step 5b: Dismiss popup that appears after Analytics click
+    await _dismiss_popup(page)
+
     # Step 6: Click Data sub-tab — use span[title='Data'] (exact DOM match)
     try:
         data_tab = page.locator("span[title='Data'], [role='tab']:has-text('Data')").first
@@ -170,6 +186,9 @@ async def find_str_section(page: Page) -> bool:
     except Exception as exc:
         log(f"  ✗ Data tab error: {exc}")
         await screenshot(page, "06b_data_tab_err")
+
+    # Step 6b: Dismiss any popup after Data tab click too
+    await _dismiss_popup(page)
 
     await screenshot(page, "07_data_tab")
     return True
