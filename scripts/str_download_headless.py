@@ -208,13 +208,13 @@ async def export_period(page: Page, period: str, dest: Path) -> bool:
         await screenshot(page, f"err_{period.lower()}_combobox")
         return False
 
-    log(f"[{period}] Clicking Export...")
+    log(f"[{period}] Clicking Export button (force)...")
     try:
-        # Use exact automation-id from live DOM
         export_btn = page.locator("button[automation-id='toolbar-button-export']").first
-        await export_btn.wait_for(state="visible", timeout=10_000)
-        await export_btn.click()
-        await page.wait_for_timeout(800)
+        await export_btn.wait_for(timeout=10_000)  # just wait for it to exist, not visible
+        await export_btn.click(force=True)          # force bypasses hidden check
+        await page.wait_for_timeout(1000)
+        log(f"  ✓ Export button clicked")
     except Exception as exc:
         log(f"  ✗ Export button error: {exc}")
         await screenshot(page, f"err_{period.lower()}_export_btn")
@@ -222,7 +222,7 @@ async def export_period(page: Page, period: str, dest: Path) -> bool:
 
     log(f"[{period}] Clicking 'Data Export' menu item...")
     try:
-        data_export = page.locator("[role='menuitem']:has-text('Data Export'), div:has-text('Data Export')").first
+        data_export = page.locator("div.more-menu__item--drqqC[role='menuitem']").filter(has_text="Data Export").first
         await data_export.wait_for(state="visible", timeout=10_000)
 
         async with page.expect_download(timeout=90_000) as dl_info:
