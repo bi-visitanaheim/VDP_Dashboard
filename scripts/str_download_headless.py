@@ -221,8 +221,11 @@ async def main() -> None:
         if proxy_cfg:
             log(f"  Using proxy: {proxy_cfg['server']}")
 
+        # headless=True is blocked by Akamai bot detection on CoStar.
+        # Run headed (visible window) locally; on CI/server use xvfb-run.
+        headless = os.getenv("PLAYWRIGHT_HEADLESS", "0") == "1"
         browser = await pw.chromium.launch(
-            headless=True,
+            headless=headless,
             args=["--no-sandbox", "--disable-dev-shm-usage"],
             downloads_path=str(DL_DIR),
             proxy=proxy_cfg,
