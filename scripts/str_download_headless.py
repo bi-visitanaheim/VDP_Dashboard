@@ -144,9 +144,13 @@ async def find_str_section(page: Page) -> bool:
         except PWTimeout:
             pass
 
-    # Step 5: Click Analytics sub-tab — wait for it to appear after VDP Select loads
+    # Step 5: Click Analytics tab — icon-only (SVG bar chart), no text label
     try:
-        analytics = page.locator("[role='tab']:has-text('Analytics')").first
+        analytics = page.locator(
+            "[role='tab']:has(.analytics_component_svg__setStroke), "
+            "button:has(.analytics_component_svg__setStroke), "
+            "i:has(.analytics_component_svg__setStroke)"
+        ).first
         await analytics.wait_for(state="visible", timeout=15_000)
         await analytics.click()
         await page.wait_for_timeout(3000)
