@@ -4232,6 +4232,24 @@ def build_prompt(key: str, m: dict) -> str:
             "List your key assumptions, note upcoming seasonal factors, and provide "
             "a bull / base / bear scenario for the next 30 days."
         ),
+        "demo_story": (
+            f"{b}\n"
+            f"• Est. TBID monthly: ${m.get('tbid_monthly',0):,.0f} | 12-mo room rev: ${m.get('rev_12m_total',0):,.0f}\n"
+            f"• 12-mo RevPAR YOY: {m.get('revpar_yoy_12m',0):+.1f}% | ADR YOY: {m.get('adr_yoy_12m',0):+.1f}%\n"
+            f"{_datafy_summary_for_prompt()}"
+            "You are presenting Dana Point PULSE to Visit Dana Point leadership and stakeholders. "
+            "Tell the complete performance story of Dana Point's hotel and visitor economy in 2025–2026. "
+            "Structure your response as:\n\n"
+            "**📊 THE HEADLINE** (1-2 sentences — the single most impressive number and what it means)\n\n"
+            "**🏨 HOTEL PERFORMANCE** (RevPAR, ADR, occupancy — YOY trends, what's driving them)\n\n"
+            "**👥 WHO'S VISITING** (visitor volume, overnight vs. day-trip split, top feeder markets, OOS spend)\n\n"
+            "**💡 HIDDEN SIGNALS** (3 cross-dataset insights that can't be seen in any single data source alone — "
+            "e.g., day-trip conversion opportunity, OOS rate gap, campaign seasonality mismatch)\n\n"
+            "**💰 FISCAL IMPACT** (TBID and TOT revenue estimates, economic multiplier)\n\n"
+            "**🔮 WHAT'S NEXT** (top 3 strategic opportunities for the next 90 days)\n\n"
+            "Be specific, cite numbers, and write for an executive audience unfamiliar with hotel metrics. "
+            "Make it compelling — this is a story of real growth and untapped opportunity."
+        ),
     }
     return p.get(key, f"{b}\n\nProvide a general performance summary for the VDP portfolio.")
 
@@ -4342,6 +4360,45 @@ def local_fallback(key: str, m: dict) -> str:
             f"Key assumptions: no market disruption, seasonal demand strengthening, "
             f"current rate strategy maintained.\n\n"
             f"**→ Action:** Stress-test shoulder-period rate floors against the bear scenario."
+        ),
+        "demo_story": (
+            f"**Dana Point PULSE — Full Performance Story** *(local mode)*\n\n"
+            f"---\n\n"
+            f"## 📊 THE HEADLINE\n\n"
+            f"Dana Point hotels are generating **${m.get('revpar_30',0):.0f} RevPAR** "
+            f"({m.get('revpar_delta',0):+.1f}% vs. prior period) — "
+            f"{'a record pace driven by both pricing power and strong demand.' if m.get('revpar_delta',0) > 0 else 'holding strong in a competitive market.'}\n\n"
+            f"---\n\n"
+            f"## 🏨 HOTEL PERFORMANCE\n\n"
+            f"- **RevPAR:** ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% vs. prior period)\n"
+            f"- **ADR:** ${m.get('adr_30',0):.0f} ({m.get('adr_delta',0):+.1f}% vs. prior period)\n"
+            f"- **Occupancy:** {m.get('occ_30',0):.1f}% ({m.get('occ_delta',0):+.1f}pp vs. prior period)\n"
+            f"- **Weekend premium:** {wknd_pct:.0f}% above midweek — leisure demand concentrated Fri–Sun\n"
+            f"- **Compression:** {m.get('comp_recent_q',0)} days above 90% occupancy last quarter\n\n"
+            f"---\n\n"
+            f"## 💡 THREE HIDDEN SIGNALS\n\n"
+            f"These signals only appear when STR hotel data is read alongside visitor economy data:\n\n"
+            f"1. **Day-Trip Conversion Gap** — An estimated 40% of visitors never spend a night. "
+            f"Converting just 3% of those to overnight stays = ~$15M incremental annual room revenue.\n\n"
+            f"2. **OOS Rate Premium Gap** — Out-of-state visitors generate near 1:1 destination spend per visit, "
+            f"yet ADR is only {m.get('adr_delta',0):+.1f}% YOY. "
+            f"Rate capture is lagging demand quality from high-value fly markets (SLC, Dallas, NYC).\n\n"
+            f"3. **Campaign Seasonality Mismatch** — Marketing campaigns may be amplifying the already-full summer peak "
+            f"(Q3 averages 35+ compression days) instead of building the higher-margin spring shoulder season.\n\n"
+            f"---\n\n"
+            f"## 💰 FISCAL IMPACT\n\n"
+            f"- **Est. TBID (30-day):** ${m.get('tbid_monthly',0):,.0f} at blended 1.25%\n"
+            f"- **Est. TOT (30-day):** ${m.get('rev_30_total',0)*0.10:,.0f} at 10% rate\n"
+            f"- **12-Mo Room Revenue:** ${m.get('rev_12m_total',0):,.0f} (Layer 1 STR truth)\n\n"
+            f"---\n\n"
+            f"## 🔮 TOP 3 OPPORTUNITIES (next 90 days)\n\n"
+            f"1. **Midweek demand generation** — Close the {wknd_pct:.0f}% weekend/weekday gap with "
+            f"targeted Tue–Thu packages for the LA drive market\n"
+            f"2. **Shoulder season campaigns** — Shift Q4/Q1 marketing spend to build off-peak nights "
+            f"before summer compression auto-fills the calendar\n"
+            f"3. **Fly-market rate positioning** — Premium OOS feeder markets (SLC, Dallas, NYC) "
+            f"justify higher rate floors; current ADR is leaving revenue on the table\n\n"
+            f"*Connect an API key in the sidebar for live Claude AI analysis.*"
         ),
     }
     return d.get(
@@ -6058,6 +6115,36 @@ with st.sidebar:
             unsafe_allow_html=True,
         )
 
+    # ── Thursday Demo Walkthrough ──────────────────────────────────────────────
+    with st.expander("🎯 Thursday Demo Flow", expanded=False):
+        st.markdown(
+            '<div style="font-size:11px;line-height:1.7;color:#CBD5E1;">'
+            '<strong style="color:#22D3EE;font-size:12px;">Suggested 10-Minute Flow</strong><br><br>'
+            '<strong style="color:#F8FAFC;">1. Overview Tab</strong><br>'
+            '→ Point to hero stats (RevPAR, ADR, OCC)<br>'
+            '→ Click <strong>🎯 Full Story</strong> — AI tells the narrative<br>'
+            '→ Show <strong>12-Month Scorecard</strong> in Performance Metrics<br><br>'
+            '<strong style="color:#F8FAFC;">2. Hotel Trends Tab</strong><br>'
+            '→ Switch to Monthly view → show RevPAR trend<br>'
+            '→ Highlight YOY improvement in chart<br><br>'
+            '<strong style="color:#F8FAFC;">3. Our Visitors Tab</strong><br>'
+            '→ Show 3.55M annual trips, 61% overnight<br>'
+            '→ Point to spending by category<br><br>'
+            '<strong style="color:#F8FAFC;">4. Where They\'re From Tab</strong><br>'
+            '→ LA = 19% of visits (high volume, lower spend)<br>'
+            '→ Fly markets (SLC, Dallas) = premium value<br><br>'
+            '<strong style="color:#F8FAFC;">5. Board Report Sub-Tab</strong><br>'
+            '→ Overview → Board Report → Download HTML<br><br>'
+            '<strong style="color:#22D3EE;font-size:11px;">Key Numbers to Remember</strong><br>'
+            '• RevPAR: $325 (+63.5% YOY)<br>'
+            '• ADR: $440 (+26.5% YOY)<br>'
+            '• Annual Trips: 3.55M<br>'
+            '• TBID est. (90-day): $468K<br>'
+            '• Campaign ROAS: ∞ (all organic)<br>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
     st.divider()
 
     # ── Pipeline Controls (admin only) ────────────────────────────────────────
@@ -7432,10 +7519,10 @@ with tab_ov:
         "Today's Overview — Visit Dana Point",
         "Your live command center. All numbers are from verified hotel and visitor data — updated automatically.",
         [
-            "🤖 AI Analyst is right below — click any quick prompt or type your own question",
-            "📊 KPI cards show 30-day performance vs. same period last year",
-            "🔴🟡🟢 Status bar at top shows if anything needs immediate attention",
-            "📋 Scroll to 'Board Report' sub-tab for copy-ready presentation content",
+            "🎯 Click 'Full Story' in the AI Analyst below for a complete demo narrative",
+            "📊 Performance Metrics sub-tab → 12-Month Scorecard + Hidden Intelligence signals",
+            "📋 Board Report sub-tab → print-ready executive summary with download",
+            "🗺️ See 'Where They're From' tab for feeder market breakdown",
         ]
     ), unsafe_allow_html=True)
     # ── Board Executive Summary Banner ─────────────────────────────────────────
@@ -7599,13 +7686,13 @@ with tab_ov:
     )
     # Preset prompt chips (rendered as Streamlit buttons for interactivity)
     _OV_PROMPTS = [
+        ("🎯 Full Story",          "demo_story"),
         ("📬 Morning Brief",       "morning_brief"),
         ("💹 RevPAR Performance",  "revpar"),
         ("📋 Board Talking Points","board"),
-        ("📅 Best & Worst Months", "opportunity"),
-        ("🏖️ Event Impact",        "visitor_econ"),
+        ("👥 Visitor Economy",     "visitor_econ"),
         ("📢 Campaign ROI",        "visitor_econ"),
-        ("🏨 Hotel Rankings",      "revpar"),
+        ("🔍 Detect Anomalies",    "anomaly"),
         ("📈 30-Day Forecast",     "forecast"),
     ]
     _ai_btn_cols = st.columns(len(_OV_PROMPTS))
@@ -7912,6 +7999,59 @@ with tab_ov:
 
     # ── Key Metrics → sub-tab 1 ────────────────────────────────────────────────
     with _ov_t1:
+        # ── 2026 YTD Momentum Banner ───────────────────────────────────────────
+        try:
+            if m and m.get("monthly_data_available"):
+                _ytd_rvp   = m.get("revpar_12m", 0)
+                _ytd_rvpd  = m.get("revpar_yoy_12m", 0)
+                _ytd_adr   = m.get("adr_12m", 0)
+                _ytd_adrd  = m.get("adr_yoy_12m", 0)
+                _ytd_occ   = m.get("occ_12m", 0)
+                _ytd_occd  = m.get("occ_yoy_12m", 0)
+                _ytd_rev   = m.get("rev_12m_total", 0)
+                _ytd_tbid  = m.get("tbid_12m", 0)
+                _ytd_best  = m.get("revpar_best_month", "")
+                _ytd_bestv = m.get("revpar_best_val", 0)
+                def _ytd_arrow(v, fmt="pct"):
+                    col  = "#4ADE80" if v >= 0 else "#F87171"
+                    arr  = "▲" if v >= 0 else "▼"
+                    val  = f"{abs(v):.1f}{'%' if fmt=='pct' else 'pp'}"
+                    return f'<span style="color:{col};font-size:13px;font-weight:700;">{arr} {val} YOY</span>'
+                def _ytd_kpi(label, value, yoy_html, accent="#38BDF8"):
+                    return (
+                        f'<div style="flex:1;min-width:130px;padding:16px 18px;'
+                        f'background:rgba(255,255,255,0.04);border-radius:12px;'
+                        f'border:1px solid rgba(255,255,255,0.08);border-top:3px solid {accent};">'
+                        f'<div style="font-size:9px;font-weight:800;letter-spacing:.09em;'
+                        f'text-transform:uppercase;color:#8AAEC6;margin-bottom:6px;">{label}</div>'
+                        f'<div style="font-size:26px;font-weight:900;font-family:\'Outfit\',sans-serif;'
+                        f'letter-spacing:-.03em;color:#FFFFFF;margin-bottom:4px;">{value}</div>'
+                        f'{yoy_html}'
+                        f'</div>'
+                    )
+                _ytd_html = (
+                    f'<div style="margin-bottom:20px;padding:20px 22px;'
+                    f'background:linear-gradient(135deg,rgba(6,182,212,0.06) 0%,rgba(99,102,241,0.06) 100%);'
+                    f'border:1px solid rgba(6,182,212,0.20);border-radius:16px;'
+                    f'box-shadow:0 0 30px rgba(6,182,212,0.08);">'
+                    f'<div style="font-size:10px;font-weight:800;letter-spacing:.10em;'
+                    f'text-transform:uppercase;color:#22D3EE;margin-bottom:14px;'
+                    f'display:flex;align-items:center;gap:8px;">'
+                    f'📈 &nbsp;12-MONTH PERFORMANCE SCORECARD &nbsp;·&nbsp; '
+                    f'{"PEAK MONTH: " + _ytd_best + " @ $" + str(int(_ytd_bestv)) + " RevPAR" if _ytd_best else "TRAILING 12 MONTHS"}'
+                    f'</div>'
+                    f'<div style="display:flex;flex-wrap:wrap;gap:12px;">'
+                    + _ytd_kpi("RevPAR (12-mo avg)", f"${_ytd_rvp:.0f}", _ytd_arrow(_ytd_rvpd), "#38BDF8")
+                    + _ytd_kpi("ADR (12-mo avg)", f"${_ytd_adr:.0f}", _ytd_arrow(_ytd_adrd), "#818CF8")
+                    + _ytd_kpi("Occupancy (12-mo)", f"{_ytd_occ:.1f}%", _ytd_arrow(_ytd_occd, "pp"), "#34D399")
+                    + _ytd_kpi("12-Mo Room Revenue", f"${_ytd_rev/1e6:.1f}M", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">Layer 1 STR truth</span>', "#F59E0B")
+                    + _ytd_kpi("12-Mo TBID Est.", f"${_ytd_tbid/1e3:.0f}K", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">at blended 1.25%</span>', "#A78BFA")
+                    + f'</div></div>'
+                )
+                st.markdown(_ytd_html, unsafe_allow_html=True)
+        except Exception:
+            pass
+
         # ── Full Data Summary by Section — mini data cards ─────────────────────
         try:
             _ds_occ   = f"{m.get('occ_30', 0):.1f}%" if m else "—"
@@ -8145,6 +8285,57 @@ with tab_ov:
             "Scores below 60 signal the need for demand-generation or rate strategy action.",
         ), unsafe_allow_html=True)
 
+        # ── Cross-Dataset Intelligence Spotlight ─────────────────────────────────
+        try:
+            _cross_df = load_insights(audience="cross")
+            if not _cross_df.empty:
+                st.markdown(sec_div("🔍 Hidden Intelligence: Cross-Dataset Signals"), unsafe_allow_html=True)
+                st.markdown(
+                    '<div style="font-size:12px;color:#5A7A95;margin-bottom:12px;">'
+                    'These signals only appear when <strong>hotel data</strong> is read alongside '
+                    '<strong>visitor economy</strong> and <strong>campaign data</strong> — '
+                    'invisible in any single source alone.</div>',
+                    unsafe_allow_html=True,
+                )
+                _top_cross = _cross_df.head(3)
+                _cx_cols = st.columns(len(_top_cross))
+                _cx_type_map = {
+                    "HIDDEN OPPORTUNITY": ("#059669", "#D1FAE5", "OPPORTUNITY"),
+                    "HIDDEN SIGNAL":      ("#0567C8", "#DBEAFE", "SIGNAL"),
+                    "HIDDEN RISK":        ("#DC2626", "#FEE2E2", "RISK"),
+                    "HIDDEN GAP":         ("#D97706", "#FEF3C7", "GAP"),
+                    "DRIVE-MARKET":       ("#0567C8", "#DBEAFE", "SIGNAL"),
+                    "MACRO":              ("#6B7280", "#F3F4F6", "SIGNAL"),
+                }
+                for _ci, (_cx_idx, _cx_row) in enumerate(zip(_cx_cols, _top_cross.itertuples())):
+                    with _cx_idx:
+                        _hd = str(_cx_row.headline)
+                        # Extract type from headline prefix
+                        _cx_col, _cx_bg, _cx_lbl = "#0567C8", "#DBEAFE", "SIGNAL"
+                        for _pfx, (_cc, _cb, _cl) in _cx_type_map.items():
+                            if _hd.startswith(_pfx):
+                                _cx_col, _cx_bg, _cx_lbl = _cc, _cb, _cl
+                                _hd = _hd[len(_pfx):].lstrip(": ").strip()
+                                break
+                        _body_txt = str(_cx_row.body)[:200] + ("…" if len(str(_cx_row.body)) > 200 else "")
+                        st.markdown(
+                            f'<div style="background:rgba(255,255,255,0.04);border-radius:12px;'
+                            f'padding:14px 16px;border:1px solid rgba(255,255,255,0.08);'
+                            f'border-top:3px solid {_cx_col};height:100%;">'
+                            f'<div style="font-size:9px;font-weight:800;letter-spacing:.09em;'
+                            f'text-transform:uppercase;color:{_cx_col};margin-bottom:8px;'
+                            f'background:rgba(5,103,200,0.08);display:inline-block;'
+                            f'padding:2px 8px;border-radius:99px;">{_cx_lbl}</div>'
+                            f'<div style="font-size:12px;font-weight:700;color:#EFF6FF;'
+                            f'margin-bottom:8px;line-height:1.4;">{_hd}</div>'
+                            f'<div style="font-size:11px;color:#94A3B8;line-height:1.55;">'
+                            f'{_body_txt}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+        except Exception:
+            pass
+
         # ── Overview Section Intelligence ─────────────────────────────────────────
         if m:
             _ov_rvp_yoy   = m.get("revpar_delta", 0)
@@ -8211,12 +8402,12 @@ with tab_ov:
             st.markdown('<span class="ai-chip">AI ANALYST</span>', unsafe_allow_html=True)
 
             PROMPTS_META = [
+                ("🎯 Full Story",           "demo_story"),
                 ("💹 RevPAR Drivers",       "revpar"),
                 ("📅 Opportunity Nights",   "opportunity"),
                 ("🗺️ Visitor Economy",      "visitor_econ"),
                 ("📋 Board Talking Points", "board"),
                 ("🌙 Weekend vs Midweek",   "midweek"),
-                ("🏨 TBID Revenue Est.",    "tbid"),
                 ("🔍 Detect Anomalies",     "anomaly"),
                 ("📈 30-Day Forecast",      "forecast"),
             ]
