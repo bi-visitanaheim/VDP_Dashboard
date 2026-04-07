@@ -9,6 +9,7 @@ Streamlit app with Claude AI Analyst · Read-only connection to data/analytics.s
 # Unauthorized reproduction or distribution prohibited.
 
 import streamlit as st
+import streamlit.components.v1 as _st_components
 import sqlite3
 import pandas as pd
 import numpy as np
@@ -7387,21 +7388,6 @@ def render_intel_panel(
                 del st.session_state[_ans_key]
 
 
-# ─── Tab navigation (triggered by KPI card "View Detail" buttons) ─────────────
-if "pending_tab_nav" in st.session_state:
-    _nav_idx = int(st.session_state.pop("pending_tab_nav"))
-    st.markdown(f"""<script>
-    (function(){{
-      function _clickTab(){{
-        var tabs = document.querySelectorAll('[role="tab"]');
-        if(!tabs.length) tabs = document.querySelectorAll('button[data-baseweb="tab"]');
-        if(tabs[{_nav_idx}]){{ tabs[{_nav_idx}].click(); window.scrollTo({{top:0,behavior:'smooth'}}); }}
-      }}
-      setTimeout(_clickTab, 80);
-      setTimeout(_clickTab, 300);
-    }})();
-    </script>""", unsafe_allow_html=True)
-
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
@@ -7487,6 +7473,26 @@ def _str_filters(tab_id: str, show_grain: bool = True, show_metric: bool = True)
 # GloCon Solutions LLC — Board-level executive summary + intelligence briefing
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ov:
+    # ── Tab navigation: fires after tabs are in the DOM ────────────────────────
+    if "pending_tab_nav" in st.session_state:
+        _nav_idx = int(st.session_state.pop("pending_tab_nav"))
+        _st_components.html(f"""<script>
+        (function(){{
+          function _go(){{
+            try{{
+              var doc = window.parent.document;
+              var tabs = doc.querySelectorAll('[role="tab"]');
+              if(!tabs.length) tabs = doc.querySelectorAll('button[data-baseweb="tab"]');
+              if(tabs[{_nav_idx}]){{
+                tabs[{_nav_idx}].dispatchEvent(new MouseEvent('click',{{bubbles:true,cancelable:true}}));
+                window.parent.scrollTo({{top:0,behavior:'smooth'}});
+              }}
+            }}catch(e){{}}
+          }}
+          setTimeout(_go,50); setTimeout(_go,250); setTimeout(_go,700);
+        }})();
+        </script>""", height=1, scrolling=False)
+
     _tab_controls("ov")
     # Filter: Time Period only — Overview uses the window to compute 30-day KPI snapshot
     _str_filters("ov", show_grain=False, show_metric=False)
