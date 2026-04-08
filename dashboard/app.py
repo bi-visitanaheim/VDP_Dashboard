@@ -9,6 +9,7 @@ Streamlit app with Claude AI Analyst · Read-only connection to data/analytics.s
 # Unauthorized reproduction or distribution prohibited.
 
 import streamlit as st
+import streamlit.components.v1 as _st_components
 import sqlite3
 import pandas as pd
 import numpy as np
@@ -848,10 +849,38 @@ st.markdown("""
   [data-testid="stDecoration"]          { display:    none    !important; }
   [data-testid="stStatusWidget"]        { visibility: hidden !important; }
   [data-testid="stHeader"]              { background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; }
-  .viewerBadge_container__1QSob        { display:    none    !important; }
-  .styles_viewerBadge__CvC9N           { display:    none    !important; }
-  a[href*="streamlit.io"]               { display:    none    !important; }
-  a[href*="github.com/streamlit"]       { display:    none    !important; }
+  /* ── Kill ALL Streamlit floating bottom chrome ───────────────────────── */
+  [data-testid="stBottom"]              { display: none !important; }
+  [data-testid="stAppDeployButton"]     { display: none !important; }
+  [data-testid="appCreatorAvatar"]      { display: none !important; }
+  [data-testid="appCreatorName"]        { display: none !important; }
+  .stDeployButton                       { display: none !important; }
+  [data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
+  /* hash-based classes — hide everything matching these patterns */
+  [class*="_profileImage_"]             { display: none !important; }
+  [class*="_link_gzau"]                 { display: none !important; }
+  [class*="_container_gzau"]            { display: none !important; }
+  [class*="_darkThemeShadow_"]          { display: none !important; }
+  [class*="appCreator"]                 { display: none !important; }
+  [class*="deployButton"]               { display: none !important; }
+  .viewerBadge_container__1QSob        { display: none !important; }
+  .styles_viewerBadge__CvC9N           { display: none !important; }
+  a[href*="streamlit.io"]               { display: none !important; }
+  a[href*="github.com/streamlit"]       { display: none !important; }
+  /* Sidebar toggle button */
+  #dp-sidebar-toggle {
+    position: fixed; bottom: 72px; left: 12px; z-index: 99999;
+    width: 36px; height: 36px; border-radius: 9px;
+    background: rgba(22,40,68,0.94); border: 1px solid rgba(0,212,200,0.30);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.40); backdrop-filter: blur(8px);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  #dp-sidebar-toggle:hover {
+    background: rgba(0,212,200,0.15);
+    box-shadow: 0 4px 18px rgba(0,212,200,0.22);
+  }
+  #dp-sidebar-toggle svg { width: 16px; height: 16px; fill: #00D4C8; pointer-events: none; }
 
   /* ── Inner containers: must NOT clip so sticky tabs can work ────────── */
   /* stMain/stMainBlockContainer are scroll containers — set above        */
@@ -1658,8 +1687,41 @@ st.markdown("""
     border-left-color: var(--dp-green);
   }
 
+  /* ── View Detail nav buttons — styled as teal text links ────────────── */
+  button[data-testid="stBaseButton-secondary"][kind="secondary"]:has(> div > p:only-child) {
+    /* fallback: target all secondary buttons in the PCC card area */
+  }
+  [data-testid="stVerticalBlock"] button[data-testid^="stBaseButton"]:is([id*="vd_"],[id*="vd_m_"]) {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #32B8C6 !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: .04em !important;
+    padding: 2px 4px !important;
+    min-height: unset !important;
+    height: auto !important;
+    text-align: right !important;
+    justify-content: flex-end !important;
+  }
+  /* Broader selector covering Streamlit button wrappers near KPI cards */
+  .kpi-card + div button, .kpi-card ~ div button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #32B8C6 !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: .04em !important;
+    padding: 2px 0 !important;
+    min-height: unset !important;
+  }
+
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
-  .block-container { padding-top: 0.5rem !important; overflow: visible !important; }
+  .block-container { padding-top: 0 !important; overflow: visible !important; }
+  [data-testid="stAppViewContainer"] > section > div:first-child { padding-top: 0 !important; }
+  [data-testid="stMain"] { padding-top: 0 !important; }
   [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; width: 100% !important; }
   [data-testid="stPlotlyChart"] > div { width: 100% !important; }
   [data-testid="stPlotlyChart"] iframe { width: 100% !important; min-width: 100% !important; }
@@ -1883,7 +1945,7 @@ st.markdown("""
 
   @media screen and (max-width: 768px) {
     .main .block-container {
-      padding: 0.5rem 0.75rem 2rem 0.75rem !important;
+      padding: 0 0.75rem 2rem 0.75rem !important;
       max-width: 100% !important;
       width: 100% !important;
       box-sizing: border-box !important;
@@ -1913,11 +1975,20 @@ st.markdown("""
       bottom: 70px !important; right: 14px !important;
       width: 42px !important; height: 42px !important;
     }
+    #dp-sidebar-toggle {
+      bottom: 116px !important; left: 10px !important;
+      width: 38px !important; height: 38px !important;
+    }
     .event-stat { padding: 14px 10px !important; }
     .event-val  { font-size: 22px !important; }
     .nlm-briefing { padding: 12px 14px !important; }
     .src-card { padding: 10px 12px !important; }
     .kpi-value { font-size: 24px !important; }
+    /* Demo question buttons: wrap to 2×2 grid on mobile */
+    div[data-testid="stHorizontalBlock"]:has(button[data-testid^="stBaseButton-secondary"]) > div {
+      min-width: calc(50% - 4px) !important;
+      flex: 1 1 calc(50% - 4px) !important;
+    }
     /* Charts scroll horizontally on mobile rather than overflow */
     .js-plotly-plot .plotly { overflow-x: auto !important; }
     /* Stacked columns on small screens */
@@ -1931,7 +2002,7 @@ st.markdown("""
   }
   @media screen and (max-width: 480px) {
     .hero-title { font-size: 1.15rem !important; }
-    .main .block-container { padding: 0.25rem 0.5rem 2rem 0.5rem !important; }
+    .main .block-container { padding: 0 0.5rem 2rem 0.5rem !important; }
     .sh-tag { display: none !important; }
     [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
     /* Single column on phones */
@@ -2458,6 +2529,48 @@ st.markdown("""
 <button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
 </button>
+<button id="dp-sidebar-toggle" title="Toggle sidebar / filters">
+  <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+</button>
+<script>
+(function(){
+  /* ── Nuke floating Streamlit badges via JS (CSS fallback) ── */
+  function killBadges(){
+    var sel = [
+      '[data-testid="stBottom"]','[data-testid="appCreatorAvatar"]',
+      '[data-testid="appCreatorName"]','[data-testid="stAppDeployButton"]',
+      '[class*="_profileImage_"]','[class*="_link_gzau"]',
+      '[class*="_container_gzau"]','[class*="appCreator"]','[class*="deployButton"]'
+    ];
+    sel.forEach(function(s){
+      document.querySelectorAll(s).forEach(function(el){ el.style.display='none'; });
+    });
+  }
+  killBadges();
+  setTimeout(killBadges, 800);
+  if(window.MutationObserver){
+    new MutationObserver(killBadges).observe(document.body,{childList:true,subtree:true});
+  }
+
+  /* ── Sidebar toggle ── */
+  function attachSidebarToggle(){
+    var btn = document.getElementById('dp-sidebar-toggle');
+    if(!btn){ setTimeout(attachSidebarToggle, 500); return; }
+    btn.addEventListener('click', function(){
+      var native = document.querySelector('[data-testid="collapsedControl"]') ||
+                   document.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
+                   document.querySelector('button[aria-label="Close sidebar"]') ||
+                   document.querySelector('button[aria-label="Open sidebar"]') ||
+                   document.querySelector('[data-testid="stSidebar"] button[kind="header"]');
+      if(native){ native.click(); return; }
+      /* Fallback: toggle sidebar width directly */
+      var sb = document.querySelector('[data-testid="stSidebar"]');
+      if(sb){ sb.style.display = (sb.style.display==='none') ? '' : 'none'; }
+    });
+  }
+  attachSidebarToggle();
+})();
+</script>
 <script>
 (function(){
   function attachBtn(){
@@ -7635,6 +7748,26 @@ def _str_filters(tab_id: str, show_grain: bool = True, show_metric: bool = True)
 # GloCon Solutions LLC — Board-level executive summary + intelligence briefing
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ov:
+    # ── Tab navigation: fires after tabs are in the DOM ────────────────────────
+    if "pending_tab_nav" in st.session_state:
+        _nav_idx = int(st.session_state.pop("pending_tab_nav"))
+        _st_components.html(f"""<script>
+        (function(){{
+          function _go(){{
+            try{{
+              var doc = window.parent.document;
+              var tabs = doc.querySelectorAll('[role="tab"]');
+              if(!tabs.length) tabs = doc.querySelectorAll('button[data-baseweb="tab"]');
+              if(tabs[{_nav_idx}]){{
+                tabs[{_nav_idx}].dispatchEvent(new MouseEvent('click',{{bubbles:true,cancelable:true}}));
+                window.parent.scrollTo({{top:0,behavior:'smooth'}});
+              }}
+            }}catch(e){{}}
+          }}
+          setTimeout(_go,50); setTimeout(_go,250); setTimeout(_go,700);
+        }})();
+        </script>""", height=1, scrolling=False)
+
     _tab_controls("ov")
     # Filter: Time Period only — Overview uses the window to compute 30-day KPI snapshot
     _str_filters("ov", show_grain=False, show_metric=False)
@@ -7836,6 +7969,28 @@ with tab_ov:
                 st.session_state.ai_prompt_label = _ai_lbl
                 st.session_state.ai_result = ""
                 st.session_state.ai_needs_call = True
+
+    # ── Demo: 4 Killer Questions ───────────────────────────────────────────────
+    st.markdown(
+        '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">'
+        '<span style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:#94A3B8;text-transform:uppercase;">🎯 Demo Questions</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    _DEMO_PROMPTS = [
+        ("📊 Rate Gap",         "Which feeder markets are sending the most visitors but capturing the least in ADR? Where is the rate gap and how much revenue is being left on the table?"),
+        ("🔄 Day Trip Convert", "We have 1.44 million day trippers. If we convert just 3% to overnight stays, what does that mean for room revenue, TBID, and TOT?"),
+        ("📅 Campaign Season",  "Is our marketing spend amplifying peak season or building shoulder demand? What does compression data say about where to shift media dollars?"),
+        ("🎶 Ohana Fest 2026",  "Based on Ohana Fest 2025 performance — $18.4M destination spend, 3.2x multiplier, +$139 ADR lift — what should our 2026 event marketing strategy look like?"),
+    ]
+    _demo_btn_cols = st.columns(4)
+    for _di, (_dl, _dq) in enumerate(_DEMO_PROMPTS):
+        with _demo_btn_cols[_di]:
+            if st.button(_dl, key=f"ov_demo_{_di}", use_container_width=True):
+                st.session_state.ai_current_prompt = build_custom_prompt(_dq, m)
+                st.session_state.ai_prompt_label   = f"🎯 {_dl}"
+                st.session_state.ai_result         = ""
+                st.session_state.ai_needs_call     = True
     st.markdown('</div>', unsafe_allow_html=True)
 
     # ── AI custom input and response — always visible ──────────────────────────
@@ -8905,14 +9060,10 @@ with tab_ov:
                                     "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
                                     "Demand": 1, "Supply": 1, "Revenue": 1}
                         _tab_idx = next((v for k,v in _tab_map.items() if k.lower() in _k["label"].lower()), 1)
-                        st.markdown(
-                            f'<div class="pcc-card-link" data-tab-idx="{_tab_idx}" '
-                            f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;border-radius:12px;">'
-                            f'{_card_html}'
-                            f'<div style="font-size:9px;color:#32B8C6;text-align:right;padding:2px 4px 0 0;font-weight:700;letter-spacing:.04em;">→ VIEW DETAIL</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
+                        st.markdown(_card_html, unsafe_allow_html=True)
+                        if st.button("→ View Detail", key=f"vd_{_ri}_{_idx}_{_k['label'].replace(' ','_')}", use_container_width=True):
+                            st.session_state["pending_tab_nav"] = _tab_idx
+                            st.rerun()
                     with _chart_col:
                         _spk = _k.get("sparkline") or []
                         st.plotly_chart(
@@ -8996,14 +9147,10 @@ with tab_ov:
                                            "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
                                            "Demand": 1, "Supply": 1, "Revenue": 1}
                             _mk_tab_idx = next((v for k,v in _mk_tab_map.items() if k.lower() in _mk["label"].lower()), 1)
-                            st.markdown(
-                                f'<div class="pcc-card-link" data-tab-idx="{_mk_tab_idx}" '
-                                f'style="cursor:pointer;transition:transform 0.15s ease,box-shadow 0.15s ease;border-radius:12px;">'
-                                f'{_mk_card_html}'
-                                f'<div style="font-size:9px;color:#32B8C6;text-align:right;padding:2px 4px 0 0;font-weight:700;letter-spacing:.04em;">→ VIEW DETAIL</div>'
-                                f'</div>',
-                                unsafe_allow_html=True,
-                            )
+                            st.markdown(_mk_card_html, unsafe_allow_html=True)
+                            if st.button("→ View Detail", key=f"vd_m_{_mri}_{_mi}_{_mk['label'].replace(' ','_')}", use_container_width=True):
+                                st.session_state["pending_tab_nav"] = _mk_tab_idx
+                                st.rerun()
                         with _mcc:
                             _mspk = _mk.get("sparkline") or []
                             st.plotly_chart(
@@ -16320,6 +16467,25 @@ st.markdown(
     '</div>'
     '<div style="font-size:10px;opacity:0.30;margin-top:4px;">'
     'Data sources: STR · Datafy · CoStar · Later.com · Visit California · FRED · EIA · TSA · NOAA · Census ACS · BLS · Open-Meteo · Google Trends'
+    '</div>'
+    '<div style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;">'
+    '<a href="https://github.com/gloconllc" target="_blank" rel="noopener" '
+    'style="display:flex;align-items:center;gap:6px;text-decoration:none;opacity:0.45;transition:opacity .2s;" '
+    'onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'0.45\'">'
+    '<img src="https://avatars.githubusercontent.com/u/233848167?v=4" '
+    'style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);" alt="GloCon Solutions LLC"/>'
+    '<span style="font-size:11px;color:#94A3B8;">GloCon Solutions LLC</span>'
+    '</a>'
+    '<a href="https://streamlit.io" target="_blank" rel="noopener" '
+    'style="display:flex;align-items:center;gap:6px;text-decoration:none;opacity:0.35;transition:opacity .2s;" '
+    'onmouseover="this.style.opacity=\'0.75\'" onmouseout="this.style.opacity=\'0.35\'">'
+    '<svg width="18" height="10" viewBox="0 0 303 165" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    '<path d="M151.478 102.737L98.4421 74.7024L6.37999 26.0452C2.68239 24.3645 -0.763116 27.7259 0.497434 31.0874L47.4067 150.73C49.4824 155.571 53.6842 158.327 58.2558 159.411C121.295 166.446 181.803 166.446 240.926 160C243.01 159.899 245.973 159.274 248.083 158.45C251.371 156.354 251.986 155.857 251.986 155.857L151.478 102.737Z" fill="#FAFAFA"/>'
+    '<path d="M296.729 26.0464L204.549 74.7036L255.744 150.95L302.536 31.0886C303.712 27.391 300.098 24.1976 296.729 26.0464" fill="#A3A8B8"/>'
+    '<path d="M156.386 2.91088C154.033 -0.526222 148.906 -0.526222 146.638 2.91088L98.4424 74.7035L151.478 102.738L251.986 155.857C253.658 154.001 255.742 150.95 204.547 74.7035L156.386 2.91088Z" fill="#D5DAE5"/>'
+    '</svg>'
+    '<span style="font-size:11px;color:#94A3B8;">Built with Streamlit</span>'
+    '</a>'
     '</div>'
     '</div>',
     unsafe_allow_html=True,
