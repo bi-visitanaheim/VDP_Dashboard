@@ -10452,6 +10452,117 @@ with tab_fo:
             if all_sources:
                 st.caption(f"Data sources: {', '.join(sorted(s.strip() for s in all_sources if s.strip()))}")
 
+    # ── 6-Month Forward Demand Calendar ─────────────────────────────────────
+    st.markdown(sec_div("📅 2026 Forward Demand Outlook"), unsafe_allow_html=True)
+    st.markdown(
+        '<div style="font-size:12px;color:#5A7A95;margin-bottom:14px;">'
+        'Monthly demand forecast through Oct 2026 — based on historical STR compression patterns, '
+        'seasonal indices, and known event anchors. Use for campaign planning and rate strategy.</div>',
+        unsafe_allow_html=True,
+    )
+    try:
+        from datetime import date as _cal_date
+        import calendar as _cal_module
+        _today_cal = _cal_date.today()
+
+        # Build 7-month outlook: current month through Oct 2026
+        _fwd_months = []
+        _m = _today_cal.replace(day=1)
+        for _ in range(7):
+            _fwd_months.append(_m)
+            _yr = _m.year + (_m.month // 12)
+            _mo = (_m.month % 12) + 1
+            _m = _m.replace(year=_yr, month=_mo)
+
+        # Historical compression by month (from kpi_daily_summary)
+        _hist_comp = {}
+        if not df_kpi.empty:
+            _kdf = df_kpi.copy()
+            _kdf["month"] = pd.to_datetime(_kdf["as_of_date"], errors="coerce").dt.month
+            _kdf["is_comp"] = (_kdf["occ_pct"] >= 80).astype(int)
+            _monthly_c = _kdf.groupby("month")["is_comp"].mean()
+            _hist_comp = _monthly_c.to_dict()
+
+        # Events in the forward window
+        _fwd_events: dict = {}
+        if not df_vdp_events.empty:
+            _upcoming = df_vdp_events[
+                df_vdp_events["event_date"] >= str(_today_cal)
+            ].copy()
+            for _, _ev in _upcoming.iterrows():
+                try:
+                    _ev_d = _cal_date.fromisoformat(str(_ev["event_date"])[:10])
+                    _ev_key = (_ev_d.year, _ev_d.month)
+                    if _ev_key not in _fwd_events:
+                        _fwd_events[_ev_key] = []
+                    _fwd_events[_ev_key].append({
+                        "name": str(_ev.get("event_name", "")),
+                        "is_major": int(_ev.get("is_major", 0)),
+                    })
+                except Exception:
+                    pass
+
+        # Seasonal demand tiers for OC coastal: 1=lowest, 5=highest
+        _season_idx = {1: 2, 2: 2, 3: 3, 4: 3, 5: 4, 6: 5, 7: 5, 8: 5, 9: 4, 10: 4, 11: 3, 12: 3}
+        _tier_color = {
+            1: ("rgba(99,102,241,0.15)", "#818CF8", "Off-Peak"),
+            2: ("rgba(99,102,241,0.20)", "#818CF8", "Shoulder"),
+            3: ("rgba(251,146,60,0.18)", "#FB923C", "Secondary Peak"),
+            4: ("rgba(16,185,129,0.20)", "#34D399", "High Season"),
+            5: ("rgba(239,68,68,0.20)",  "#F87171", "Peak / Compression"),
+        }
+
+        # ADR seasonal multipliers (relative to base $440)
+        _adr_base = m.get("adr_30", 440) if m else 440
+        _adr_mult = {1: 0.82, 2: 0.85, 3: 0.92, 4: 0.96, 5: 1.05,
+                     6: 1.18, 7: 1.25, 8: 1.22, 9: 1.10, 10: 1.05, 11: 0.90, 12: 0.88}
+
+        # Render calendar cards
+        _cal_cols = st.columns(min(4, len(_fwd_months)))
+        for _ci, _fm in enumerate(_fwd_months):
+            with _cal_cols[_ci % 4]:
+                _mo_name = _fm.strftime("%b %Y")
+                _tier    = _season_idx.get(_fm.month, 3)
+                _bg, _ac, _tier_lbl = _tier_color[_tier]
+                _hist_pct = _hist_comp.get(_fm.month, 0)
+                _comp_bar_w = int(_hist_pct * 100)
+                _proj_adr   = _adr_base * _adr_mult.get(_fm.month, 1.0)
+                _evts       = _fwd_events.get((_fm.year, _fm.month), [])
+                _evt_html   = ""
+                for _ev in _evts[:2]:  # max 2 events shown
+                    _ev_icon = "🎸" if "ohana" in _ev["name"].lower() else (
+                               "🎵" if _ev["is_major"] else "📅")
+                    _ev_col  = "#FB923C" if _ev["is_major"] else "#64748B"
+                    _evt_html += (
+                        f'<div style="font-size:9px;color:{_ev_col};font-weight:600;'
+                        f'margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+                        f'{_ev_icon} {_ev["name"]}</div>'
+                    )
+                _is_current = (_fm.year == _today_cal.year and _fm.month == _today_cal.month)
+                _border_extra = "border:2px solid #22D3EE;" if _is_current else "border:1px solid rgba(255,255,255,0.08);"
+                st.markdown(
+                    f'<div style="padding:14px 14px 10px 14px;border-radius:12px;'
+                    f'background:{_bg};{_border_extra}margin-bottom:8px;">'
+                    f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+                    f'<div style="font-size:12px;font-weight:800;color:#F8FAFC;">{_mo_name}</div>'
+                    + (f'<span style="font-size:9px;color:#22D3EE;font-weight:700;">NOW</span>' if _is_current else '')
+                    + f'</div>'
+                    f'<div style="font-size:9px;font-weight:700;color:{_ac};text-transform:uppercase;'
+                    f'letter-spacing:.07em;margin-bottom:6px;">{_tier_lbl}</div>'
+                    f'<div style="font-size:18px;font-weight:900;color:#FFFFFF;font-family:\'Outfit\',sans-serif;">'
+                    f'${_proj_adr:,.0f} <span style="font-size:10px;color:#64748B;font-weight:400;">proj. ADR</span></div>'
+                    f'<div style="margin-top:6px;">'
+                    f'<div style="font-size:9px;color:#94A3B8;margin-bottom:2px;">Historical compression</div>'
+                    f'<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:3px;">'
+                    f'<div style="width:{_comp_bar_w}%;height:100%;background:{_ac};border-radius:3px;"></div>'
+                    f'</div></div>'
+                    f'{_evt_html}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+    except Exception:
+        pass
+
     # ── Forward Signals Dashboard ──────────────────────────────────────────
     st.markdown(_sh("📊", "Forward Signal Dashboard", "blue", "Leading indicators powering the AI outlook"), unsafe_allow_html=True)
 
@@ -12394,6 +12505,78 @@ with tab_ei:
         "ei_event", _ei_next_steps, _ei_questions,
         "Event ROI: Ohana Fest $14.6M direct spend, 3.2x multiplier, +$139 ADR lift, 68% OOS attendance."
     )
+
+    # ── Ohana Fest 2026 ROI Impact Banner ─────────────────────────────────────
+    try:
+        from datetime import date as _date
+        _today = _date.today()
+        _ohana_2026 = _date(2026, 9, 25)
+        _memday_2026 = _date(2026, 5, 25)
+        _days_ohana = (_ohana_2026 - _today).days
+        _days_memday = (_memday_2026 - _today).days
+
+        # Ohana Fest ROI card
+        if _days_ohana > 0:
+            st.markdown(
+                f'<div style="margin-bottom:16px;padding:20px 24px;'
+                f'background:linear-gradient(135deg,rgba(251,146,60,0.12) 0%,rgba(239,68,68,0.08) 100%);'
+                f'border:1px solid rgba(251,146,60,0.30);border-radius:16px;'
+                f'border-left:5px solid #F97316;">'
+                f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
+                f'<span style="font-size:24px;">🎸</span>'
+                f'<div>'
+                f'<div style="font-size:13px;font-weight:800;color:#FED7AA;letter-spacing:.06em;text-transform:uppercase;">Ohana Fest 2026 — Sep 25–28</div>'
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">Dana Point\'s #1 hotel demand driver · {_days_ohana} days away</div>'
+                f'</div>'
+                f'<span style="margin-left:auto;background:rgba(249,115,22,0.20);color:#FB923C;'
+                f'font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;'
+                f'padding:4px 12px;border-radius:99px;border:1px solid rgba(249,115,22,0.40);">'
+                f'⏳ {_days_ohana} DAYS</span>'
+                f'</div>'
+                f'<div style="display:flex;flex-wrap:wrap;gap:10px;">'
+                + "".join([
+                    f'<div style="flex:1;min-width:110px;background:rgba(255,255,255,0.04);'
+                    f'border-radius:10px;padding:12px 14px;border:1px solid rgba(255,255,255,0.08);">'
+                    f'<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94A3B8;margin-bottom:5px;">{lbl}</div>'
+                    f'<div style="font-size:20px;font-weight:900;font-family:\'Outfit\',sans-serif;color:#FFFFFF;">{val}</div>'
+                    f'<div style="font-size:10px;color:#64748B;margin-top:3px;">{sub}</div></div>'
+                    for lbl, val, sub in [
+                        ("Event Expenditure",  "$14.6M",  "direct event spend"),
+                        ("Destination Spend",  "$18.4M",  "total destination impact"),
+                        ("Spend Multiplier",   "3.2×",    "of direct expenditure"),
+                        ("ADR Lift",           "+$139",   "$542 vs $403 baseline"),
+                        ("OOS Attendance",     "68%",     "out-of-state visitors"),
+                        ("Avg Stay Spend",     "$1,219",  "per accommodation trip"),
+                    ]
+                ])
+                + f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
+        # Memorial Day booking alert
+        if 0 < _days_memday <= 90:
+            _memday_adr_premium = m.get("adr_30", 440) * 0.265 if m else 116  # ~26.5% premium
+            st.markdown(
+                f'<div style="margin-bottom:16px;padding:16px 20px;'
+                f'background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);'
+                f'border-radius:12px;border-left:4px solid #818CF8;'
+                f'display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
+                f'<span style="font-size:22px;">🏖️</span>'
+                f'<div style="flex:1;">'
+                f'<div style="font-size:12px;font-weight:800;color:#C7D2FE;">Memorial Day Weekend — May 23–25, 2026</div>'
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:3px;">'
+                f'{_days_memday} days away · Book now for best rates · '
+                f'Expected ADR premium: ~+${_memday_adr_premium:.0f} vs. shoulder season</div>'
+                f'</div>'
+                f'<span style="background:rgba(99,102,241,0.20);color:#A5B4FC;'
+                f'font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;'
+                f'padding:4px 12px;border-radius:99px;border:1px solid rgba(99,102,241,0.40);">'
+                f'🔴 HIGH DEMAND</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        pass
 
     # ── Headline KPIs — Event Calendar Snapshot ────────────────────────────────
     _ei_summary_cols = st.columns(4)
@@ -15144,6 +15327,75 @@ with tab_cs:
                     st.caption(f"Correlation analysis unavailable: {_corr_err}")
             else:
                 st.info("Load both EIA gas prices and STR KPIs to see correlation analysis.")
+
+        # ── Google Search Demand Signal ───────────────────────────────────────────
+        st.markdown(sec_div("🔍 Google Search Demand — Leading Indicator"), unsafe_allow_html=True)
+        st.markdown(_sh("🔍", "Search Intent Trends", "teal", "BOOKING LEAD SIGNAL · 2–6 weeks ahead of demand"), unsafe_allow_html=True)
+        st.caption(
+            "Google Trends index (0–100). Search interest in 'dana point hotel' and 'ohana fest' leads hotel bookings "
+            "by 2–6 weeks — the earliest consumer demand signal available. "
+            "Rising 'ohana fest' searches before September = advance booking pressure."
+        )
+        if not df_trends.empty:
+            try:
+                _key_terms = ["dana point hotel", "ohana fest", "laguna beach hotel", "newport beach hotel"]
+                _term_palette = {"dana point hotel": "#22D3EE", "ohana fest": "#FB923C",
+                                 "laguna beach hotel": "#A78BFA", "newport beach hotel": "#34D399"}
+                fig_sd = go.Figure()
+                for _kterm in _key_terms:
+                    _td2 = df_trends[df_trends["term"] == _kterm].copy()
+                    if _td2.empty:
+                        continue
+                    _td2 = _td2.sort_values("week_date").tail(52)  # last 12 months
+                    _tc = _term_palette.get(_kterm, "#94A3B8")
+                    _lw = 3 if _kterm in ("dana point hotel", "ohana fest") else 1.5
+                    _ld = "solid" if _kterm in ("dana point hotel", "ohana fest") else "dot"
+                    fig_sd.add_trace(go.Scatter(
+                        x=_td2["week_date"], y=_td2["interest_idx"],
+                        name=_kterm, mode="lines",
+                        line=dict(color=_tc, width=_lw, dash=_ld),
+                        fill="tozeroy" if _kterm == "dana point hotel" else None,
+                        fillcolor="rgba(34,211,238,0.05)" if _kterm == "dana point hotel" else None,
+                        hovertemplate=f"<b>%{{x|%b %d}}</b><br>{_kterm}: %{{y}}<extra></extra>",
+                    ))
+                # Add Ohana Fest vertical marker
+                fig_sd.add_vline(
+                    x="2026-09-25", line_dash="dash", line_color="#FB923C", line_width=1.5,
+                    annotation_text="🎸 Ohana Fest", annotation_position="top right",
+                    annotation_font_size=10, annotation_font_color="#FB923C",
+                )
+                # Add Memorial Day marker
+                fig_sd.add_vline(
+                    x="2026-05-25", line_dash="dash", line_color="#818CF8", line_width=1,
+                    annotation_text="🏖️ Memorial Day", annotation_position="top left",
+                    annotation_font_size=9, annotation_font_color="#818CF8",
+                )
+                fig_sd.update_layout(
+                    title="Search Intent: Dana Point Hotel vs. Competitors (Last 12 Months)",
+                    yaxis_title="Google Search Index (0–100)",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, font=dict(size=10)),
+                )
+                st.plotly_chart(style_fig(fig_sd, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+
+                # Peak interest summary
+                _sd_cols = st.columns(4)
+                for _sdi, _kterm in enumerate(["dana point hotel", "ohana fest", "laguna beach hotel", "dana point beach"]):
+                    _tdk = df_trends[df_trends["term"] == _kterm].tail(4)
+                    if _tdk.empty:
+                        continue
+                    _avg4w = _tdk["interest_idx"].mean()
+                    _pk    = df_trends[df_trends["term"] == _kterm]["interest_idx"].max()
+                    with _sd_cols[_sdi]:
+                        st.metric(
+                            _kterm,
+                            f"{int(_avg4w)}/100",
+                            f"Peak: {int(_pk)}/100",
+                            help=f"4-week avg search index for '{_kterm}'"
+                        )
+            except Exception:
+                pass
+        else:
+            st.info("Run the pipeline to fetch Google Trends search demand data.")
 
         # ── Live Market Intelligence (Perplexity Sonar) ──────────────────────────
         st.markdown(sec_div("🌐 Live Market Intelligence"), unsafe_allow_html=True)
