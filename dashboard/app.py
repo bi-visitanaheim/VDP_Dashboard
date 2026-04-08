@@ -573,7 +573,7 @@ st.markdown("""
   ════════════════════════════════════════════════════════════════════════ */
 
   /* ── Google Fonts ────────────────────────────────────────────────────── */
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
   /* ── Design Tokens — Coastal Slate (readable, bright ocean dark) ─────────── */
   :root {
@@ -942,14 +942,28 @@ st.markdown("""
   .hero-banner {
     background: #0F2540 !important;
     background-image:
-      radial-gradient(circle at 78% 18%, rgba(0,212,200,0.22) 0%, transparent 50%),
-      radial-gradient(circle at 8%  80%, rgba(56,189,248,0.12) 0%, transparent 42%),
-      linear-gradient(160deg, #0F2540 0%, #132D50 60%, #172F52 100%) !important;
+      radial-gradient(circle at 78% 18%, rgba(0,212,200,0.24) 0%, transparent 50%),
+      radial-gradient(circle at 8%  80%, rgba(56,189,248,0.14) 0%, transparent 42%),
+      radial-gradient(circle at 50% 120%, rgba(167,139,250,0.10) 0%, transparent 40%),
+      linear-gradient(160deg, #0B1E38 0%, #132D50 60%, #162E52 100%) !important;
     border-radius: 0 !important;
     margin: -1rem -1rem 0 -1rem;
     padding: 26px 36px 22px 36px;
-    border-bottom: 1px solid rgba(0,212,200,0.18) !important;
+    border-bottom: 1px solid rgba(0,212,200,0.20) !important;
     overflow: hidden;
+    /* Dot grid ambient pattern */
+    --dot-color: rgba(255,255,255,0.04);
+    --dot-size: 1.5px;
+    --dot-space: 22px;
+  }
+  .hero-banner::before {
+    /* Override — use animated horizontal light bar instead */
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(0,212,200,0.80) 20%,
+      rgba(56,189,248,0.60) 50%,
+      rgba(0,212,200,0.80) 80%,
+      transparent 100%) !important;
   }
   .hero-banner::before {
     content: '';
@@ -2470,7 +2484,725 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# ─── Dark mode: deep ocean ambient glow injected via CSS tokens above ─────────
+# ─── PULSE v6 — Premium Interaction Layer ─────────────────────────────────────
+# Godly.website-inspired: scroll animations, counter fx, ambient effects, glass cards
+st.markdown("""
+<style>
+  /* ════════════════════════════════════════════════════════════════
+     PULSE v6 — Interaction & Animation System
+     Scroll-reveal · Counter animation · Ambient glow · Glass cards
+  ════════════════════════════════════════════════════════════════ */
+
+  /* ── Animated background dot grid (hero ambient) ─────────────── */
+  @keyframes dot-drift {
+    0%   { background-position: 0 0; }
+    100% { background-position: 40px 40px; }
+  }
+  @keyframes aurora-shift {
+    0%,100% { opacity: 0.18; transform: translate(0,0) scale(1); }
+    33%      { opacity: 0.28; transform: translate(30px,-20px) scale(1.06); }
+    66%      { opacity: 0.22; transform: translate(-20px,15px) scale(0.97); }
+  }
+  @keyframes aurora-shift-2 {
+    0%,100% { opacity: 0.12; transform: translate(0,0) scale(1); }
+    50%      { opacity: 0.22; transform: translate(-40px,25px) scale(1.09); }
+  }
+
+  /* ── Scroll-reveal animation classes ────────────────────────────── */
+  @keyframes pulse-fade-up {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes pulse-scale-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .reveal-up   { opacity: 0; animation: pulse-fade-up 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .reveal-fade { opacity: 0; animation: pulse-fade-in 0.45s ease forwards; }
+  .reveal-scale { opacity: 0; animation: pulse-scale-in 0.40s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.12s; }
+  .stagger-3 { animation-delay: 0.20s; }
+  .stagger-4 { animation-delay: 0.28s; }
+  .stagger-5 { animation-delay: 0.36s; }
+
+  /* ── Live pulse ring (data freshness dots) ───────────────────── */
+  @keyframes live-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(0,212,200,0.55); }
+    70%  { box-shadow: 0 0 0 8px rgba(0,212,200,0); }
+    100% { box-shadow: 0 0 0 0 rgba(0,212,200,0); }
+  }
+  .live-dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: #00D4C8; border-radius: 50%;
+    animation: live-ring 2s ease-in-out infinite;
+    vertical-align: middle; margin-right: 5px;
+  }
+  .live-dot.green  { background: #10B981; animation: none;
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.22); }
+  .live-dot.amber  { background: #F5B940;
+    animation: none; box-shadow: 0 0 0 3px rgba(245,185,64,0.22); }
+  .live-dot.red    { background: #EF4444;
+    animation: none; box-shadow: 0 0 0 3px rgba(239,68,68,0.22); }
+
+  /* ── Enhanced glass card ─────────────────────────────────────── */
+  .glass-card {
+    background: rgba(36,67,102,0.72);
+    backdrop-filter: blur(18px) saturate(1.5);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08);
+    transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
+                box-shadow 0.28s cubic-bezier(0.22,1,0.36,1);
+  }
+  .glass-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,212,200,0.22),
+                inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+
+  /* ── Noise texture overlay (premium grain) ───────────────────── */
+  .noise-overlay::after {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 128px 128px;
+    pointer-events: none;
+    border-radius: inherit;
+    opacity: 0.45;
+    mix-blend-mode: overlay;
+  }
+
+  /* ── Enhanced KPI card — neon glow on hover ──────────────────── */
+  .kpi-card {
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 50% 0%, rgba(0,212,200,0.10) 0%, transparent 65%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+  }
+  .kpi-card:hover::after { opacity: 1; }
+
+  /* ── Animated number counter (JS handles the actual counting) ── */
+  .counter-num {
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s ease;
+  }
+
+  /* ── Shimmer skeleton loading ────────────────────────────────── */
+  @keyframes shimmer-slide {
+    0%   { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg,
+      rgba(255,255,255,0.04) 0%,
+      rgba(255,255,255,0.10) 50%,
+      rgba(255,255,255,0.04) 100%);
+    background-size: 800px 100%;
+    animation: shimmer-slide 1.6s linear infinite;
+    border-radius: 8px;
+    min-height: 18px;
+  }
+
+  /* ── Gradient border cards ───────────────────────────────────── */
+  .grad-border-card {
+    position: relative;
+    border-radius: 16px;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(0,212,200,0.40) 0%, rgba(56,189,248,0.20) 50%, rgba(167,139,250,0.25) 100%);
+  }
+  .grad-border-card > * {
+    background: var(--dp-card);
+    border-radius: 15px;
+  }
+
+  /* ── Data signal card — animated border ─────────────────────── */
+  @keyframes border-sweep {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .signal-card {
+    position: relative;
+    border-radius: 14px;
+    background: var(--dp-card);
+    padding: 18px 20px;
+    overflow: hidden;
+  }
+  .signal-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 14px;
+    padding: 1px;
+    background: linear-gradient(270deg, #00D4C8, #38BDF8, #A78BFA, #00D4C8);
+    background-size: 300% 300%;
+    animation: border-sweep 5s ease infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* ── Enhanced tab bar — sliding pill ────────────────────────── */
+  [data-testid="stTabs"] [role="tablist"] {
+    position: relative;
+    gap: 2px !important;
+  }
+  button[data-baseweb="tab"] {
+    border-radius: 8px 8px 0 0 !important;
+    transition: background 0.22s ease, color 0.22s ease !important;
+    padding: 8px 14px !important;
+  }
+  button[data-baseweb="tab"][aria-selected="true"] {
+    background: rgba(0,212,200,0.10) !important;
+    color: var(--dp-teal) !important;
+  }
+  button[data-baseweb="tab"]:hover:not([aria-selected="true"]) {
+    background: rgba(255,255,255,0.05) !important;
+    color: var(--dp-text-2) !important;
+  }
+
+  /* ── Chart container enhancement ────────────────────────────── */
+  .chart-wrap {
+    background: rgba(22,40,66,0.65);
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.07);
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.28);
+    backdrop-filter: blur(4px);
+  }
+  .chart-header {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: .10em;
+    color: var(--dp-text-3);
+    padding: 14px 18px 0 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chart-header .ch-title {
+    color: var(--dp-text-1);
+    font-size: 13.5px; letter-spacing: -.01em;
+    font-weight: 700; text-transform: none;
+  }
+  .chart-header .ch-badge {
+    margin-left: auto; font-size: 10px; font-weight: 700;
+    padding: 2px 9px; border-radius: 20px;
+    background: rgba(0,212,200,0.10); color: var(--dp-teal);
+    border: 1px solid rgba(0,212,200,0.22);
+    text-transform: uppercase; letter-spacing: .08em;
+  }
+
+  /* ── Metric number glow on hover ─────────────────────────────── */
+  .kpi-card:hover .kpi-value {
+    text-shadow: 0 0 24px rgba(0,212,200,0.35);
+    transition: text-shadow 0.3s ease;
+  }
+
+  /* ── Animated section label line ─────────────────────────────── */
+  .section-label::after {
+    animation: pulse-fade-in 0.8s ease 0.2s both;
+  }
+
+  /* ── Tooltip enhancement ──────────────────────────────────────── */
+  .dp-tooltip {
+    position: relative; display: inline-block;
+    cursor: help;
+  }
+  .dp-tooltip-content {
+    display: none;
+    position: absolute; bottom: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%);
+    background: #1A3756; border: 1px solid rgba(0,212,200,0.30);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 11px; color: var(--dp-text-2);
+    white-space: nowrap; z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.45);
+    backdrop-filter: blur(10px);
+  }
+  .dp-tooltip:hover .dp-tooltip-content { display: block; }
+
+  /* ── Status chip improvement ──────────────────────────────────── */
+  .vdp-status-chip {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .vdp-status-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+
+  /* ── Data table hover rows ────────────────────────────────────── */
+  [data-testid="stDataFrame"] tbody tr:hover td {
+    background: rgba(0,212,200,0.05) !important;
+  }
+
+  /* ── Expander enhancement ────────────────────────────────────── */
+  [data-testid="stExpander"] {
+    transition: box-shadow 0.22s ease, border-color 0.22s ease;
+  }
+  [data-testid="stExpander"]:hover {
+    border-color: rgba(0,212,200,0.25) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.28) !important;
+  }
+
+  /* ── Focus ring on interactive elements ──────────────────────── */
+  button:focus-visible, [role="tab"]:focus-visible {
+    outline: 2px solid rgba(0,212,200,0.55) !important;
+    outline-offset: 2px;
+  }
+
+  /* ── Insight card stagger reveal ─────────────────────────────── */
+  .insight-card { animation: pulse-fade-up 0.45s cubic-bezier(0.22,1,0.36,1) both; }
+
+  /* ── Horizontal rule aesthetic ───────────────────────────────── */
+  hr {
+    border: none !important;
+    border-top: 1px solid rgba(0,212,200,0.15) !important;
+    margin: 20px 0 !important;
+  }
+
+  /* ── Quick-action button glow ────────────────────────────────── */
+  .vdp-qa-btn.primary {
+    box-shadow: 0 0 0 0 rgba(0,212,200,0.40);
+    animation: live-ring 2.5s ease-in-out infinite;
+  }
+
+</style>
+<script>
+/* ── PULSE v6 Interaction Engine ─────────────────────────────────
+   1. Scroll-reveal (IntersectionObserver)
+   2. Animated number counter
+   3. Stagger children of .stagger-children
+   4. Tab bar pill indicator
+   ─────────────────────────────────────────────────────────────── */
+(function(){
+
+  /* 1 ─ Intersection-Observer scroll-reveal ─────────────────── */
+  function initScrollReveal(){
+    if(!window.IntersectionObserver) return;
+    var items = document.querySelectorAll(
+      '.kpi-card, .insight-card, .event-stat, .src-card, ' +
+      '.glass-card, .signal-card, .sh-block, .tab-summary, ' +
+      '.dp-callout, .dp-callout-amber, .dp-callout-purple, .dp-callout-green'
+    );
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          var el = e.target;
+          if(!el.dataset.revealed){
+            el.dataset.revealed = '1';
+            el.style.animation = 'pulse-fade-up 0.50s cubic-bezier(0.22,1,0.36,1) both';
+          }
+          io.unobserve(el);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+    items.forEach(function(el){
+      if(!el.dataset.revealed){
+        el.style.opacity = '0';
+        io.observe(el);
+      }
+    });
+  }
+
+  /* 2 ─ Number counter animation ────────────────────────────── */
+  function animateCounter(el){
+    var raw = el.textContent || '';
+    var prefix = raw.match(/^[^0-9.,-]*/)[0];
+    var suffix = raw.match(/[^0-9.,]*$/)[0];
+    var numStr = raw.replace(prefix,'').replace(suffix,'').replace(/,/g,'');
+    var target = parseFloat(numStr);
+    if(isNaN(target) || target === 0) return;
+    var decimals = (numStr.indexOf('.') >= 0) ? numStr.split('.')[1].length : 0;
+    var duration = Math.min(1200, Math.max(600, target * 2));
+    var start = null;
+    function step(ts){
+      if(!start) start = ts;
+      var progress = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - progress, 3);
+      var cur = target * eased;
+      var formatted = decimals > 0
+        ? cur.toFixed(decimals)
+        : Math.floor(cur).toLocaleString();
+      el.textContent = prefix + formatted + suffix;
+      if(progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function initCounters(){
+    if(!window.IntersectionObserver) return;
+    var nums = document.querySelectorAll('.kpi-value, .event-val, [data-counter]');
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting && !e.target.dataset.counted){
+          e.target.dataset.counted = '1';
+          animateCounter(e.target);
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.5 });
+    nums.forEach(function(el){ io.observe(el); });
+  }
+
+  /* 3 ─ Stagger children animation ──────────────────────────── */
+  function initStagger(){
+    document.querySelectorAll('.stagger-children').forEach(function(parent){
+      var kids = parent.children;
+      Array.from(kids).forEach(function(child, i){
+        child.style.opacity = '0';
+        child.style.animation = 'pulse-fade-up 0.45s cubic-bezier(0.22,1,0.36,1) '
+          + (i * 0.08) + 's both';
+      });
+    });
+  }
+
+  /* 4 ─ Ambient aurora effect enhancement ───────────────────── */
+  function initAuroraHero(){
+    var hero = document.querySelector('.hero-banner');
+    if(!hero) return;
+    hero.style.position = 'relative';
+    hero.style.overflow = 'hidden';
+    // Add a secondary aurora orb if not already present
+    if(!hero.querySelector('.hero-aurora-2')){
+      var orb = document.createElement('div');
+      orb.className = 'hero-aurora-2';
+      orb.style.cssText = [
+        'position:absolute','bottom:-60px','left:-40px',
+        'width:280px','height:280px','border-radius:50%',
+        'background:radial-gradient(circle,rgba(56,189,248,0.14) 0%,transparent 70%)',
+        'pointer-events:none',
+        'animation:aurora-shift-2 7s ease-in-out infinite'
+      ].join(';');
+      hero.appendChild(orb);
+    }
+  }
+
+  /* 5 ─ Live status dots pulse (sidebar pipeline dots) ──────── */
+  function initLiveDots(){
+    // Find sidebar text nodes containing green circle emoji and add pulse
+    document.querySelectorAll('[data-testid="stSidebar"] p, [data-testid="stSidebar"] span').forEach(function(el){
+      if(el.textContent && el.textContent.includes('🟢')){
+        el.style.animation = 'none'; // handled by sidebar CSS
+      }
+    });
+  }
+
+  /* Bootstrap — run after DOM is ready, re-run on Streamlit rerenders */
+  function bootstrap(){
+    initScrollReveal();
+    initCounters();
+    initStagger();
+    initAuroraHero();
+    initLiveDots();
+  }
+
+  if(document.readyState !== 'loading'){
+    bootstrap();
+    setTimeout(bootstrap, 800);
+    setTimeout(bootstrap, 2000);
+  } else {
+    document.addEventListener('DOMContentLoaded', function(){
+      bootstrap();
+      setTimeout(bootstrap, 800);
+    });
+  }
+
+  /* Re-run on Streamlit dynamic updates (tab switches, rerenders) */
+  if(window.MutationObserver){
+    var _lastRun = 0;
+    new MutationObserver(function(){
+      var now = Date.now();
+      if(now - _lastRun > 400){
+        _lastRun = now;
+        setTimeout(bootstrap, 100);
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
+})();
+</script>
+""", unsafe_allow_html=True)
+
+# ─── Godly.website Intelligence — v6.1 premium upgrade ───────────────────────
+# Applied from: Linear, Vercel, Railway, Twingate, Plausible, Resend (April 2026 research)
+st.markdown("""
+<style>
+  /* ── JetBrains Mono for KPI numbers (Twingate/Linear standard) ── */
+  .kpi-value,
+  [data-testid="stMetricValue"],
+  div[data-testid="metric-container"] [data-testid="stMetricValue"],
+  .hero-stat-val,
+  .event-val,
+  .pulse-ticker-val {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Outfit', monospace !important;
+    font-variant-numeric: tabular-nums !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  /* ── Chart container glow (Railway pattern — teal instead of indigo) ── */
+  [data-testid="stPlotlyChart"] {
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    box-shadow:
+      0 4px 24px rgba(0,0,0,0.35),
+      0 0 80px rgba(0,212,200,0.05),
+      0 0 0 1px rgba(255,255,255,0.03) !important;
+    transition: box-shadow 0.30s ease !important;
+  }
+  [data-testid="stPlotlyChart"]:hover {
+    box-shadow:
+      0 8px 40px rgba(0,0,0,0.45),
+      0 0 120px rgba(0,212,200,0.09),
+      0 0 0 1px rgba(0,212,200,0.10) !important;
+  }
+
+  /* ── Streamlit native metric delta — colored badge (Plausible style) ── */
+  [data-testid="stMetricDelta"] {
+    border-radius: 5px !important;
+    padding: 2px 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+  }
+  [data-testid="stMetricDelta"][data-direction="positive"],
+  [data-testid="stMetricDelta"].positive {
+    background: rgba(16,185,129,0.12) !important;
+    color: #10B981 !important;
+  }
+  [data-testid="stMetricDelta"][data-direction="negative"],
+  [data-testid="stMetricDelta"].negative {
+    background: rgba(239,68,68,0.12) !important;
+    color: #EF4444 !important;
+  }
+
+  /* ── Staggered slideUp on Streamlit native metrics (Linear style) ── */
+  div[data-testid="metric-container"] {
+    animation: pulse-fade-up 0.45s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(1) div[data-testid="metric-container"] { animation-delay: 0.04s; }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(2) div[data-testid="metric-container"] { animation-delay: 0.10s; }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(3) div[data-testid="metric-container"] { animation-delay: 0.16s; }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(4) div[data-testid="metric-container"] { animation-delay: 0.22s; }
+  div[data-testid="stHorizontalBlock"] > div:nth-child(5) div[data-testid="metric-container"] { animation-delay: 0.28s; }
+
+  /* ── Rotating ambient conic gradient (Vercel hero pattern, subtle) ── */
+  [data-testid="stAppViewContainer"]::before {
+    content: '';
+    position: fixed;
+    top: -40%; left: -40%;
+    width: 180%; height: 180%;
+    background: conic-gradient(
+      from 0deg at 65% 35%,
+      rgba(0,212,200,0.04) 0deg,
+      rgba(56,189,248,0.03) 90deg,
+      rgba(167,139,250,0.03) 180deg,
+      rgba(0,212,200,0.04) 360deg
+    );
+    animation: slowSpin 40s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes slowSpin { to { transform: rotate(360deg); } }
+
+  /* ── Vercel-style subtle dot grid on hero ── */
+  .hero-banner {
+    background-image:
+      radial-gradient(circle at 78% 18%, rgba(0,212,200,0.24) 0%, transparent 50%),
+      radial-gradient(circle at 8% 80%, rgba(56,189,248,0.14) 0%, transparent 42%),
+      radial-gradient(circle at 50% 120%, rgba(167,139,250,0.10) 0%, transparent 40%),
+      radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(160deg, #0B1E38 0%, #132D50 60%, #162E52 100%) !important;
+    background-size: auto, auto, auto, 28px 28px, auto !important;
+  }
+
+  /* ── Railway gradient top-border on insight cards (replaces left bar) ── */
+  .insight-positive::before { background: linear-gradient(90deg, #10B981, #34D399, #10B981) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-warning::before  { background: linear-gradient(90deg, #F5B940, #FCD34D, #F5B940) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-negative::before { background: linear-gradient(90deg, #EF4444, #F87171, #EF4444) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-info::before     { background: linear-gradient(90deg, #00D4C8, #38BDF8, #00D4C8) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  @keyframes border-sweep { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+  /* Adjust insight card padding for top border (was left: 14px indent, now top: 3px bar) */
+  .insight-title { padding-left: 0 !important; padding-top: 8px !important; }
+  .insight-body  { padding-left: 0 !important; }
+
+  /* ── Monospace for data tables (Twingate terminal pattern) ── */
+  [data-testid="stDataFrame"] td,
+  [data-testid="stDataFrame"] th {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+    font-variant-numeric: tabular-nums !important;
+    font-size: 12px !important;
+    letter-spacing: -0.01em !important;
+  }
+  [data-testid="stDataFrame"] th {
+    font-size: 10.5px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    font-weight: 600 !important;
+  }
+
+  /* ── Live pulse on sidebar pipeline green dots (Liveblocks style) ── */
+  [data-testid="stSidebar"] p {
+    font-size: 12px !important;
+    line-height: 1.6 !important;
+  }
+
+  /* ── Plotly modebar button enhancement ── */
+  .modebar-btn path { fill: rgba(200,230,255,0.55) !important; }
+  .modebar-btn:hover path { fill: #00D4C8 !important; }
+
+  /* ── Resend-style warm gradient on AI panel ── */
+  .ai-command-panel {
+    background: linear-gradient(104deg,
+      rgba(0,212,200,0.06) 0%,
+      rgba(56,189,248,0.04) 50%,
+      rgba(167,139,250,0.04) 100%) !important;
+    border: 1px solid rgba(0,212,200,0.22) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 20px rgba(0,0,0,0.25) !important;
+  }
+
+</style>
+""", unsafe_allow_html=True)
+
+# ─── Branded loading splash — shown while Streamlit cold-starts / wakes up ────
+st.markdown("""
+<style>
+  /* Loading splash overlay */
+  #pulse-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse at 75% 10%, rgba(0,212,200,0.18) 0%, transparent 50%),
+      radial-gradient(ellipse at 10% 88%, rgba(56,189,248,0.12) 0%, transparent 45%),
+      linear-gradient(160deg, #0B1E38 0%, #1A3756 60%, #1E3D5E 100%);
+    transition: opacity 0.55s cubic-bezier(0.22,1,0.36,1),
+                visibility 0.55s cubic-bezier(0.22,1,0.36,1);
+  }
+  #pulse-splash.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .splash-wave {
+    font-size: 52px;
+    animation: splash-bob 1.8s ease-in-out infinite;
+    margin-bottom: 18px;
+    filter: drop-shadow(0 0 18px rgba(0,212,200,0.55));
+  }
+  @keyframes splash-bob {
+    0%,100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-8px) scale(1.06); }
+  }
+  .splash-title {
+    font-family: 'Syne', 'Outfit', system-ui, sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: #F4FAFF;
+    letter-spacing: -0.03em;
+    margin-bottom: 4px;
+  }
+  .splash-title span { color: #00D4C8; }
+  .splash-sub {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px;
+    color: rgba(200,224,242,0.60);
+    letter-spacing: 0.04em;
+    margin-bottom: 36px;
+  }
+  /* Animated ring spinner */
+  .splash-spinner {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 3px solid rgba(0,212,200,0.15);
+    border-top-color: #00D4C8;
+    animation: splash-spin 0.9s linear infinite;
+    margin-bottom: 20px;
+  }
+  @keyframes splash-spin { to { transform: rotate(360deg); } }
+  .splash-status {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 12px;
+    color: rgba(200,224,242,0.45);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  /* Animated dots on status text */
+  .splash-status::after {
+    content: '';
+    animation: splash-dots 1.5s steps(4, end) infinite;
+  }
+  @keyframes splash-dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+  }
+</style>
+
+<div id="pulse-splash">
+  <div class="splash-wave">🌊</div>
+  <div class="splash-title">Dana Point <span>PULSE</span></div>
+  <div class="splash-sub">Destination Intelligence Platform</div>
+  <div class="splash-spinner"></div>
+  <div class="splash-status">Loading intelligence</div>
+</div>
+
+<script>
+(function() {
+  // Hide splash once Streamlit has fully hydrated the React tree
+  function hideSplash() {
+    var el = document.getElementById('pulse-splash');
+    if (!el) return;
+    // Check if any Streamlit component has rendered (title, metric, etc.)
+    var ready = document.querySelector(
+      '[data-testid="stAppViewContainer"] [data-testid="stVerticalBlock"] > div,' +
+      '[data-testid="stMain"] h1,' +
+      '[data-testid="stMain"] h2,' +
+      '[data-testid="stMain"] [data-testid="stMetric"]'
+    );
+    if (ready) {
+      el.classList.add('hidden');
+      return;
+    }
+    // Not ready yet — check again shortly
+    setTimeout(hideSplash, 180);
+  }
+  // Start checking after a brief delay (React needs time to mount)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(hideSplash, 400); });
+  } else {
+    setTimeout(hideSplash, 400);
+  }
+  // Hard fallback: always remove after 12s even if check fails
+  setTimeout(function() {
+    var el = document.getElementById('pulse-splash');
+    if (el) el.classList.add('hidden');
+  }, 12000);
+})();
+</script>
+""", unsafe_allow_html=True)
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 ROOT    = Path(__file__).parent.parent                          # project root
@@ -3623,6 +4355,24 @@ def build_prompt(key: str, m: dict) -> str:
             "List your key assumptions, note upcoming seasonal factors, and provide "
             "a bull / base / bear scenario for the next 30 days."
         ),
+        "demo_story": (
+            f"{b}\n"
+            f"• Est. TBID monthly: ${m.get('tbid_monthly',0):,.0f} | 12-mo room rev: ${m.get('rev_12m_total',0):,.0f}\n"
+            f"• 12-mo RevPAR YOY: {m.get('revpar_yoy_12m',0):+.1f}% | ADR YOY: {m.get('adr_yoy_12m',0):+.1f}%\n"
+            f"{_datafy_summary_for_prompt()}"
+            "You are presenting Dana Point PULSE to Visit Dana Point leadership and stakeholders. "
+            "Tell the complete performance story of Dana Point's hotel and visitor economy in 2025–2026. "
+            "Structure your response as:\n\n"
+            "**📊 THE HEADLINE** (1-2 sentences — the single most impressive number and what it means)\n\n"
+            "**🏨 HOTEL PERFORMANCE** (RevPAR, ADR, occupancy — YOY trends, what's driving them)\n\n"
+            "**👥 WHO'S VISITING** (visitor volume, overnight vs. day-trip split, top feeder markets, OOS spend)\n\n"
+            "**💡 HIDDEN SIGNALS** (3 cross-dataset insights that can't be seen in any single data source alone — "
+            "e.g., day-trip conversion opportunity, OOS rate gap, campaign seasonality mismatch)\n\n"
+            "**💰 FISCAL IMPACT** (TBID and TOT revenue estimates, economic multiplier)\n\n"
+            "**🔮 WHAT'S NEXT** (top 3 strategic opportunities for the next 90 days)\n\n"
+            "Be specific, cite numbers, and write for an executive audience unfamiliar with hotel metrics. "
+            "Make it compelling — this is a story of real growth and untapped opportunity."
+        ),
     }
     return p.get(key, f"{b}\n\nProvide a general performance summary for the VDP portfolio.")
 
@@ -3733,6 +4483,45 @@ def local_fallback(key: str, m: dict) -> str:
             f"Key assumptions: no market disruption, seasonal demand strengthening, "
             f"current rate strategy maintained.\n\n"
             f"**→ Action:** Stress-test shoulder-period rate floors against the bear scenario."
+        ),
+        "demo_story": (
+            f"**Dana Point PULSE — Full Performance Story** *(local mode)*\n\n"
+            f"---\n\n"
+            f"## 📊 THE HEADLINE\n\n"
+            f"Dana Point hotels are generating **${m.get('revpar_30',0):.0f} RevPAR** "
+            f"({m.get('revpar_delta',0):+.1f}% vs. prior period) — "
+            f"{'a record pace driven by both pricing power and strong demand.' if m.get('revpar_delta',0) > 0 else 'holding strong in a competitive market.'}\n\n"
+            f"---\n\n"
+            f"## 🏨 HOTEL PERFORMANCE\n\n"
+            f"- **RevPAR:** ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% vs. prior period)\n"
+            f"- **ADR:** ${m.get('adr_30',0):.0f} ({m.get('adr_delta',0):+.1f}% vs. prior period)\n"
+            f"- **Occupancy:** {m.get('occ_30',0):.1f}% ({m.get('occ_delta',0):+.1f}pp vs. prior period)\n"
+            f"- **Weekend premium:** {wknd_pct:.0f}% above midweek — leisure demand concentrated Fri–Sun\n"
+            f"- **Compression:** {m.get('comp_recent_q',0)} days above 90% occupancy last quarter\n\n"
+            f"---\n\n"
+            f"## 💡 THREE HIDDEN SIGNALS\n\n"
+            f"These signals only appear when STR hotel data is read alongside visitor economy data:\n\n"
+            f"1. **Day-Trip Conversion Gap** — An estimated 40% of visitors never spend a night. "
+            f"Converting just 3% of those to overnight stays = ~$15M incremental annual room revenue.\n\n"
+            f"2. **OOS Rate Premium Gap** — Out-of-state visitors generate near 1:1 destination spend per visit, "
+            f"yet ADR is only {m.get('adr_delta',0):+.1f}% YOY. "
+            f"Rate capture is lagging demand quality from high-value fly markets (SLC, Dallas, NYC).\n\n"
+            f"3. **Campaign Seasonality Mismatch** — Marketing campaigns may be amplifying the already-full summer peak "
+            f"(Q3 averages 35+ compression days) instead of building the higher-margin spring shoulder season.\n\n"
+            f"---\n\n"
+            f"## 💰 FISCAL IMPACT\n\n"
+            f"- **Est. TBID (30-day):** ${m.get('tbid_monthly',0):,.0f} at blended 1.25%\n"
+            f"- **Est. TOT (30-day):** ${m.get('rev_30_total',0)*0.10:,.0f} at 10% rate\n"
+            f"- **12-Mo Room Revenue:** ${m.get('rev_12m_total',0):,.0f} (Layer 1 STR truth)\n\n"
+            f"---\n\n"
+            f"## 🔮 TOP 3 OPPORTUNITIES (next 90 days)\n\n"
+            f"1. **Midweek demand generation** — Close the {wknd_pct:.0f}% weekend/weekday gap with "
+            f"targeted Tue–Thu packages for the LA drive market\n"
+            f"2. **Shoulder season campaigns** — Shift Q4/Q1 marketing spend to build off-peak nights "
+            f"before summer compression auto-fills the calendar\n"
+            f"3. **Fly-market rate positioning** — Premium OOS feeder markets (SLC, Dallas, NYC) "
+            f"justify higher rate floors; current ADR is leaving revenue on the table\n\n"
+            f"*Connect an API key in the sidebar for live Claude AI analysis.*"
         ),
     }
     return d.get(
@@ -4327,8 +5116,8 @@ def event_stat(val, label, icon: str = "", date: str = "") -> str:
 
 
 def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
-    """Deep Ocean dark chart theme — Dana Point PULSE v8.
-    Full dark mode: transparent bg, ocean-teal palette, crisp grid.
+    """Deep Ocean dark chart theme — Dana Point PULSE v9.
+    Full dark mode: transparent bg, vibrant ocean-teal palette, premium grid.
     """
     _font  = "Syne, DM Sans, Inter, system-ui, sans-serif"
     _title = "Syne, Outfit, DM Sans, system-ui, sans-serif"
@@ -4349,20 +5138,21 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         height  = height,
         autosize = True,
         margin  = dict(l=14, r=20, t=52, b=14, autoexpand=True),
-        transition = {"duration": 600, "easing": "cubic-in-out"},
+        transition = {"duration": 500, "easing": "cubic-in-out"},
         legend = dict(
             orientation = "h",
             yanchor = "bottom", y = 1.04,
             xanchor = "left",   x = 0,
-            font    = dict(size=11.5, family=_font, color="#5A7A95"),
+            font    = dict(size=11.5, family=_font, color="#8AAEC6"),
             bgcolor = "rgba(0,0,0,0)",
             borderwidth = 0,
-            itemsizing = "constant",
+            itemsizing  = "constant",
+            tracegroupgap = 4,
         ),
         hoverlabel = dict(
-            bgcolor     = "#264B6E",
-            bordercolor = "rgba(0,212,200,0.55)",
-            font        = dict(size=13.5, family=_font, color="#EFF6FF"),
+            bgcolor     = "rgba(20,50,80,0.96)",
+            bordercolor = "rgba(0,212,200,0.60)",
+            font        = dict(size=13, family=_font, color="#EFF6FF"),
             namelength  = -1,
             align       = "left",
         ),
@@ -4372,33 +5162,39 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
             color       = "#5A7A95",
             activecolor = "#00D4C8",
         ),
+        dragmode = "zoom",
     )
     fig.update_xaxes(
         showgrid    = False,
         zeroline    = False,
         tickfont    = dict(size=11, family=_font, color="#8AAEC6"),
-        linecolor   = "rgba(255,255,255,0.12)",
+        linecolor   = "rgba(255,255,255,0.10)",
         linewidth   = 1,
         showline    = True,
         ticks       = "outside",
-        ticklen     = 4,
-        tickcolor   = "rgba(255,255,255,0.10)",
+        ticklen     = 3,
+        tickcolor   = "rgba(255,255,255,0.08)",
         automargin  = True,
+        tickangle   = 0,
     )
     fig.update_yaxes(
-        gridcolor   = "rgba(255,255,255,0.06)",
+        gridcolor   = "rgba(255,255,255,0.04)",   # Linear-standard ultra-thin
         gridwidth   = 1,
         griddash    = "dot",
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#8AAEC6"),
+        tickfont    = dict(size=11, family="'JetBrains Mono', " + _font, color="#7A9EB8"),
         showline    = False,
         ticks       = "",
         automargin  = True,
     )
-    # ── Deep Ocean fills: organic gradient fills + smooth spline lines ────
+    # ── Vibrant fill palette with stronger gradients ──────────────────────
     _fill_palette = [
-        "rgba(0,212,200,0.12)", "rgba(245,185,64,0.10)", "rgba(16,185,129,0.10)",
-        "rgba(167,139,250,0.10)", "rgba(251,146,60,0.10)",
+        "rgba(0,212,200,0.16)",   "rgba(245,185,64,0.14)",
+        "rgba(16,185,129,0.14)",  "rgba(167,139,250,0.13)",
+        "rgba(251,146,60,0.14)",  "rgba(56,189,248,0.14)",
+    ]
+    _line_palette = [
+        "#00D4C8", "#F5B940", "#10B981", "#A78BFA", "#FB923C", "#38BDF8",
     ]
     _fill_idx = 0
     for trace in fig.data:
@@ -4409,35 +5205,47 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
                 trace.fill = "tozeroy"
                 _c = (getattr(trace.line, "color", None) or _colorway[0])
                 if "rgb(" in str(_c):
-                    trace.fillcolor = _c.replace("rgb(", "rgba(").replace(")", ",0.09)")
+                    # Convert existing rgb to rgba with stronger opacity
+                    trace.fillcolor = _c.replace("rgb(", "rgba(").replace(")", ",0.13)")
                 else:
                     trace.fillcolor = _fill_palette[_fill_idx % len(_fill_palette)]
+                    # Ensure line color matches fill color
+                    if not getattr(trace.line, "color", None):
+                        try: trace.line.color = _line_palette[_fill_idx % len(_line_palette)]
+                        except Exception: pass
                     _fill_idx += 1
             # Smooth spline for organic painted feel
             if hasattr(trace, "line") and trace.line is not None:
                 if not getattr(trace.line, "shape", None):
                     try:
                         trace.line.shape = "spline"
-                        trace.line.smoothing = 0.85
+                        trace.line.smoothing = 0.8
                     except Exception:
                         pass
-                if getattr(trace.line, "width", None) is None or getattr(trace.line, "width", 2) < 2:
-                    try:
+                try:
+                    if (getattr(trace.line, "width", None) is None or
+                            getattr(trace.line, "width", 2) < 2):
                         trace.line.width = 2.5
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
         elif ttype == "Bar":
             try:
                 if not getattr(trace.marker, "cornerradius", None):
-                    trace.marker.cornerradius = 4
+                    trace.marker.cornerradius = 5
             except Exception:
                 pass
-    # ── Title styling ──────────────────────────────────────────────────────
+            # Add subtle opacity variation for bar depth
+            try:
+                if getattr(trace.marker, "opacity", None) is None:
+                    trace.marker.opacity = 0.88
+            except Exception:
+                pass
+    # ── Title styling (white text on dark bg) ─────────────────────────────
     if fig.layout.title and fig.layout.title.text:
         fig.update_layout(
-            title_font = dict(family=_title, size=15, color="#07111F"),
+            title_font = dict(family=_title, size=14, color="#C8E0F2"),
             title_x    = 0,
-            title_pad  = dict(l=4, t=6),
+            title_pad  = dict(l=4, t=4),
         )
     return fig
 
@@ -5300,9 +6108,9 @@ with st.sidebar:
     _later_fb_rows = len(df_later_fb_profile) + len(df_later_fb_posts)
     _later_tk_rows = len(df_later_tk_profile)
     _later_total   = _later_ig_rows + _later_fb_rows + _later_tk_rows
-    _ig_followers  = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
-    _fb_followers  = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
-    _tk_followers  = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+    _ig_followers  = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns and pd.notna(df_later_ig_profile.iloc[0]["followers"]) else 0
+    _fb_followers  = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns and pd.notna(df_later_fb_profile.iloc[0]["page_followers"]) else 0
+    _tk_followers  = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns and pd.notna(df_later_tk_profile.iloc[0]["followers"]) else 0
     # Fallback: query DB directly if cached DFs are empty (same guard as Visit CA)
     if _later_total == 0:
         try:
@@ -5427,6 +6235,36 @@ with st.sidebar:
                 f'</div></div>'
                 for icon, name, desc in _nav_items
             ),
+            unsafe_allow_html=True,
+        )
+
+    # ── Thursday Demo Walkthrough ──────────────────────────────────────────────
+    with st.expander("🎯 Thursday Demo Flow", expanded=False):
+        st.markdown(
+            '<div style="font-size:11px;line-height:1.7;color:#CBD5E1;">'
+            '<strong style="color:#22D3EE;font-size:12px;">Suggested 10-Minute Flow</strong><br><br>'
+            '<strong style="color:#F8FAFC;">1. Overview Tab</strong><br>'
+            '→ Point to hero stats (RevPAR, ADR, OCC)<br>'
+            '→ Click <strong>🎯 Full Story</strong> — AI tells the narrative<br>'
+            '→ Show <strong>12-Month Scorecard</strong> in Performance Metrics<br><br>'
+            '<strong style="color:#F8FAFC;">2. Hotel Trends Tab</strong><br>'
+            '→ Switch to Monthly view → show RevPAR trend<br>'
+            '→ Highlight YOY improvement in chart<br><br>'
+            '<strong style="color:#F8FAFC;">3. Our Visitors Tab</strong><br>'
+            '→ Show 3.55M annual trips, 61% overnight<br>'
+            '→ Point to spending by category<br><br>'
+            '<strong style="color:#F8FAFC;">4. Where They\'re From Tab</strong><br>'
+            '→ LA = 19% of visits (high volume, lower spend)<br>'
+            '→ Fly markets (SLC, Dallas) = premium value<br><br>'
+            '<strong style="color:#F8FAFC;">5. Board Report Sub-Tab</strong><br>'
+            '→ Overview → Board Report → Download HTML<br><br>'
+            '<strong style="color:#22D3EE;font-size:11px;">Key Numbers to Remember</strong><br>'
+            '• RevPAR: $325 (+63.5% YOY)<br>'
+            '• ADR: $440 (+26.5% YOY)<br>'
+            '• Annual Trips: 3.55M<br>'
+            '• TBID est. (90-day): $468K<br>'
+            '• Campaign ROAS: ∞ (all organic)<br>'
+            '</div>',
             unsafe_allow_html=True,
         )
 
@@ -6804,10 +7642,10 @@ with tab_ov:
         "Today's Overview — Visit Dana Point",
         "Your live command center. All numbers are from verified hotel and visitor data — updated automatically.",
         [
-            "🤖 AI Analyst is right below — click any quick prompt or type your own question",
-            "📊 KPI cards show 30-day performance vs. same period last year",
-            "🔴🟡🟢 Status bar at top shows if anything needs immediate attention",
-            "📋 Scroll to 'Board Report' sub-tab for copy-ready presentation content",
+            "🎯 Click 'Full Story' in the AI Analyst below for a complete demo narrative",
+            "📊 Performance Metrics sub-tab → 12-Month Scorecard + Hidden Intelligence signals",
+            "📋 Board Report sub-tab → print-ready executive summary with download",
+            "🗺️ See 'Where They're From' tab for feeder market breakdown",
         ]
     ), unsafe_allow_html=True)
     # ── Board Executive Summary Banner ─────────────────────────────────────────
@@ -6971,13 +7809,13 @@ with tab_ov:
     )
     # Preset prompt chips (rendered as Streamlit buttons for interactivity)
     _OV_PROMPTS = [
+        ("🎯 Full Story",          "demo_story"),
         ("📬 Morning Brief",       "morning_brief"),
         ("💹 RevPAR Performance",  "revpar"),
         ("📋 Board Talking Points","board"),
-        ("📅 Best & Worst Months", "opportunity"),
-        ("🏖️ Event Impact",        "visitor_econ"),
+        ("👥 Visitor Economy",     "visitor_econ"),
         ("📢 Campaign ROI",        "visitor_econ"),
-        ("🏨 Hotel Rankings",      "revpar"),
+        ("🔍 Detect Anomalies",    "anomaly"),
         ("📈 30-Day Forecast",     "forecast"),
     ]
     _ai_btn_cols = st.columns(len(_OV_PROMPTS))
@@ -7117,9 +7955,9 @@ with tab_ov:
                 else:
                     _ga4_lbl = "Run pipeline to load Datafy GA4 web analytics data."
                 # Later.com social stats for board report
-                _ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else 0
-                _fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else 0
-                _tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else 0
+                _ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns and pd.notna(df_later_ig_profile.iloc[0]["followers"]) else 0
+                _fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns and pd.notna(df_later_fb_profile.iloc[0]["page_followers"]) else 0
+                _tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns and pd.notna(df_later_tk_profile.iloc[0]["followers"]) else 0
                 _ig_posts_ct = len(df_later_ig_posts)
                 _ig_eng_avg  = float(df_later_ig_posts["engagement_rate"].mean()) if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns else 0.0
                 _social_reach_total = (
@@ -7284,6 +8122,59 @@ with tab_ov:
 
     # ── Key Metrics → sub-tab 1 ────────────────────────────────────────────────
     with _ov_t1:
+        # ── 2026 YTD Momentum Banner ───────────────────────────────────────────
+        try:
+            if m and m.get("monthly_data_available"):
+                _ytd_rvp   = m.get("revpar_12m", 0)
+                _ytd_rvpd  = m.get("revpar_yoy_12m", 0)
+                _ytd_adr   = m.get("adr_12m", 0)
+                _ytd_adrd  = m.get("adr_yoy_12m", 0)
+                _ytd_occ   = m.get("occ_12m", 0)
+                _ytd_occd  = m.get("occ_yoy_12m", 0)
+                _ytd_rev   = m.get("rev_12m_total", 0)
+                _ytd_tbid  = m.get("tbid_12m", 0)
+                _ytd_best  = m.get("revpar_best_month", "")
+                _ytd_bestv = m.get("revpar_best_val", 0)
+                def _ytd_arrow(v, fmt="pct"):
+                    col  = "#4ADE80" if v >= 0 else "#F87171"
+                    arr  = "▲" if v >= 0 else "▼"
+                    val  = f"{abs(v):.1f}{'%' if fmt=='pct' else 'pp'}"
+                    return f'<span style="color:{col};font-size:13px;font-weight:700;">{arr} {val} YOY</span>'
+                def _ytd_kpi(label, value, yoy_html, accent="#38BDF8"):
+                    return (
+                        f'<div style="flex:1;min-width:130px;padding:16px 18px;'
+                        f'background:rgba(255,255,255,0.04);border-radius:12px;'
+                        f'border:1px solid rgba(255,255,255,0.08);border-top:3px solid {accent};">'
+                        f'<div style="font-size:9px;font-weight:800;letter-spacing:.09em;'
+                        f'text-transform:uppercase;color:#8AAEC6;margin-bottom:6px;">{label}</div>'
+                        f'<div style="font-size:26px;font-weight:900;font-family:\'Outfit\',sans-serif;'
+                        f'letter-spacing:-.03em;color:#FFFFFF;margin-bottom:4px;">{value}</div>'
+                        f'{yoy_html}'
+                        f'</div>'
+                    )
+                _ytd_html = (
+                    f'<div style="margin-bottom:20px;padding:20px 22px;'
+                    f'background:linear-gradient(135deg,rgba(6,182,212,0.06) 0%,rgba(99,102,241,0.06) 100%);'
+                    f'border:1px solid rgba(6,182,212,0.20);border-radius:16px;'
+                    f'box-shadow:0 0 30px rgba(6,182,212,0.08);">'
+                    f'<div style="font-size:10px;font-weight:800;letter-spacing:.10em;'
+                    f'text-transform:uppercase;color:#22D3EE;margin-bottom:14px;'
+                    f'display:flex;align-items:center;gap:8px;">'
+                    f'📈 &nbsp;12-MONTH PERFORMANCE SCORECARD &nbsp;·&nbsp; '
+                    f'{"PEAK MONTH: " + _ytd_best + " @ $" + str(int(_ytd_bestv)) + " RevPAR" if _ytd_best else "TRAILING 12 MONTHS"}'
+                    f'</div>'
+                    f'<div style="display:flex;flex-wrap:wrap;gap:12px;">'
+                    + _ytd_kpi("RevPAR (12-mo avg)", f"${_ytd_rvp:.0f}", _ytd_arrow(_ytd_rvpd), "#38BDF8")
+                    + _ytd_kpi("ADR (12-mo avg)", f"${_ytd_adr:.0f}", _ytd_arrow(_ytd_adrd), "#818CF8")
+                    + _ytd_kpi("Occupancy (12-mo)", f"{_ytd_occ:.1f}%", _ytd_arrow(_ytd_occd, "pp"), "#34D399")
+                    + _ytd_kpi("12-Mo Room Revenue", f"${_ytd_rev/1e6:.1f}M", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">Layer 1 STR truth</span>', "#F59E0B")
+                    + _ytd_kpi("12-Mo TBID Est.", f"${_ytd_tbid/1e3:.0f}K", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">at blended 1.25%</span>', "#A78BFA")
+                    + f'</div></div>'
+                )
+                st.markdown(_ytd_html, unsafe_allow_html=True)
+        except Exception:
+            pass
+
         # ── Full Data Summary by Section — mini data cards ─────────────────────
         try:
             _ds_occ   = f"{m.get('occ_30', 0):.1f}%" if m else "—"
@@ -7517,6 +8408,57 @@ with tab_ov:
             "Scores below 60 signal the need for demand-generation or rate strategy action.",
         ), unsafe_allow_html=True)
 
+        # ── Cross-Dataset Intelligence Spotlight ─────────────────────────────────
+        try:
+            _cross_df = load_insights(audience="cross")
+            if not _cross_df.empty:
+                st.markdown(sec_div("🔍 Hidden Intelligence: Cross-Dataset Signals"), unsafe_allow_html=True)
+                st.markdown(
+                    '<div style="font-size:12px;color:#5A7A95;margin-bottom:12px;">'
+                    'These signals only appear when <strong>hotel data</strong> is read alongside '
+                    '<strong>visitor economy</strong> and <strong>campaign data</strong> — '
+                    'invisible in any single source alone.</div>',
+                    unsafe_allow_html=True,
+                )
+                _top_cross = _cross_df.head(3)
+                _cx_cols = st.columns(len(_top_cross))
+                _cx_type_map = {
+                    "HIDDEN OPPORTUNITY": ("#059669", "#D1FAE5", "OPPORTUNITY"),
+                    "HIDDEN SIGNAL":      ("#0567C8", "#DBEAFE", "SIGNAL"),
+                    "HIDDEN RISK":        ("#DC2626", "#FEE2E2", "RISK"),
+                    "HIDDEN GAP":         ("#D97706", "#FEF3C7", "GAP"),
+                    "DRIVE-MARKET":       ("#0567C8", "#DBEAFE", "SIGNAL"),
+                    "MACRO":              ("#6B7280", "#F3F4F6", "SIGNAL"),
+                }
+                for _ci, (_cx_idx, _cx_row) in enumerate(zip(_cx_cols, _top_cross.itertuples())):
+                    with _cx_idx:
+                        _hd = str(_cx_row.headline)
+                        # Extract type from headline prefix
+                        _cx_col, _cx_bg, _cx_lbl = "#0567C8", "#DBEAFE", "SIGNAL"
+                        for _pfx, (_cc, _cb, _cl) in _cx_type_map.items():
+                            if _hd.startswith(_pfx):
+                                _cx_col, _cx_bg, _cx_lbl = _cc, _cb, _cl
+                                _hd = _hd[len(_pfx):].lstrip(": ").strip()
+                                break
+                        _body_txt = str(_cx_row.body)[:200] + ("…" if len(str(_cx_row.body)) > 200 else "")
+                        st.markdown(
+                            f'<div style="background:rgba(255,255,255,0.04);border-radius:12px;'
+                            f'padding:14px 16px;border:1px solid rgba(255,255,255,0.08);'
+                            f'border-top:3px solid {_cx_col};height:100%;">'
+                            f'<div style="font-size:9px;font-weight:800;letter-spacing:.09em;'
+                            f'text-transform:uppercase;color:{_cx_col};margin-bottom:8px;'
+                            f'background:rgba(5,103,200,0.08);display:inline-block;'
+                            f'padding:2px 8px;border-radius:99px;">{_cx_lbl}</div>'
+                            f'<div style="font-size:12px;font-weight:700;color:#EFF6FF;'
+                            f'margin-bottom:8px;line-height:1.4;">{_hd}</div>'
+                            f'<div style="font-size:11px;color:#94A3B8;line-height:1.55;">'
+                            f'{_body_txt}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True,
+                        )
+        except Exception:
+            pass
+
         # ── Overview Section Intelligence ─────────────────────────────────────────
         if m:
             _ov_rvp_yoy   = m.get("revpar_delta", 0)
@@ -7583,12 +8525,12 @@ with tab_ov:
             st.markdown('<span class="ai-chip">AI ANALYST</span>', unsafe_allow_html=True)
 
             PROMPTS_META = [
+                ("🎯 Full Story",           "demo_story"),
                 ("💹 RevPAR Drivers",       "revpar"),
                 ("📅 Opportunity Nights",   "opportunity"),
                 ("🗺️ Visitor Economy",      "visitor_econ"),
                 ("📋 Board Talking Points", "board"),
                 ("🌙 Weekend vs Midweek",   "midweek"),
-                ("🏨 TBID Revenue Est.",    "tbid"),
                 ("🔍 Detect Anomalies",     "anomaly"),
                 ("📈 30-Day Forecast",      "forecast"),
             ]
@@ -9633,6 +10575,117 @@ with tab_fo:
             if all_sources:
                 st.caption(f"Data sources: {', '.join(sorted(s.strip() for s in all_sources if s.strip()))}")
 
+    # ── 6-Month Forward Demand Calendar ─────────────────────────────────────
+    st.markdown(sec_div("📅 2026 Forward Demand Outlook"), unsafe_allow_html=True)
+    st.markdown(
+        '<div style="font-size:12px;color:#5A7A95;margin-bottom:14px;">'
+        'Monthly demand forecast through Oct 2026 — based on historical STR compression patterns, '
+        'seasonal indices, and known event anchors. Use for campaign planning and rate strategy.</div>',
+        unsafe_allow_html=True,
+    )
+    try:
+        from datetime import date as _cal_date
+        import calendar as _cal_module
+        _today_cal = _cal_date.today()
+
+        # Build 7-month outlook: current month through Oct 2026
+        _fwd_months = []
+        _m = _today_cal.replace(day=1)
+        for _ in range(7):
+            _fwd_months.append(_m)
+            _yr = _m.year + (_m.month // 12)
+            _mo = (_m.month % 12) + 1
+            _m = _m.replace(year=_yr, month=_mo)
+
+        # Historical compression by month (from kpi_daily_summary)
+        _hist_comp = {}
+        if not df_kpi.empty:
+            _kdf = df_kpi.copy()
+            _kdf["month"] = pd.to_datetime(_kdf["as_of_date"], errors="coerce").dt.month
+            _kdf["is_comp"] = (_kdf["occ_pct"] >= 80).astype(int)
+            _monthly_c = _kdf.groupby("month")["is_comp"].mean()
+            _hist_comp = _monthly_c.to_dict()
+
+        # Events in the forward window
+        _fwd_events: dict = {}
+        if not df_vdp_events.empty:
+            _upcoming = df_vdp_events[
+                df_vdp_events["event_date"] >= str(_today_cal)
+            ].copy()
+            for _, _ev in _upcoming.iterrows():
+                try:
+                    _ev_d = _cal_date.fromisoformat(str(_ev["event_date"])[:10])
+                    _ev_key = (_ev_d.year, _ev_d.month)
+                    if _ev_key not in _fwd_events:
+                        _fwd_events[_ev_key] = []
+                    _fwd_events[_ev_key].append({
+                        "name": str(_ev.get("event_name", "")),
+                        "is_major": int(_ev.get("is_major", 0)),
+                    })
+                except Exception:
+                    pass
+
+        # Seasonal demand tiers for OC coastal: 1=lowest, 5=highest
+        _season_idx = {1: 2, 2: 2, 3: 3, 4: 3, 5: 4, 6: 5, 7: 5, 8: 5, 9: 4, 10: 4, 11: 3, 12: 3}
+        _tier_color = {
+            1: ("rgba(99,102,241,0.15)", "#818CF8", "Off-Peak"),
+            2: ("rgba(99,102,241,0.20)", "#818CF8", "Shoulder"),
+            3: ("rgba(251,146,60,0.18)", "#FB923C", "Secondary Peak"),
+            4: ("rgba(16,185,129,0.20)", "#34D399", "High Season"),
+            5: ("rgba(239,68,68,0.20)",  "#F87171", "Peak / Compression"),
+        }
+
+        # ADR seasonal multipliers (relative to base $440)
+        _adr_base = m.get("adr_30", 440) if m else 440
+        _adr_mult = {1: 0.82, 2: 0.85, 3: 0.92, 4: 0.96, 5: 1.05,
+                     6: 1.18, 7: 1.25, 8: 1.22, 9: 1.10, 10: 1.05, 11: 0.90, 12: 0.88}
+
+        # Render calendar cards
+        _cal_cols = st.columns(min(4, len(_fwd_months)))
+        for _ci, _fm in enumerate(_fwd_months):
+            with _cal_cols[_ci % 4]:
+                _mo_name = _fm.strftime("%b %Y")
+                _tier    = _season_idx.get(_fm.month, 3)
+                _bg, _ac, _tier_lbl = _tier_color[_tier]
+                _hist_pct = _hist_comp.get(_fm.month, 0)
+                _comp_bar_w = int(_hist_pct * 100)
+                _proj_adr   = _adr_base * _adr_mult.get(_fm.month, 1.0)
+                _evts       = _fwd_events.get((_fm.year, _fm.month), [])
+                _evt_html   = ""
+                for _ev in _evts[:2]:  # max 2 events shown
+                    _ev_icon = "🎸" if "ohana" in _ev["name"].lower() else (
+                               "🎵" if _ev["is_major"] else "📅")
+                    _ev_col  = "#FB923C" if _ev["is_major"] else "#64748B"
+                    _evt_html += (
+                        f'<div style="font-size:9px;color:{_ev_col};font-weight:600;'
+                        f'margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+                        f'{_ev_icon} {_ev["name"]}</div>'
+                    )
+                _is_current = (_fm.year == _today_cal.year and _fm.month == _today_cal.month)
+                _border_extra = "border:2px solid #22D3EE;" if _is_current else "border:1px solid rgba(255,255,255,0.08);"
+                st.markdown(
+                    f'<div style="padding:14px 14px 10px 14px;border-radius:12px;'
+                    f'background:{_bg};{_border_extra}margin-bottom:8px;">'
+                    f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+                    f'<div style="font-size:12px;font-weight:800;color:#F8FAFC;">{_mo_name}</div>'
+                    + (f'<span style="font-size:9px;color:#22D3EE;font-weight:700;">NOW</span>' if _is_current else '')
+                    + f'</div>'
+                    f'<div style="font-size:9px;font-weight:700;color:{_ac};text-transform:uppercase;'
+                    f'letter-spacing:.07em;margin-bottom:6px;">{_tier_lbl}</div>'
+                    f'<div style="font-size:18px;font-weight:900;color:#FFFFFF;font-family:\'Outfit\',sans-serif;">'
+                    f'${_proj_adr:,.0f} <span style="font-size:10px;color:#64748B;font-weight:400;">proj. ADR</span></div>'
+                    f'<div style="margin-top:6px;">'
+                    f'<div style="font-size:9px;color:#94A3B8;margin-bottom:2px;">Historical compression</div>'
+                    f'<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:3px;">'
+                    f'<div style="width:{_comp_bar_w}%;height:100%;background:{_ac};border-radius:3px;"></div>'
+                    f'</div></div>'
+                    f'{_evt_html}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+    except Exception:
+        pass
+
     # ── Forward Signals Dashboard ──────────────────────────────────────────
     st.markdown(_sh("📊", "Forward Signal Dashboard", "blue", "Leading indicators powering the AI outlook"), unsafe_allow_html=True)
 
@@ -10544,8 +11597,9 @@ with tab_ev:
             st.markdown('<div class="chart-header">Instagram — Follower Growth</div>', unsafe_allow_html=True)
             if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns:
                 _ig_p = df_later_ig_profile.sort_values("data_date").tail(30).copy()
-                _ig_cur = int(_ig_p["followers"].iloc[-1]) if len(_ig_p) else 0
-                _ig_prev = int(_ig_p["followers"].iloc[0]) if len(_ig_p) else _ig_cur
+                _ig_vals = _ig_p["followers"].dropna()
+                _ig_cur = int(_ig_vals.iloc[-1]) if len(_ig_vals) else 0
+                _ig_prev = int(_ig_vals.iloc[0]) if len(_ig_vals) else _ig_cur
                 _ig_delta = _ig_cur - _ig_prev
                 st.metric("Followers", f"{_ig_cur:,}", delta=f"{_ig_delta:+,} (30d)")
                 fig_ig = go.Figure(go.Scatter(
@@ -10569,8 +11623,9 @@ with tab_ev:
             st.markdown('<div class="chart-header">Facebook — Follower Growth</div>', unsafe_allow_html=True)
             if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns:
                 _fb_p = df_later_fb_profile.sort_values("data_date").tail(30).copy()
-                _fb_cur = int(_fb_p["page_followers"].iloc[-1]) if len(_fb_p) else 0
-                _fb_prev = int(_fb_p["page_followers"].iloc[0]) if len(_fb_p) else _fb_cur
+                _fb_vals = _fb_p["page_followers"].dropna()
+                _fb_cur = int(_fb_vals.iloc[-1]) if len(_fb_vals) else 0
+                _fb_prev = int(_fb_vals.iloc[0]) if len(_fb_vals) else _fb_cur
                 _fb_delta = _fb_cur - _fb_prev
                 st.metric("Followers", f"{_fb_cur:,}", delta=f"{_fb_delta:+,} (30d)")
                 fig_fb = go.Figure(go.Scatter(
@@ -10594,8 +11649,9 @@ with tab_ev:
             st.markdown('<div class="chart-header">TikTok — Follower Growth</div>', unsafe_allow_html=True)
             if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns:
                 _tk_p = df_later_tk_profile.sort_values("data_date").tail(30).copy()
-                _tk_cur = int(_tk_p["followers"].iloc[-1]) if len(_tk_p) else 0
-                _tk_prev = int(_tk_p["followers"].iloc[0]) if len(_tk_p) else _tk_cur
+                _tk_vals = _tk_p["followers"].dropna()
+                _tk_cur = int(_tk_vals.iloc[-1]) if len(_tk_vals) else 0
+                _tk_prev = int(_tk_vals.iloc[0]) if len(_tk_vals) else _tk_cur
                 _tk_delta = _tk_cur - _tk_prev
                 st.metric("Followers", f"{_tk_cur:,}", delta=f"{_tk_delta:+,} (30d)")
                 fig_tk = go.Figure(go.Scatter(
@@ -11572,6 +12628,78 @@ with tab_ei:
         "ei_event", _ei_next_steps, _ei_questions,
         "Event ROI: Ohana Fest $14.6M direct spend, 3.2x multiplier, +$139 ADR lift, 68% OOS attendance."
     )
+
+    # ── Ohana Fest 2026 ROI Impact Banner ─────────────────────────────────────
+    try:
+        from datetime import date as _date
+        _today = _date.today()
+        _ohana_2026 = _date(2026, 9, 25)
+        _memday_2026 = _date(2026, 5, 25)
+        _days_ohana = (_ohana_2026 - _today).days
+        _days_memday = (_memday_2026 - _today).days
+
+        # Ohana Fest ROI card
+        if _days_ohana > 0:
+            st.markdown(
+                f'<div style="margin-bottom:16px;padding:20px 24px;'
+                f'background:linear-gradient(135deg,rgba(251,146,60,0.12) 0%,rgba(239,68,68,0.08) 100%);'
+                f'border:1px solid rgba(251,146,60,0.30);border-radius:16px;'
+                f'border-left:5px solid #F97316;">'
+                f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
+                f'<span style="font-size:24px;">🎸</span>'
+                f'<div>'
+                f'<div style="font-size:13px;font-weight:800;color:#FED7AA;letter-spacing:.06em;text-transform:uppercase;">Ohana Fest 2026 — Sep 25–28</div>'
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">Dana Point\'s #1 hotel demand driver · {_days_ohana} days away</div>'
+                f'</div>'
+                f'<span style="margin-left:auto;background:rgba(249,115,22,0.20);color:#FB923C;'
+                f'font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;'
+                f'padding:4px 12px;border-radius:99px;border:1px solid rgba(249,115,22,0.40);">'
+                f'⏳ {_days_ohana} DAYS</span>'
+                f'</div>'
+                f'<div style="display:flex;flex-wrap:wrap;gap:10px;">'
+                + "".join([
+                    f'<div style="flex:1;min-width:110px;background:rgba(255,255,255,0.04);'
+                    f'border-radius:10px;padding:12px 14px;border:1px solid rgba(255,255,255,0.08);">'
+                    f'<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94A3B8;margin-bottom:5px;">{lbl}</div>'
+                    f'<div style="font-size:20px;font-weight:900;font-family:\'Outfit\',sans-serif;color:#FFFFFF;">{val}</div>'
+                    f'<div style="font-size:10px;color:#64748B;margin-top:3px;">{sub}</div></div>'
+                    for lbl, val, sub in [
+                        ("Event Expenditure",  "$14.6M",  "direct event spend"),
+                        ("Destination Spend",  "$18.4M",  "total destination impact"),
+                        ("Spend Multiplier",   "3.2×",    "of direct expenditure"),
+                        ("ADR Lift",           "+$139",   "$542 vs $403 baseline"),
+                        ("OOS Attendance",     "68%",     "out-of-state visitors"),
+                        ("Avg Stay Spend",     "$1,219",  "per accommodation trip"),
+                    ]
+                ])
+                + f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
+        # Memorial Day booking alert
+        if 0 < _days_memday <= 90:
+            _memday_adr_premium = m.get("adr_30", 440) * 0.265 if m else 116  # ~26.5% premium
+            st.markdown(
+                f'<div style="margin-bottom:16px;padding:16px 20px;'
+                f'background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);'
+                f'border-radius:12px;border-left:4px solid #818CF8;'
+                f'display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
+                f'<span style="font-size:22px;">🏖️</span>'
+                f'<div style="flex:1;">'
+                f'<div style="font-size:12px;font-weight:800;color:#C7D2FE;">Memorial Day Weekend — May 23–25, 2026</div>'
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:3px;">'
+                f'{_days_memday} days away · Book now for best rates · '
+                f'Expected ADR premium: ~+${_memday_adr_premium:.0f} vs. shoulder season</div>'
+                f'</div>'
+                f'<span style="background:rgba(99,102,241,0.20);color:#A5B4FC;'
+                f'font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;'
+                f'padding:4px 12px;border-radius:99px;border:1px solid rgba(99,102,241,0.40);">'
+                f'🔴 HIGH DEMAND</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        pass
 
     # ── Headline KPIs — Event Calendar Snapshot ────────────────────────────────
     _ei_summary_cols = st.columns(4)
@@ -14322,6 +15450,75 @@ with tab_cs:
                     st.caption(f"Correlation analysis unavailable: {_corr_err}")
             else:
                 st.info("Load both EIA gas prices and STR KPIs to see correlation analysis.")
+
+        # ── Google Search Demand Signal ───────────────────────────────────────────
+        st.markdown(sec_div("🔍 Google Search Demand — Leading Indicator"), unsafe_allow_html=True)
+        st.markdown(_sh("🔍", "Search Intent Trends", "teal", "BOOKING LEAD SIGNAL · 2–6 weeks ahead of demand"), unsafe_allow_html=True)
+        st.caption(
+            "Google Trends index (0–100). Search interest in 'dana point hotel' and 'ohana fest' leads hotel bookings "
+            "by 2–6 weeks — the earliest consumer demand signal available. "
+            "Rising 'ohana fest' searches before September = advance booking pressure."
+        )
+        if not df_trends.empty:
+            try:
+                _key_terms = ["dana point hotel", "ohana fest", "laguna beach hotel", "newport beach hotel"]
+                _term_palette = {"dana point hotel": "#22D3EE", "ohana fest": "#FB923C",
+                                 "laguna beach hotel": "#A78BFA", "newport beach hotel": "#34D399"}
+                fig_sd = go.Figure()
+                for _kterm in _key_terms:
+                    _td2 = df_trends[df_trends["term"] == _kterm].copy()
+                    if _td2.empty:
+                        continue
+                    _td2 = _td2.sort_values("week_date").tail(52)  # last 12 months
+                    _tc = _term_palette.get(_kterm, "#94A3B8")
+                    _lw = 3 if _kterm in ("dana point hotel", "ohana fest") else 1.5
+                    _ld = "solid" if _kterm in ("dana point hotel", "ohana fest") else "dot"
+                    fig_sd.add_trace(go.Scatter(
+                        x=_td2["week_date"], y=_td2["interest_idx"],
+                        name=_kterm, mode="lines",
+                        line=dict(color=_tc, width=_lw, dash=_ld),
+                        fill="tozeroy" if _kterm == "dana point hotel" else None,
+                        fillcolor="rgba(34,211,238,0.05)" if _kterm == "dana point hotel" else None,
+                        hovertemplate=f"<b>%{{x|%b %d}}</b><br>{_kterm}: %{{y}}<extra></extra>",
+                    ))
+                # Add Ohana Fest vertical marker
+                fig_sd.add_vline(
+                    x="2026-09-25", line_dash="dash", line_color="#FB923C", line_width=1.5,
+                    annotation_text="🎸 Ohana Fest", annotation_position="top right",
+                    annotation_font_size=10, annotation_font_color="#FB923C",
+                )
+                # Add Memorial Day marker
+                fig_sd.add_vline(
+                    x="2026-05-25", line_dash="dash", line_color="#818CF8", line_width=1,
+                    annotation_text="🏖️ Memorial Day", annotation_position="top left",
+                    annotation_font_size=9, annotation_font_color="#818CF8",
+                )
+                fig_sd.update_layout(
+                    title="Search Intent: Dana Point Hotel vs. Competitors (Last 12 Months)",
+                    yaxis_title="Google Search Index (0–100)",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, font=dict(size=10)),
+                )
+                st.plotly_chart(style_fig(fig_sd, height=300), use_container_width=True, config=PLOTLY_CONFIG)
+
+                # Peak interest summary
+                _sd_cols = st.columns(4)
+                for _sdi, _kterm in enumerate(["dana point hotel", "ohana fest", "laguna beach hotel", "dana point beach"]):
+                    _tdk = df_trends[df_trends["term"] == _kterm].tail(4)
+                    if _tdk.empty:
+                        continue
+                    _avg4w = _tdk["interest_idx"].mean()
+                    _pk    = df_trends[df_trends["term"] == _kterm]["interest_idx"].max()
+                    with _sd_cols[_sdi]:
+                        st.metric(
+                            _kterm,
+                            f"{int(_avg4w)}/100",
+                            f"Peak: {int(_pk)}/100",
+                            help=f"4-week avg search index for '{_kterm}'"
+                        )
+            except Exception:
+                pass
+        else:
+            st.info("Run the pipeline to fetch Google Trends search demand data.")
 
         # ── Live Market Intelligence (Perplexity Sonar) ──────────────────────────
         st.markdown(sec_div("🌐 Live Market Intelligence"), unsafe_allow_html=True)
