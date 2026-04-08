@@ -3079,7 +3079,130 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Dark mode: deep ocean ambient glow injected via CSS tokens above ─────────
+# ─── Branded loading splash — shown while Streamlit cold-starts / wakes up ────
+st.markdown("""
+<style>
+  /* Loading splash overlay */
+  #pulse-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse at 75% 10%, rgba(0,212,200,0.18) 0%, transparent 50%),
+      radial-gradient(ellipse at 10% 88%, rgba(56,189,248,0.12) 0%, transparent 45%),
+      linear-gradient(160deg, #0B1E38 0%, #1A3756 60%, #1E3D5E 100%);
+    transition: opacity 0.55s cubic-bezier(0.22,1,0.36,1),
+                visibility 0.55s cubic-bezier(0.22,1,0.36,1);
+  }
+  #pulse-splash.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .splash-wave {
+    font-size: 52px;
+    animation: splash-bob 1.8s ease-in-out infinite;
+    margin-bottom: 18px;
+    filter: drop-shadow(0 0 18px rgba(0,212,200,0.55));
+  }
+  @keyframes splash-bob {
+    0%,100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-8px) scale(1.06); }
+  }
+  .splash-title {
+    font-family: 'Syne', 'Outfit', system-ui, sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: #F4FAFF;
+    letter-spacing: -0.03em;
+    margin-bottom: 4px;
+  }
+  .splash-title span { color: #00D4C8; }
+  .splash-sub {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px;
+    color: rgba(200,224,242,0.60);
+    letter-spacing: 0.04em;
+    margin-bottom: 36px;
+  }
+  /* Animated ring spinner */
+  .splash-spinner {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 3px solid rgba(0,212,200,0.15);
+    border-top-color: #00D4C8;
+    animation: splash-spin 0.9s linear infinite;
+    margin-bottom: 20px;
+  }
+  @keyframes splash-spin { to { transform: rotate(360deg); } }
+  .splash-status {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 12px;
+    color: rgba(200,224,242,0.45);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  /* Animated dots on status text */
+  .splash-status::after {
+    content: '';
+    animation: splash-dots 1.5s steps(4, end) infinite;
+  }
+  @keyframes splash-dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+  }
+</style>
+
+<div id="pulse-splash">
+  <div class="splash-wave">🌊</div>
+  <div class="splash-title">Dana Point <span>PULSE</span></div>
+  <div class="splash-sub">Destination Intelligence Platform</div>
+  <div class="splash-spinner"></div>
+  <div class="splash-status">Loading intelligence</div>
+</div>
+
+<script>
+(function() {
+  // Hide splash once Streamlit has fully hydrated the React tree
+  function hideSplash() {
+    var el = document.getElementById('pulse-splash');
+    if (!el) return;
+    // Check if any Streamlit component has rendered (title, metric, etc.)
+    var ready = document.querySelector(
+      '[data-testid="stAppViewContainer"] [data-testid="stVerticalBlock"] > div,' +
+      '[data-testid="stMain"] h1,' +
+      '[data-testid="stMain"] h2,' +
+      '[data-testid="stMain"] [data-testid="stMetric"]'
+    );
+    if (ready) {
+      el.classList.add('hidden');
+      return;
+    }
+    // Not ready yet — check again shortly
+    setTimeout(hideSplash, 180);
+  }
+  // Start checking after a brief delay (React needs time to mount)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() { setTimeout(hideSplash, 400); });
+  } else {
+    setTimeout(hideSplash, 400);
+  }
+  // Hard fallback: always remove after 12s even if check fails
+  setTimeout(function() {
+    var el = document.getElementById('pulse-splash');
+    if (el) el.classList.add('hidden');
+  }, 12000);
+})();
+</script>
+""", unsafe_allow_html=True)
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 ROOT    = Path(__file__).parent.parent                          # project root
