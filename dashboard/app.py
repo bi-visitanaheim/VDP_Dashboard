@@ -2553,37 +2553,57 @@ st.markdown("""
     new MutationObserver(killBadges).observe(document.body,{childList:true,subtree:true});
   }
 
-  // Sidebar toggle — event delegation on document survives Streamlit rerenders
-  function findSidebarBtn(){
-    var docs = [document];
-    try{ docs.push(window.parent.document); }catch(e){}
-    var sels = [
-      '[data-testid="collapsedControl"]',
-      '[data-testid="stSidebarCollapseButton"] button',
-      '[data-testid="stSidebarNavCollapseButton"]',
-      'button[aria-label="Close sidebar"]',
-      'button[aria-label="Open sidebar"]',
-      'button[aria-label="Collapse sidebar"]',
-      'button[aria-label="Expand sidebar"]',
-      '[data-testid="stSidebar"] button[kind="header"]'
-    ];
-    for(var d=0;d<docs.length;d++){
-      for(var i=0;i<sels.length;i++){
-        var el = docs[d].querySelector(sels[i]);
-        if(el) return el;
+  // Sidebar toggle — guard against duplicate registration on Streamlit rerenders
+  if(!window._dpSidebarReady){
+    window._dpSidebarReady = true;
+    function _dpToggleSidebar(){
+      var docs=[document];
+      try{docs.push(window.parent.document);}catch(e){}
+      // Try every known Streamlit sidebar selector
+      var sels=[
+        '[data-testid="collapsedControl"]',
+        'button[aria-label="Open sidebar"]',
+        'button[aria-label="Close sidebar"]',
+        'button[aria-label="Expand sidebar"]',
+        'button[aria-label="Collapse sidebar"]',
+        '[data-testid="stSidebarCollapseButton"] button',
+        '[data-testid="stSidebarNavCollapseButton"]'
+      ];
+      for(var d=0;d<docs.length;d++){
+        for(var i=0;i<sels.length;i++){
+          var el=docs[d].querySelector(sels[i]);
+          if(el){el.click();return;}
+        }
+        // Brute-force: any button with "sidebar" in aria-label
+        var btns=docs[d].querySelectorAll('button[aria-label]');
+        for(var j=0;j<btns.length;j++){
+          if(/sidebar/i.test(btns[j].getAttribute('aria-label'))){
+            btns[j].click();return;
+          }
+        }
+      }
+      // Keyboard shortcut fallback (Streamlit shortcut to toggle sidebar)
+      try{
+        document.dispatchEvent(new KeyboardEvent('keydown',{key:'\\',keyCode:220,code:'Backslash',bubbles:true,cancelable:true}));
+      }catch(ke){}
+      // Last resort: direct CSS toggle using computed transform
+      var sb=document.querySelector('[data-testid="stSidebar"]');
+      if(sb){
+        var ct=window.getComputedStyle(sb).transform;
+        var isHidden=ct&&ct!=='none'&&ct!=='matrix(1, 0, 0, 1, 0, 0)'&&
+                     (ct.indexOf('matrix')!==-1&&parseFloat(ct.split(',')[4])<-10);
+        sb.style.transition='transform 0.3s ease';
+        sb.style.transform=isHidden?'translateX(0)':'translateX(-105%)';
+        if(isHidden){sb.style.visibility='visible';sb.style.display='flex';}
       }
     }
-    return null;
+    document.addEventListener('click',function(e){
+      if(e.target&&e.target.closest&&e.target.closest('#dp-sidebar-toggle')){
+        e.preventDefault();e.stopImmediatePropagation();
+        _dpToggleSidebar();
+      }
+    },true);
   }
-  // Delegation on document — survives Streamlit re-rendering the button element
-  document.addEventListener('click', function(e){
-    if(!e.target.closest('#dp-sidebar-toggle')) return;
-    var native = findSidebarBtn();
-    if(native){ native.click(); return; }
-    var sb = document.querySelector('[data-testid="stSidebar"]') ||
-             (function(){ try{return window.parent.document.querySelector('[data-testid="stSidebar"]');}catch(x){return null;} })();
-    if(sb){ sb.style.transform = (sb.style.transform === 'translateX(-105%)') ? 'translateX(0)' : 'translateX(-105%)'; }
-  }, true);
   // Nightly reset at 9 PM UTC — reloads page so cache refreshes with new pipeline data
   (function(){
     function msUntil9pmUTC(){
