@@ -5975,43 +5975,36 @@ with st.sidebar:
     # ── VDP Analyst — Multi-Model AI Config ──────────────────────────────────
     st.markdown("**🧠 VDP Analyst**")
 
-    # Anthropic key always visible — needed to activate AI analyst
+    # All AI keys always visible — needed to activate models in production
     api_key_raw = st.text_input(
         "Anthropic API Key",
         type="password",
         placeholder="sk-ant-api03-…",
         value=st.session_state.get("api_key_field", _ENV_API_KEY),
-        help="Paste your Anthropic key to activate the AI Analyst panel",
+        help="Claude Sonnet / Opus — primary AI analyst",
         key="api_key_field",
     )
-
-    # Other keys: admin only
-    if _is_admin:
-        _oa_raw = st.text_input(
-            "OpenAI API Key",
-            type="password", placeholder="sk-…",
-            value=_ENV_OPENAI_KEY,
-            help="OPENAI_API_KEY — enables GPT-4o, o3-mini",
-            key="openai_key_field",
-        )
-        _ga_raw = st.text_input(
-            "Google AI API Key",
-            type="password", placeholder="AIzaSy…",
-            value=_ENV_GOOGLE_AI_KEY,
-            help="GOOGLE_AI_API_KEY — enables Gemini 2.0 Flash, 1.5 Pro",
-            key="google_key_field",
-        )
-        _px_raw = st.text_input(
-            "Perplexity API Key",
-            type="password", placeholder="pplx-…",
-            value=_ENV_PERPLEXITY_KEY,
-            help="PERPLEXITY_API_KEY — enables live web search (Sonar Pro)",
-            key="perplexity_key_field",
-        )
-    else:
-        _oa_raw     = _ENV_OPENAI_KEY
-        _ga_raw     = _ENV_GOOGLE_AI_KEY
-        _px_raw     = _ENV_PERPLEXITY_KEY
+    _oa_raw = st.text_input(
+        "OpenAI API Key",
+        type="password", placeholder="sk-…",
+        value=st.session_state.get("openai_key_field", _ENV_OPENAI_KEY),
+        help="GPT-4o / o3-mini — enables OpenAI models",
+        key="openai_key_field",
+    )
+    _ga_raw = st.text_input(
+        "Google AI API Key",
+        type="password", placeholder="AIzaSy…",
+        value=st.session_state.get("google_key_field", _ENV_GOOGLE_AI_KEY),
+        help="Gemini 2.0 Flash / 1.5 Pro — enables Google models",
+        key="google_key_field",
+    )
+    _px_raw = st.text_input(
+        "Perplexity API Key",
+        type="password", placeholder="pplx-…",
+        value=st.session_state.get("perplexity_key_field", _ENV_PERPLEXITY_KEY),
+        help="Sonar Pro — live web search for market intelligence",
+        key="perplexity_key_field",
+    )
 
     api_key       = api_key_raw.strip()
     _OPENAI_KEY   = _oa_raw.strip()
