@@ -294,6 +294,17 @@ git add <specific files> && git commit -m "description" && git push origin main
 
 ---
 
+## John Picou Writing Style
+
+When drafting any communication (emails, summaries, reports) on behalf of John Picou:
+
+- **Never use em dashes** ("—"). Use a comma, period, or restructure the sentence instead.
+- Tone: warm, direct, and professional. Not stiff or corporate.
+- Sign-offs: "Sincerely, John Picou / GloCon Solutions LLC"
+- AP style for all user-facing text (no Oxford comma, numerals for 10+, etc.)
+
+---
+
 ## Self-Improvement Protocol
 
 After every session or error correction:
