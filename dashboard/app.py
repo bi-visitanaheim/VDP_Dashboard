@@ -598,6 +598,7 @@ st.markdown("""
     --dp-text-1:        #F4FAFF;
     --dp-text-2:        #C8E0F2;
     --dp-text-3:        #8EC4DC;
+    --dp-text-4:        #5A7A95;   /* muted/disabled — Linear 4th tier */
     --dp-radius:        12px;
     --dp-radius-lg:     16px;
     --dp-shadow:        0 1px 4px rgba(0,0,0,0.30), 0 4px 20px rgba(0,0,0,0.22);
@@ -3178,6 +3179,17 @@ st.markdown("""
   /* ── Plotly modebar button enhancement ── */
   .modebar-btn path { fill: rgba(200,230,255,0.55) !important; }
   .modebar-btn:hover path { fill: #00D4C8 !important; }
+
+  /* ── Linear text-wrap: balance on headings (cleaner line breaks) ── */
+  h1, h2, h3, .kpi-label, .insight-title, .event-label, .src-name, .empty-title {
+    text-wrap: balance;
+  }
+
+  /* ── Muted 4th-tier text utility (Linear pattern) ── */
+  .text-muted { color: var(--dp-text-4) !important; }
+
+  /* ── ChartMogul dotted forecast line utility ── */
+  /* Applied in Plotly traces via line=dict(dash='dot') */
 
   /* ── Resend-style warm gradient on AI panel ── */
   .ai-command-panel {
@@ -6375,7 +6387,7 @@ with st.sidebar:
             '• RevPAR: $325 (+63.5% YOY)<br>'
             '• ADR: $440 (+26.5% YOY)<br>'
             '• Annual Trips: 3.55M<br>'
-            '• TBID est. (90-day): $468K<br>'
+            '• TBID est. (90-day): $464K<br>'
             '• Campaign ROAS: ∞ (all organic)<br>'
             '</div>',
             unsafe_allow_html=True,
