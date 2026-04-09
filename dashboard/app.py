@@ -2553,8 +2553,10 @@ st.markdown("""
     new MutationObserver(killBadges).observe(document.body,{childList:true,subtree:true});
   }
 
-  // Sidebar toggle — searches doc and parent window for Streamlit's native button
+  // Sidebar toggle — event delegation on document survives Streamlit rerenders
   function findSidebarBtn(){
+    var docs = [document];
+    try{ docs.push(window.parent.document); }catch(e){}
     var sels = [
       '[data-testid="collapsedControl"]',
       '[data-testid="stSidebarCollapseButton"] button',
@@ -2565,31 +2567,33 @@ st.markdown("""
       'button[aria-label="Expand sidebar"]',
       '[data-testid="stSidebar"] button[kind="header"]'
     ];
-    for(var i=0;i<sels.length;i++){
-      var el = document.querySelector(sels[i]);
-      if(el) return el;
-      // also try parent frame (Streamlit Cloud wraps in iframe)
-      try {
-        el = window.parent.document.querySelector(sels[i]);
+    for(var d=0;d<docs.length;d++){
+      for(var i=0;i<sels.length;i++){
+        var el = docs[d].querySelector(sels[i]);
         if(el) return el;
-      } catch(e){}
+      }
     }
     return null;
   }
-  function attachSidebarToggle(){
-    var btn = document.getElementById('dp-sidebar-toggle');
-    if(!btn){ setTimeout(attachSidebarToggle, 500); return; }
-    btn.addEventListener('click', function(){
-      var native = findSidebarBtn();
-      if(native){ native.click(); return; }
-      // Fallback: CSS toggle sidebar visibility
-      var sb = document.querySelector('[data-testid="stSidebar"]');
-      if(sb){
-        sb.style.transform = (sb.style.transform === 'translateX(-105%)') ? 'translateX(0)' : 'translateX(-105%)';
-      }
-    });
-  }
-  attachSidebarToggle();
+  // Delegation on document — survives Streamlit re-rendering the button element
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('#dp-sidebar-toggle')) return;
+    var native = findSidebarBtn();
+    if(native){ native.click(); return; }
+    var sb = document.querySelector('[data-testid="stSidebar"]') ||
+             (function(){ try{return window.parent.document.querySelector('[data-testid="stSidebar"]');}catch(x){return null;} })();
+    if(sb){ sb.style.transform = (sb.style.transform === 'translateX(-105%)') ? 'translateX(0)' : 'translateX(-105%)'; }
+  }, true);
+  // Nightly reset at 9 PM UTC — reloads page so cache refreshes with new pipeline data
+  (function(){
+    function msUntil9pmUTC(){
+      var now = new Date();
+      var t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 21, 0, 0));
+      if(now >= t) t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()+1, 21, 0, 0));
+      return t - now;
+    }
+    setTimeout(function(){ window.location.reload(); }, msUntil9pmUTC());
+  })();
 })();
 </script>
 <script>
@@ -7770,13 +7774,13 @@ with tab_ov:
         try:
             _conn_s = sqlite3.connect(DB_PATH)
             _ig_row = pd.read_sql_query(
-                "SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1", _conn_s
+                "SELECT followers FROM later_ig_profile_growth WHERE followers IS NOT NULL ORDER BY data_date DESC LIMIT 1", _conn_s
             )
             _fb_row = pd.read_sql_query(
-                "SELECT page_followers FROM later_fb_profile_growth ORDER BY data_date DESC LIMIT 1", _conn_s
+                "SELECT page_followers FROM later_fb_profile_growth WHERE page_followers IS NOT NULL ORDER BY data_date DESC LIMIT 1", _conn_s
             )
             _tk_row = pd.read_sql_query(
-                "SELECT followers FROM later_tk_profile_growth ORDER BY data_date DESC LIMIT 1", _conn_s
+                "SELECT followers FROM later_tk_profile_growth WHERE followers IS NOT NULL ORDER BY data_date DESC LIMIT 1", _conn_s
             )
             _conn_s.close()
             if not _ig_row.empty: _exec_ig_fol = int(_ig_row.iloc[0,0] or 0)
@@ -8080,9 +8084,12 @@ with tab_ov:
                 else:
                     _ga4_lbl = "Run pipeline to load Datafy GA4 web analytics data."
                 # Later.com social stats for board report
-                _ig_fol = int(df_later_ig_profile.iloc[0]["followers"]) if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns and pd.notna(df_later_ig_profile.iloc[0]["followers"]) else 0
-                _fb_fol = int(df_later_fb_profile.iloc[0]["page_followers"]) if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns and pd.notna(df_later_fb_profile.iloc[0]["page_followers"]) else 0
-                _tk_fol = int(df_later_tk_profile.iloc[0]["followers"]) if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns and pd.notna(df_later_tk_profile.iloc[0]["followers"]) else 0
+                _ig_fol_s = df_later_ig_profile["followers"].dropna() if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else pd.Series(dtype=float)
+                _fb_fol_s = df_later_fb_profile["page_followers"].dropna() if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else pd.Series(dtype=float)
+                _tk_fol_s = df_later_tk_profile["followers"].dropna() if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else pd.Series(dtype=float)
+                _ig_fol = int(_ig_fol_s.iloc[0]) if not _ig_fol_s.empty else 0
+                _fb_fol = int(_fb_fol_s.iloc[0]) if not _fb_fol_s.empty else 0
+                _tk_fol = int(_tk_fol_s.iloc[0]) if not _tk_fol_s.empty else 0
                 _ig_posts_ct = len(df_later_ig_posts)
                 _ig_eng_avg  = float(df_later_ig_posts["engagement_rate"].mean()) if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns else 0.0
                 _social_reach_total = (
@@ -10608,6 +10615,21 @@ with tab_fo:
     except Exception:
         pass
 
+    # ── All-Insights Download ────────────────────────────────────────────────
+    if not df_insights_all.empty:
+        _ins_dl_cols = [c for c in ["as_of_date", "audience", "category", "headline", "body", "priority", "horizon_days"] if c in df_insights_all.columns]
+        _all_ins_csv = df_insights_all[_ins_dl_cols].to_csv(index=False).encode()
+        _ins_dl_c1, _ins_dl_c2 = st.columns([3, 1])
+        with _ins_dl_c2:
+            st.download_button(
+                "⬇️ Download All Insights CSV",
+                _all_ins_csv,
+                file_name=f"all_insights_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                key="dl_all_insights",
+                help="Download all forward-looking insights for all audiences as CSV",
+            )
+
     # ── Audience tabs ────────────────────────────────────────────────────────
     st.markdown(sec_div("🧠 Audience-Specific Insights"), unsafe_allow_html=True)
     AUDIENCE_CONFIG = {
@@ -10691,6 +10713,17 @@ with tab_fo:
                     all_sources.update(row["data_sources"].split(","))
             if all_sources:
                 st.caption(f"Data sources: {', '.join(sorted(s.strip() for s in all_sources if s.strip()))}")
+
+            # Download button for this audience's insights
+            _dl_cols = [c for c in ["as_of_date", "audience", "category", "headline", "body", "priority", "horizon_days"] if c in df_aud.columns]
+            _aud_csv = df_aud[_dl_cols].to_csv(index=False).encode()
+            st.download_button(
+                f"⬇️ Download {label} Insights CSV",
+                _aud_csv,
+                file_name=f"insights_{audience}_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                key=f"dl_insights_{audience}",
+            )
 
     # ── 6-Month Forward Demand Calendar ─────────────────────────────────────
     st.markdown(sec_div("📅 2026 Forward Demand Outlook"), unsafe_allow_html=True)
