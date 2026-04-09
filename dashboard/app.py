@@ -2530,12 +2530,23 @@ st.markdown("""
 <button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
 </button>
-<button id="dp-sidebar-toggle" title="Toggle sidebar (☰ open / close)">
+<button id="dp-sidebar-toggle" title="Toggle sidebar" onclick="
+if(!window._sbOpen){window._sbOpen=false;}
+var sb=document.querySelector('[data-testid=stSidebar]');
+if(!sb)sb=document.querySelector('.stSidebar');
+if(!sb)return;
+window._sbOpen=!window._sbOpen;
+if(window._sbOpen){
+  sb.style.cssText='display:flex!important;visibility:visible!important;transform:translateX(0)!important;width:336px!important;min-width:336px!important;transition:transform 0.25s ease;';
+}else{
+  sb.style.cssText='transform:translateX(-110%)!important;transition:transform 0.25s ease;';
+}
+">
   <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
 </button>
 <script>
 (function(){
-  // Nuke floating Streamlit badges via JS (CSS fallback)
+  // Nuke floating Streamlit badges
   function killBadges(){
     var sel = [
       '[data-testid="stBottom"]','[data-testid="appCreatorAvatar"]',
@@ -2552,68 +2563,16 @@ st.markdown("""
   if(window.MutationObserver){
     new MutationObserver(killBadges).observe(document.body,{childList:true,subtree:true});
   }
-
-  // Sidebar toggle — guard against duplicate registration on Streamlit rerenders
-  if(!window._dpSidebarReady){
-    window._dpSidebarReady = true;
-    function _dpToggleSidebar(){
-      var docs=[document];
-      try{docs.push(window.parent.document);}catch(e){}
-      // Try every known Streamlit sidebar selector
-      var sels=[
-        '[data-testid="collapsedControl"]',
-        'button[aria-label="Open sidebar"]',
-        'button[aria-label="Close sidebar"]',
-        'button[aria-label="Expand sidebar"]',
-        'button[aria-label="Collapse sidebar"]',
-        '[data-testid="stSidebarCollapseButton"] button',
-        '[data-testid="stSidebarNavCollapseButton"]'
-      ];
-      for(var d=0;d<docs.length;d++){
-        for(var i=0;i<sels.length;i++){
-          var el=docs[d].querySelector(sels[i]);
-          if(el){el.click();return;}
-        }
-        // Brute-force: any button with "sidebar" in aria-label
-        var btns=docs[d].querySelectorAll('button[aria-label]');
-        for(var j=0;j<btns.length;j++){
-          if(/sidebar/i.test(btns[j].getAttribute('aria-label'))){
-            btns[j].click();return;
-          }
-        }
-      }
-      // Keyboard shortcut fallback (Streamlit shortcut to toggle sidebar)
-      try{
-        document.dispatchEvent(new KeyboardEvent('keydown',{key:'\\',keyCode:220,code:'Backslash',bubbles:true,cancelable:true}));
-      }catch(ke){}
-      // Last resort: direct CSS toggle using computed transform
-      var sb=document.querySelector('[data-testid="stSidebar"]');
-      if(sb){
-        var ct=window.getComputedStyle(sb).transform;
-        var isHidden=ct&&ct!=='none'&&ct!=='matrix(1, 0, 0, 1, 0, 0)'&&
-                     (ct.indexOf('matrix')!==-1&&parseFloat(ct.split(',')[4])<-10);
-        sb.style.transition='transform 0.3s ease';
-        sb.style.transform=isHidden?'translateX(0)':'translateX(-105%)';
-        if(isHidden){sb.style.visibility='visible';sb.style.display='flex';}
-      }
-    }
-    document.addEventListener('click',function(e){
-      if(e.target&&e.target.closest&&e.target.closest('#dp-sidebar-toggle')){
-        e.preventDefault();e.stopImmediatePropagation();
-        _dpToggleSidebar();
-      }
-    },true);
+  // Nightly reset at 9 PM UTC
+  if(!window._dpNightlySet){
+    window._dpNightlySet=true;
+    (function(){
+      var now=new Date();
+      var t=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),21,0,0));
+      if(now>=t) t=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1,21,0,0));
+      setTimeout(function(){window.location.reload();},t-now);
+    })();
   }
-  // Nightly reset at 9 PM UTC — reloads page so cache refreshes with new pipeline data
-  (function(){
-    function msUntil9pmUTC(){
-      var now = new Date();
-      var t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 21, 0, 0));
-      if(now >= t) t = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()+1, 21, 0, 0));
-      return t - now;
-    }
-    setTimeout(function(){ window.location.reload(); }, msUntil9pmUTC());
-  })();
 })();
 </script>
 <script>
