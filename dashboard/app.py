@@ -2464,7 +2464,7 @@ st.markdown("""
   div[data-testid="metric-container"] { padding-top: 4px !important; }
 </style>
 <script>
-/* Force metric labels to wrap — CSS alone can't override Streamlit inline styles */
+// Force metric labels to wrap — CSS alone can't override Streamlit inline styles
 (function fixMetricLabels(){
   function fix(){
     document.querySelectorAll('[data-testid="stMetricLabel"]').forEach(function(el){
@@ -2534,7 +2534,7 @@ st.markdown("""
 </button>
 <script>
 (function(){
-  /* ── Nuke floating Streamlit badges via JS (CSS fallback) ── */
+  // Nuke floating Streamlit badges via JS (CSS fallback)
   function killBadges(){
     var sel = [
       '[data-testid="stBottom"]','[data-testid="appCreatorAvatar"]',
@@ -2552,7 +2552,7 @@ st.markdown("""
     new MutationObserver(killBadges).observe(document.body,{childList:true,subtree:true});
   }
 
-  /* ── Sidebar toggle ── */
+  // Sidebar toggle
   function attachSidebarToggle(){
     var btn = document.getElementById('dp-sidebar-toggle');
     if(!btn){ setTimeout(attachSidebarToggle, 500); return; }
@@ -2563,7 +2563,7 @@ st.markdown("""
                    document.querySelector('button[aria-label="Open sidebar"]') ||
                    document.querySelector('[data-testid="stSidebar"] button[kind="header"]');
       if(native){ native.click(); return; }
-      /* Fallback: toggle sidebar width directly */
+      // Fallback: toggle sidebar width directly
       var sb = document.querySelector('[data-testid="stSidebar"]');
       if(sb){ sb.style.display = (sb.style.display==='none') ? '' : 'none'; }
     });
