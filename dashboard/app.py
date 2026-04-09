@@ -5975,38 +5975,40 @@ with st.sidebar:
     # ── VDP Analyst — Multi-Model AI Config ──────────────────────────────────
     st.markdown("**🧠 VDP Analyst**")
 
-    # API keys: admin can override, otherwise load from env silently
+    # Anthropic key always visible — needed to activate AI analyst
+    api_key_raw = st.text_input(
+        "Anthropic API Key",
+        type="password",
+        placeholder="sk-ant-api03-…",
+        value=st.session_state.get("api_key_field", _ENV_API_KEY),
+        help="Paste your Anthropic key to activate the AI Analyst panel",
+        key="api_key_field",
+    )
+
+    # Other keys: admin only
     if _is_admin:
-        api_key_raw = st.text_input(
-            "Anthropic API Key",
-            type="password", placeholder="sk-ant-api03-…",
-            value=_ENV_API_KEY,
-            help="ANTHROPIC_API_KEY from .env",
-            key="api_key_field",
-        )
         _oa_raw = st.text_input(
             "OpenAI API Key",
             type="password", placeholder="sk-…",
             value=_ENV_OPENAI_KEY,
-            help="OPENAI_API_KEY from .env — enables GPT-4o, o3-mini",
+            help="OPENAI_API_KEY — enables GPT-4o, o3-mini",
             key="openai_key_field",
         )
         _ga_raw = st.text_input(
             "Google AI API Key",
             type="password", placeholder="AIzaSy…",
             value=_ENV_GOOGLE_AI_KEY,
-            help="GOOGLE_AI_API_KEY from .env — enables Gemini 2.0 Flash, 1.5 Pro",
+            help="GOOGLE_AI_API_KEY — enables Gemini 2.0 Flash, 1.5 Pro",
             key="google_key_field",
         )
         _px_raw = st.text_input(
             "Perplexity API Key",
             type="password", placeholder="pplx-…",
             value=_ENV_PERPLEXITY_KEY,
-            help="PERPLEXITY_API_KEY from .env — enables live web search (Sonar Pro)",
+            help="PERPLEXITY_API_KEY — enables live web search (Sonar Pro)",
             key="perplexity_key_field",
         )
     else:
-        api_key_raw = _ENV_API_KEY
         _oa_raw     = _ENV_OPENAI_KEY
         _ga_raw     = _ENV_GOOGLE_AI_KEY
         _px_raw     = _ENV_PERPLEXITY_KEY
