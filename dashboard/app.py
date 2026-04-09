@@ -70,7 +70,7 @@ st.set_page_config(
     page_title="Dana Point PULSE",
     page_icon="🌊",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ─── Login Gate ───────────────────────────────────────────────────────────────
@@ -2530,7 +2530,7 @@ st.markdown("""
 <button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
 </button>
-<button id="dp-sidebar-toggle" title="Toggle sidebar / filters">
+<button id="dp-sidebar-toggle" title="Toggle sidebar (☰ open / close)">
   <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
 </button>
 <script>
@@ -2553,20 +2553,40 @@ st.markdown("""
     new MutationObserver(killBadges).observe(document.body,{childList:true,subtree:true});
   }
 
-  // Sidebar toggle
+  // Sidebar toggle — searches doc and parent window for Streamlit's native button
+  function findSidebarBtn(){
+    var sels = [
+      '[data-testid="collapsedControl"]',
+      '[data-testid="stSidebarCollapseButton"] button',
+      '[data-testid="stSidebarNavCollapseButton"]',
+      'button[aria-label="Close sidebar"]',
+      'button[aria-label="Open sidebar"]',
+      'button[aria-label="Collapse sidebar"]',
+      'button[aria-label="Expand sidebar"]',
+      '[data-testid="stSidebar"] button[kind="header"]'
+    ];
+    for(var i=0;i<sels.length;i++){
+      var el = document.querySelector(sels[i]);
+      if(el) return el;
+      // also try parent frame (Streamlit Cloud wraps in iframe)
+      try {
+        el = window.parent.document.querySelector(sels[i]);
+        if(el) return el;
+      } catch(e){}
+    }
+    return null;
+  }
   function attachSidebarToggle(){
     var btn = document.getElementById('dp-sidebar-toggle');
     if(!btn){ setTimeout(attachSidebarToggle, 500); return; }
     btn.addEventListener('click', function(){
-      var native = document.querySelector('[data-testid="collapsedControl"]') ||
-                   document.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
-                   document.querySelector('button[aria-label="Close sidebar"]') ||
-                   document.querySelector('button[aria-label="Open sidebar"]') ||
-                   document.querySelector('[data-testid="stSidebar"] button[kind="header"]');
+      var native = findSidebarBtn();
       if(native){ native.click(); return; }
-      // Fallback: toggle sidebar width directly
+      // Fallback: CSS toggle sidebar visibility
       var sb = document.querySelector('[data-testid="stSidebar"]');
-      if(sb){ sb.style.display = (sb.style.display==='none') ? '' : 'none'; }
+      if(sb){
+        sb.style.transform = (sb.style.transform === 'translateX(-105%)') ? 'translateX(0)' : 'translateX(-105%)';
+      }
     });
   }
   attachSidebarToggle();
