@@ -338,6 +338,7 @@ After every session or error correction:
 - `build_table_relationships.py` is the LAST step (step 20) in `run_pipeline.py` — it auto-rebuilds ALL 120+ relationships from the RELATIONSHIPS registry. Always add new entries there when adding tables.
 - `table_relationships.created_at` is the correct column name (not `updated_at`) — check schema with `PRAGMA table_info(table_relationships)` before writing UPSERT SQL.
 - Multi-model AI: `stream_ai_response(prompt, model_key, _ai_keys)` routes to Anthropic/OpenAI/Google/Perplexity. `_ai_keys` is computed in the sidebar; `selected_model` is stored in session_state. Both have module-level defaults before sidebar renders to prevent NameError.
+- NEVER use the Write tool on `.env` — it overwrites the file and destroys live API keys. Always Read first; if the file exists, use Edit to add/change only specific lines.
 
 ---
 
