@@ -2194,10 +2194,11 @@ st.markdown("""
   }
   /* ── Hero banner stats row ────────────────────────────────────────────── */
   .hero-stats-row {
-    display: flex; gap: 32px; margin-top: 16px; flex-wrap: wrap;
+    display: flex; gap: 40px; margin-top: 16px; flex-wrap: wrap;
     border-top: 1px solid rgba(255,255,255,0.18); padding-top: 16px;
+    justify-content: center; align-items: flex-start;
   }
-  .hero-stat { display: flex; flex-direction: column; gap: 3px; }
+  .hero-stat { display: flex; flex-direction: column; gap: 3px; align-items: center; text-align: center; }
   .hero-stat-val {
     font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900;
     letter-spacing: -0.04em;
