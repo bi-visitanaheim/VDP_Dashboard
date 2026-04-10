@@ -70,7 +70,7 @@ st.set_page_config(
     page_title="Dana Point PULSE",
     page_icon="🌊",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ─── Login Gate ───────────────────────────────────────────────────────────────
@@ -610,7 +610,22 @@ st.markdown("""
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: var(--dp-bg) !important;
     color: var(--dp-text-1) !important;
+    font-size: 15px !important;
   }
+  /* ── Global font scale-up — all text bumped ~15% larger ──────────────── */
+  p, li, span, label, div { font-size: inherit; }
+  [data-testid="stMarkdownContainer"] p,
+  [data-testid="stMarkdownContainer"] li { font-size: 15px; line-height: 1.7; }
+  [data-testid="stText"] { font-size: 15px !important; }
+  [data-testid="stMetricValue"] { font-size: 2.2rem !important; }
+  [data-testid="stMetricLabel"] { font-size: 14px !important; }
+  [data-testid="stMetricDelta"]  { font-size: 13px !important; }
+  [data-testid="stTab"] button p { font-size: 15px !important; font-weight: 600 !important; }
+  [data-testid="stSidebar"] label,
+  [data-testid="stSidebar"] p,
+  [data-testid="stSidebar"] span { font-size: 14px !important; }
+  [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p { font-size: 14px !important; }
+  caption, .caption, [data-testid="stCaptionContainer"] { font-size: 13px !important; }
   body, .main, .stApp, [data-testid="stAppViewContainer"] {
     background-color: var(--dp-bg) !important;
     background-image: none !important;
@@ -740,7 +755,7 @@ st.markdown("""
   .kpi-icon-svg { flex-shrink: 0; line-height: 0; opacity: 0.45; }
   .kpi-value {
     font-family: 'Syne', 'Outfit', sans-serif;
-    font-size: 36px; font-weight: 800;
+    font-size: 42px; font-weight: 800;
     letter-spacing: -.04em; line-height: 1.0;
     color: var(--dp-text-1);
     -webkit-text-fill-color: var(--dp-text-1);
@@ -785,14 +800,14 @@ st.markdown("""
   .insight-info::before     { background: linear-gradient(180deg, #00D4C8, #38BDF8); }
   .insight-title {
     font-family: 'Outfit', sans-serif;
-    font-size: 13.5px; font-weight: 800;
+    font-size: 15.5px; font-weight: 800;
     margin-bottom: 6px; letter-spacing: -.02em;
     padding-left: 14px;
     color: var(--dp-text-1);
   }
   .insight-body {
-    font-size: 13px; color: var(--dp-text-2);
-    line-height: 1.65; margin: 0;
+    font-size: 14.5px; color: var(--dp-text-2);
+    line-height: 1.70; margin: 0;
     padding-left: 12px;
   }
 
@@ -869,19 +884,21 @@ st.markdown("""
   a[href*="streamlit.io"]               { display: none !important; }
   a[href*="github.com/streamlit"]       { display: none !important; }
   /* Sidebar toggle button */
-  #dp-sidebar-toggle {
-    position: fixed; bottom: 72px; left: 12px; z-index: 99999;
-    width: 36px; height: 36px; border-radius: 9px;
-    background: rgba(22,40,68,0.94); border: 1px solid rgba(0,212,200,0.30);
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.40); backdrop-filter: blur(8px);
-    transition: background 0.2s, box-shadow 0.2s;
+  /* ── Native Streamlit sidebar collapse button — make it clearly visible ── */
+  [data-testid="stSidebarCollapseButton"] button,
+  [data-testid="collapsedControl"] button,
+  [data-testid="collapsedControl"] {
+    width: 40px !important; height: 40px !important;
+    background: rgba(0,212,200,0.15) !important;
+    border: 1px solid rgba(0,212,200,0.40) !important;
+    border-radius: 10px !important;
+    color: #00D4C8 !important;
+    box-shadow: 0 2px 10px rgba(0,212,200,0.20) !important;
   }
-  #dp-sidebar-toggle:hover {
-    background: rgba(0,212,200,0.15);
-    box-shadow: 0 4px 18px rgba(0,212,200,0.22);
+  [data-testid="stSidebarCollapseButton"] svg,
+  [data-testid="collapsedControl"] svg {
+    color: #00D4C8 !important; fill: #00D4C8 !important; width: 18px !important; height: 18px !important;
   }
-  #dp-sidebar-toggle svg { width: 16px; height: 16px; fill: #00D4C8; pointer-events: none; }
 
   /* ── Inner containers: must NOT clip so sticky tabs can work ────────── */
   /* stMain/stMainBlockContainer are scroll containers — set above        */
@@ -1377,7 +1394,7 @@ st.markdown("""
   }
   .chart-caption {
     font-family: 'DM Sans', sans-serif;
-    font-size: 12px; color: var(--dp-text-3); font-weight: 500; margin-bottom: 12px;
+    font-size: 13px; color: var(--dp-text-3); font-weight: 500; margin-bottom: 12px;
     letter-spacing: 0.01em; padding-left: 10px;
   }
 
@@ -1976,10 +1993,6 @@ st.markdown("""
       bottom: 70px !important; right: 14px !important;
       width: 42px !important; height: 42px !important;
     }
-    #dp-sidebar-toggle {
-      bottom: 116px !important; left: 10px !important;
-      width: 38px !important; height: 38px !important;
-    }
     .event-stat { padding: 14px 10px !important; }
     .event-val  { font-size: 22px !important; }
     .nlm-briefing { padding: 12px 14px !important; }
@@ -2200,17 +2213,17 @@ st.markdown("""
   }
   .hero-stat { display: flex; flex-direction: column; gap: 3px; align-items: center; text-align: center; }
   .hero-stat-val {
-    font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900;
+    font-family: 'Outfit', sans-serif; font-size: 34px; font-weight: 900;
     letter-spacing: -0.04em;
     color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
     line-height: 1; text-shadow: 0 1px 6px rgba(0,0,0,0.25);
   }
   .hero-stat-label {
-    font-family: 'DM Sans', sans-serif; font-size: 9px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
     text-transform: uppercase; letter-spacing: .14em;
     color: rgba(180,220,255,0.80) !important; -webkit-text-fill-color: rgba(180,220,255,0.80) !important;
   }
-  .hero-stat-delta { font-size: 11px; font-weight: 700; }
+  .hero-stat-delta { font-size: 13px; font-weight: 700; }
   .hero-stat-pos { color: #34D399 !important; -webkit-text-fill-color: #34D399 !important; }
   .hero-stat-neg { color: #F87171 !important; -webkit-text-fill-color: #F87171 !important; }
 
@@ -2531,20 +2544,7 @@ st.markdown("""
 <button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
 </button>
-<button id="dp-sidebar-toggle" title="Toggle sidebar" onclick="
-if(!window._sbOpen){window._sbOpen=false;}
-var sb=document.querySelector('[data-testid=stSidebar]');
-if(!sb)sb=document.querySelector('.stSidebar');
-if(!sb)return;
-window._sbOpen=!window._sbOpen;
-if(window._sbOpen){
-  sb.style.cssText='display:flex!important;visibility:visible!important;transform:translateX(0)!important;width:336px!important;min-width:336px!important;transition:transform 0.25s ease;';
-}else{
-  sb.style.cssText='transform:translateX(-110%)!important;transition:transform 0.25s ease;';
-}
-">
-  <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-</button>
+
 <script>
 (function(){
   // Nuke floating Streamlit badges
