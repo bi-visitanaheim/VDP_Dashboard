@@ -2634,7 +2634,63 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# ─── PULSE v6 — Premium Interaction Layer ─────────────────────────────────────
+# ── Fixed Footer — always visible at bottom of every tab ─────────────────────
+st.markdown("""
+<style>
+  #dp-fixed-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 99998;
+    height: 36px;
+    background: rgba(10, 18, 32, 0.97);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0, 212, 200, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: #5A7A95;
+    box-shadow: 0 -2px 16px rgba(0,0,0,0.30);
+    pointer-events: none;
+  }
+  #dp-fixed-footer a {
+    color: #00D4C8;
+    text-decoration: none;
+    pointer-events: all;
+  }
+  #dp-fixed-footer a:hover { opacity: 0.75; }
+  #dp-fixed-footer .fp-brand {
+    font-weight: 700;
+    color: #00D4C8;
+    letter-spacing: .03em;
+  }
+  #dp-fixed-footer .fp-sep { opacity: 0.35; margin: 0 6px; }
+  #dp-fixed-footer .fp-right { font-size: 10px; opacity: 0.55; }
+  /* Push page content up so fixed footer doesn't overlap bottom content */
+  [data-testid="stMain"] > div:first-child,
+  .block-container { padding-bottom: 48px !important; }
+  @media print { #dp-fixed-footer { display: none !important; } }
+</style>
+<div id="dp-fixed-footer">
+  <div>
+    🌊 <span class="fp-brand">Dana Point PULSE</span>
+    <span class="fp-sep">|</span>
+    GloCon Solutions LLC
+    <span class="fp-sep">·</span>
+    Built for <a href="https://www.visitdanapoint.com" target="_blank">Visit Dana Point</a>
+    <span class="fp-sep">·</span>
+    Data: STR &nbsp;·&nbsp; Datafy &nbsp;·&nbsp; CoStar &nbsp;·&nbsp; Visit California
+  </div>
+  <div class="fp-right">
+    © 2026 Wilton John Picou &nbsp;·&nbsp; All data proprietary &amp; confidential
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+
 # Godly.website-inspired: scroll animations, counter fx, ambient effects, glass cards
 st.markdown("""
 <style>
