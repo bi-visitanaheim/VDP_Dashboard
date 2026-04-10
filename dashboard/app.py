@@ -5999,48 +5999,15 @@ with st.sidebar:
     _qp = st.query_params
     _is_admin = str(_qp.get("admin", "")).lower() == "true"
 
-    # ── VDP Analyst — Multi-Model AI Config ──────────────────────────────────
-    st.markdown("**🧠 VDP Analyst**")
-
-    # All AI keys always visible — needed to activate models in production
-    api_key_raw = st.text_input(
-        "Anthropic API Key",
-        type="password",
-        placeholder="sk-ant-api03-…",
-        value=st.session_state.get("api_key_field", _ENV_API_KEY),
-        help="Claude Sonnet / Opus — primary AI analyst",
-        key="api_key_field",
-    )
-    _oa_raw = st.text_input(
-        "OpenAI API Key",
-        type="password", placeholder="sk-…",
-        value=st.session_state.get("openai_key_field", _ENV_OPENAI_KEY),
-        help="GPT-4o / o3-mini — enables OpenAI models",
-        key="openai_key_field",
-    )
-    _ga_raw = st.text_input(
-        "Google AI API Key",
-        type="password", placeholder="AIzaSy…",
-        value=st.session_state.get("google_key_field", _ENV_GOOGLE_AI_KEY),
-        help="Gemini 2.0 Flash / 1.5 Pro — enables Google models",
-        key="google_key_field",
-    )
-    _px_raw = st.text_input(
-        "Perplexity API Key",
-        type="password", placeholder="pplx-…",
-        value=st.session_state.get("perplexity_key_field", _ENV_PERPLEXITY_KEY),
-        help="Sonar Pro — live web search for market intelligence",
-        key="perplexity_key_field",
-    )
-
-    api_key       = api_key_raw.strip()
-    _OPENAI_KEY   = _oa_raw.strip()
-    _GOOGLE_AI_KEY = _ga_raw.strip()
-    _PERPLEXITY_KEY = _px_raw.strip()
+    # ── AI keys — always from .env, never exposed in UI ─────────────────────
+    api_key         = _ENV_API_KEY
+    _OPENAI_KEY     = _ENV_OPENAI_KEY
+    _GOOGLE_AI_KEY  = _ENV_GOOGLE_AI_KEY
+    _PERPLEXITY_KEY = _ENV_PERPLEXITY_KEY
 
     api_key_valid = bool(api_key) and api_key.startswith("sk-ant-") and len(api_key) > 20
 
-    # Build active model list based on available keys
+    # Build active model list from loaded env keys
     _avail_models = {}
     for _mk, _mi in AI_MODELS.items():
         _prov = _mi["provider"]
@@ -6053,69 +6020,40 @@ with st.sidebar:
         elif _prov == "perplexity" and _PERPLEXITY_KEY and OPENAI_AVAILABLE:
             _avail_models[_mk] = _mi
 
-    # Model selector
-    _model_opts   = list(_avail_models.keys()) or ["claude-sonnet-4-6"]
+    _model_opts  = list(_avail_models.keys()) or ["claude-sonnet-4-6"]
     _model_labels = [f"{_avail_models[k]['badge']} {_avail_models[k]['label']}" if k in _avail_models else "🟦 Claude Sonnet 4.6" for k in _model_opts]
-    _default_idx  = 0
-    _saved_model  = st.session_state.get("selected_model", "claude-sonnet-4-6")
-    if _saved_model in _model_opts:
-        _default_idx = _model_opts.index(_saved_model)
+    _saved_model = st.session_state.get("selected_model", "claude-sonnet-4-6")
+    _default_idx = _model_opts.index(_saved_model) if _saved_model in _model_opts else 0
 
-    if len(_model_opts) > 1:
-        _sel_label = st.selectbox(
-            "Active AI Model",
-            options=_model_labels,
-            index=_default_idx,
-            key="model_selector",
-            help="Select the AI model for all analyst panels",
-        )
-        selected_model = _model_opts[_model_labels.index(_sel_label)]
+    # Admin: model selector + provider status
+    if _is_admin:
+        st.markdown("**🧠 AI Analyst — Admin**")
+        if len(_model_opts) > 1:
+            _sel_label = st.selectbox(
+                "Active AI Model", options=_model_labels, index=_default_idx,
+                key="model_selector", help="Select AI model for all analyst panels",
+            )
+            selected_model = _model_opts[_model_labels.index(_sel_label)]
+        else:
+            selected_model = _model_opts[0]
+        _provider_status = [
+            ("Claude",     ANTHROPIC_AVAILABLE and api_key_valid),
+            ("GPT-4o",     OPENAI_AVAILABLE and bool(_OPENAI_KEY)),
+            ("Gemini",     GEMINI_AVAILABLE and bool(_GOOGLE_AI_KEY)),
+            ("Perplexity", OPENAI_AVAILABLE and bool(_PERPLEXITY_KEY)),
+        ]
+        st.caption("  ".join(f"{'🟢' if ok else '⚫'} {n}" for n, ok in _provider_status))
+        st.divider()
     else:
         selected_model = _model_opts[0]
-        if _avail_models:
-            _mi_sel = _avail_models.get(selected_model, {})
-            st.caption(f"{_mi_sel.get('badge','🟦')} {_mi_sel.get('label', selected_model)}")
 
     st.session_state["selected_model"] = selected_model
-
-    # Build keys dict for downstream routing
     _ai_keys = {
         "anthropic":  api_key,
         "openai":     _OPENAI_KEY,
         "google":     _GOOGLE_AI_KEY,
         "perplexity": _PERPLEXITY_KEY,
     }
-
-    # Status indicators for each provider
-    _provider_status = [
-        ("Claude",     ANTHROPIC_AVAILABLE and api_key_valid,          "🟦"),
-        ("GPT-4o",     OPENAI_AVAILABLE and bool(_OPENAI_KEY),         "🟩"),
-        ("Gemini",     GEMINI_AVAILABLE and bool(_GOOGLE_AI_KEY),       "🟨"),
-        ("Perplexity", OPENAI_AVAILABLE and bool(_PERPLEXITY_KEY),     "🟪"),
-    ]
-    _dots = "  ".join(
-        f"{'🟢' if ok else '⚫'} {name}"
-        for name, ok, _ in _provider_status
-        if ok or _is_admin
-    )
-    if _dots:
-        st.caption(_dots)
-
-    _active_count = sum(1 for _, ok, _ in _provider_status if ok)
-    if _active_count == 0:
-        st.caption("⚪ Local mode — add API keys for AI analysis")
-    elif _active_count == 1:
-        st.caption(f"1 AI model active · Add more keys to unlock model selection")
-
-    if not ANTHROPIC_AVAILABLE:
-        st.warning("`anthropic` not installed.\nRun: `pip install anthropic`", icon="⚠️")
-
-    # ── Public refresh button (all users) ────────────────────────────────────
-    # GloCon Solutions LLC — user-facing cache-clear button
-    if st.button("🔄 Refresh Dashboard", use_container_width=True,
-                 help="Clear cached data and reload all metrics from the database."):
-        st.cache_data.clear()
-        st.rerun()
 
     st.divider()
 
