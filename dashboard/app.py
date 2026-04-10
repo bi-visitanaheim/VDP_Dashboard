@@ -5365,49 +5365,197 @@ def sec_div(title: str) -> str:
     )
 
 
+# ── Section HTML report generator ─────────────────────────────────────────────
+def generate_section_html(label: str, df: "pd.DataFrame", subtitle: str = "") -> str:
+    """Generate a print-ready HTML report for any section — same styling as Board Report.
+    Download → open in browser → File › Print › Save as PDF."""
+    _date_str  = datetime.now().strftime("%B %d, %Y")
+    _period    = datetime.now().strftime("%B %Y")
+    _sub_str   = f" — {subtitle}" if subtitle else f" — {_period}"
+
+    # Build table (cap at 200 rows, 25 cols to keep HTML small)
+    if not df.empty:
+        _cols  = [c for c in df.columns if not c.startswith("_")][:25]
+        _thead = "".join(f"<th>{c.replace('_',' ').title()}</th>" for c in _cols)
+        _tbody = ""
+        for _, row in df.head(200).iterrows():
+            _cells = "".join(f"<td>{'' if pd.isna(row[c]) else row[c]}</td>" for c in _cols)
+            _tbody += f"<tr>{_cells}</tr>"
+        _table_html = (
+            f'<table><thead><tr>{_thead}</tr></thead>'
+            f'<tbody>{_tbody}</tbody></table>'
+        )
+    else:
+        _table_html = "<p style='color:#5A7A95;font-style:italic;'>No data available.</p>"
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{label} — Dana Point PULSE</title>
+  <style>
+    @page {{ margin: 0.75in; }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{ font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1a2b3c; background: #fff; }}
+    .hdr {{ background: #0F1C2E; color: #fff; padding: 18px 24px 14px; }}
+    .hdr-brand {{ font-size: 13px; font-weight: 700; color: #00D4C8; letter-spacing: .04em; text-transform: uppercase; }}
+    .hdr-title {{ font-size: 20px; font-weight: 700; color: #fff; margin: 4px 0 2px; }}
+    .hdr-meta  {{ font-size: 10px; color: #5A7A95; }}
+    .body {{ padding: 20px 24px; }}
+    h2 {{ font-size: 13px; font-weight: 700; color: #0F1C2E; border-bottom: 2px solid #00D4C8;
+          padding-bottom: 5px; margin: 0 0 12px; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px; }}
+    th {{ background: #0F1C2E; color: #00D4C8; padding: 5px 8px; text-align: left;
+          font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }}
+    td {{ padding: 5px 8px; border-bottom: 1px solid #e8eef3; vertical-align: top; }}
+    tr:nth-child(even) td {{ background: #f5f8fa; }}
+    .footer {{ margin-top: 24px; padding-top: 10px; border-top: 1px solid #e0e8ef;
+               font-size: 9px; color: #8AABB8; line-height: 1.5; }}
+    @media print {{
+      body {{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="hdr">
+    <div class="hdr-brand">Dana Point PULSE · GloCon Solutions LLC</div>
+    <div class="hdr-title">{label}{_sub_str}</div>
+    <div class="hdr-meta">Generated {_date_str} · Data Sources: STR · Datafy · CoStar · Visit California</div>
+  </div>
+  <div class="body">
+    <h2>{label}</h2>
+    {_table_html}
+    <div class="footer">
+      Dana Point PULSE is a proprietary analytics platform developed by GloCon Solutions LLC for Visit Dana Point.<br>
+      Data sources: STR (hotel performance) · Datafy (visitor economy) · CoStar (market supply/pipeline) · Visit California · Later.com (social).<br>
+      Live dashboard: https://vdp-analytics.streamlit.app · Contact: john@gloconsolutions.com
+    </div>
+  </div>
+</body>
+</html>"""
+
+
 # ── Universal Share Bar ────────────────────────────────────────────────────────
-# Renders Print / Download CSV / Email share buttons for any section.
+# PDF (print-ready HTML) · JPEG (screenshot) · CSV · Email (mailto) · Link (copy URL)
 # Usage: render_share_bar("Hotel Trends", df=df_daily, file_name="hotel_trends", key="tr")
 def render_share_bar(
     label: str,
     df: "pd.DataFrame | None" = None,
     file_name: str = "pulse_data",
     key: str = "share",
-    extra_html: str | None = None,
+    subtitle: str = "",
 ) -> None:
-    """Render a consistent Print / Download / Email toolbar for any section."""
-    _sb_cols = st.columns([1, 1, 1, 6])
-    with _sb_cols[0]:
+    """PDF · JPEG · CSV · Email · Link — same pattern as Board Report, for every section."""
+    _has_df   = df is not None and not df.empty
+    _date_sfx = datetime.now().strftime("%Y%m%d")
+    _subj = f"Dana%20Point%20PULSE%20%E2%80%94%20{label.replace(' ', '%20')}"
+    _body = (
+        f"Hi%2C%0A%0APlease%20find%20the%20{label.replace(' ', '%20')}%20"
+        f"section%20from%20the%20Dana%20Point%20PULSE%20dashboard.%0A%0A"
+        f"View%20live%20dashboard%3A%20https%3A%2F%2Fvdp-analytics.streamlit.app%0A%0A"
+        f"Best%2C%0AJohn%20Picou%20%7C%20GloCon%20Solutions%20LLC"
+    )
+    _btn_style = (
+        "width:100%;height:32px;background:rgba(255,255,255,0.07);"
+        "border:1px solid rgba(255,255,255,0.18);border-radius:8px;"
+        "cursor:pointer;color:#C8E0F2;font-size:11px;font-weight:600;"
+        "font-family:Inter,sans-serif;transition:background 0.2s;"
+    )
+    _hover_on  = "this.style.background='rgba(0,212,200,0.15)'"
+    _hover_off = "this.style.background='rgba(255,255,255,0.07)'"
+
+    # Column layout — include PDF + CSV only when df available
+    if _has_df:
+        _cols = st.columns([1, 1, 1, 1, 1, 3])
+        _ci   = 0
+    else:
+        _cols = st.columns([1, 1, 1, 3])
+        _ci   = 0
+
+    # ── 📄 PDF (print-ready HTML) ─────────────────────────────────────────────
+    if _has_df:
+        with _cols[_ci]:
+            _html_rpt = generate_section_html(label, df, subtitle)
+            st.download_button(
+                "📄 PDF",
+                _html_rpt.encode("utf-8"),
+                file_name=f"{file_name}_{_date_sfx}.html",
+                mime="text/html",
+                key=f"pdf_sb_{key}",
+                use_container_width=True,
+                help="Download print-ready report → open in browser → File › Print › Save as PDF. Optimized for A4/Letter.",
+            )
+        _ci += 1
+
+    # ── 📸 JPEG (html2canvas screenshot) ─────────────────────────────────────
+    _jpg_name = f"{file_name}_{_date_sfx}.jpg"
+    with _cols[_ci]:
         _st_components.html(
-            '<button onclick="window.parent.print()" style="'
-            'width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.18);'
-            'border-radius:8px;padding:6px 0;cursor:pointer;color:#C8E0F2;'
-            'font-size:12px;font-weight:600;font-family:Inter,sans-serif;white-space:nowrap;'
-            'display:flex;align-items:center;justify-content:center;gap:5px;'
-            'transition:background 0.2s;" '
-            'onmouseover="this.style.background=\'rgba(0,212,200,0.15)\'" '
-            'onmouseout="this.style.background=\'rgba(255,255,255,0.07)\'">'
-            '🖨️ Print</button>',
+            f'<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>'
+            f'<button id="jpegbtn_{key}" '
+            f'onmouseover="{_hover_on}" onmouseout="{_hover_off}" '
+            f'onclick="var me=this;me.disabled=true;me.textContent=\'…\';\n'
+            f'html2canvas('
+            f'window.parent.document.querySelector(\'[data-testid=stMainBlockContainer]\')'
+            f'||window.parent.document.body,'
+            f'{{scale:2,useCORS:true,backgroundColor:\'#0F1C2E\'}})'
+            f'.then(function(c){{'
+            f'var a=document.createElement(\'a\');a.download=\'{_jpg_name}\';'
+            f'a.href=c.toDataURL(\'image/jpeg\',0.92);a.click();'
+            f'me.disabled=false;me.textContent=\'📸 JPEG\';}}'
+            f').catch(function(){{me.disabled=false;me.textContent=\'📸 JPEG\';}});" '
+            f'style="{_btn_style}">📸 JPEG</button>',
             height=38,
         )
-    if df is not None and not df.empty:
-        with _sb_cols[1]:
+    _ci += 1
+
+    # ── ⬇️ CSV ────────────────────────────────────────────────────────────────
+    if _has_df:
+        with _cols[_ci]:
             st.download_button(
                 "⬇️ CSV",
                 df.to_csv(index=False).encode(),
-                file_name=f"{file_name}_{datetime.now().strftime('%Y%m%d')}.csv",
+                file_name=f"{file_name}_{_date_sfx}.csv",
                 mime="text/csv",
-                key=f"dl_sb_{key}",
+                key=f"csv_sb_{key}",
                 use_container_width=True,
+                help=f"Download {label} data as CSV",
             )
-    with _sb_cols[2]:
-        _subj = f"Dana%20Point%20PULSE%20%E2%80%94%20{label.replace(' ', '%20')}"
-        _body = (
-            f"Please%20find%20the%20{label.replace(' ', '%20')}%20section%20from%20"
-            f"the%20Dana%20Point%20PULSE%20dashboard.%0A%0A"
-            f"Live%20dashboard%3A%20https%3A%2F%2Fvdp-analytics.streamlit.app"
+        _ci += 1
+
+    # ── 📧 Email ──────────────────────────────────────────────────────────────
+    with _cols[_ci]:
+        st.link_button(
+            "📧 Email",
+            f"mailto:?subject={_subj}&body={_body}",
+            use_container_width=True,
+            help="Share this section via email",
         )
-        st.link_button("✉️ Email", f"mailto:?subject={_subj}&body={_body}", use_container_width=True)
+    _ci += 1
+
+    # ── 🔗 Link (copy dashboard URL to clipboard) ─────────────────────────────
+    with _cols[_ci]:
+        _st_components.html(
+            f'<button id="lnkbtn_{key}" '
+            f'onmouseover="{_hover_on}" onmouseout="{_hover_off}" '
+            f'onclick="var me=this;\n'
+            f'var u=window.parent.location.href;\n'
+            f'if(navigator.clipboard){{navigator.clipboard.writeText(u)'
+            f'.then(function(){{me.textContent=\'✓ Copied!\';'
+            f'setTimeout(function(){{me.textContent=\'🔗 Link\';}},2000);}}'
+            f').catch(function(){{window.parent.prompt(\'Copy link:\',u);}});}}\n'
+            f'else{{window.parent.prompt(\'Copy link:\',u);}}" '
+            f'style="{_btn_style}">🔗 Link</button>',
+            height=38,
+        )
+
+    # Caption — PDF how-to (matches Board Report pattern)
+    if _has_df:
+        st.caption(
+            "📄 Opens as a formatted HTML document. "
+            "To save as PDF: open in browser → File → Print → 'Save as PDF'. "
+            "Optimized for A4/Letter paper.   📧 Share via Email sends the dashboard link."
+        )
 
 
 
@@ -7709,50 +7857,14 @@ tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs
 # Tab header helper: refresh button + active filter badge on every tab
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _tab_controls(tab_id: str = "", show_filter_badge: bool = True,
-                   label: str = "Dana Point PULSE", df: "pd.DataFrame | None" = None,
-                   file_name: str = "pulse_data"):
-    """Render per-tab refresh + Print / Download / Email share bar. GloCon Solutions LLC."""
-    _tc1, _tc2, _tc3, _tc4, _tc5 = st.columns([1, 1, 1, 1, 4])
+def _tab_controls(tab_id: str = "", show_filter_badge: bool = True):
+    """Render per-tab refresh button. Share/Download buttons live inside each section."""
+    _tc1, _tc_spacer = st.columns([1, 7])
     with _tc1:
         if st.button("🔄 Refresh", key=f"tab_refresh_{tab_id}",
                      help="Clear cache and reload data.", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
-    with _tc2:
-        _st_components.html(
-            '<button onclick="window.parent.print()" title="Print this page" style="'
-            'width:100%;height:38px;background:rgba(255,255,255,0.07);'
-            'border:1px solid rgba(255,255,255,0.18);border-radius:8px;'
-            'cursor:pointer;color:#C8E0F2;font-size:12px;font-weight:600;'
-            'font-family:Inter,sans-serif;display:flex;align-items:center;'
-            'justify-content:center;gap:4px;transition:background 0.2s;" '
-            'onmouseover="this.style.background=\'rgba(0,212,200,0.15)\'" '
-            'onmouseout="this.style.background=\'rgba(255,255,255,0.07)\'">'
-            '🖨️ Print</button>',
-            height=42,
-        )
-    if df is not None and not df.empty:
-        with _tc3:
-            st.download_button(
-                "⬇️ CSV",
-                df.to_csv(index=False).encode(),
-                file_name=f"{file_name}_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
-                key=f"dl_tc_{tab_id}",
-                use_container_width=True,
-                help=f"Download {label} data as CSV",
-            )
-    with _tc4:
-        _subj = f"Dana%20Point%20PULSE%20%E2%80%94%20{label.replace(' ', '%20')}"
-        _body = (
-            f"Hi%2C%0A%0APlease%20find%20the%20{label.replace(' ', '%20')}%20"
-            f"section%20from%20the%20Dana%20Point%20PULSE%20dashboard.%0A%0A"
-            f"View%20live%20dashboard%3A%20https%3A%2F%2Fvdp-analytics.streamlit.app%0A%0A"
-            f"Best%2C%0AJohn%20Picou%20%7C%20GloCon%20Solutions%20LLC"
-        )
-        st.link_button("✉️ Share", f"mailto:?subject={_subj}&body={_body}",
-                       use_container_width=True, help="Email this section to stakeholders")
 
 
 def _str_filters(tab_id: str, show_grain: bool = True, show_metric: bool = True):
@@ -7831,7 +7943,7 @@ with tab_ov:
         }})();
         </script>""", height=1, scrolling=False)
 
-    _tab_controls("ov", label="Overview Brain", df=df_kpi, file_name="pulse_overview")
+    _tab_controls("ov")
     # Filter: Time Period only — Overview uses the window to compute 30-day KPI snapshot
     _str_filters("ov", show_grain=False, show_metric=False)
     st.markdown(tab_intro(
@@ -9638,7 +9750,7 @@ with tab_ov:
     # TAB 2 — TRENDS
     # ══════════════════════════════════════════════════════════════════════════════
 with tab_tr:
-    _tab_controls("tr", label="Hotel Trends", df=df_sel, file_name="pulse_trends")
+    _tab_controls("tr")
     # Full filters: Time Period + Daily/Monthly grain (metric controlled by "View Metric" below)
     _str_filters("tr", show_grain=True, show_metric=False)
     st.markdown(tab_intro(
@@ -10461,7 +10573,7 @@ with tab_tr:
 # TAB 3 — FORWARD OUTLOOK
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_fo:
-    _tab_controls("fo", label="Forward Outlook", df=df_kpi, file_name="pulse_forward_outlook")
+    _tab_controls("fo")
     # Time Period filter: controls how much STR history backs the outlook narrative
     _str_filters("fo", show_grain=False, show_metric=False)
     st.markdown(tab_intro(
@@ -10706,20 +10818,13 @@ with tab_fo:
     except Exception:
         pass
 
-    # ── All-Insights Download ────────────────────────────────────────────────
+    # ── All-Insights Share Bar ───────────────────────────────────────────────
     if not df_insights_all.empty:
         _ins_dl_cols = [c for c in ["as_of_date", "audience", "category", "headline", "body", "priority", "horizon_days"] if c in df_insights_all.columns]
-        _all_ins_csv = df_insights_all[_ins_dl_cols].to_csv(index=False).encode()
-        _ins_dl_c1, _ins_dl_c2 = st.columns([3, 1])
-        with _ins_dl_c2:
-            st.download_button(
-                "⬇️ Download All Insights CSV",
-                _all_ins_csv,
-                file_name=f"all_insights_{datetime.now().strftime('%Y%m%d')}.csv",
-                mime="text/csv",
-                key="dl_all_insights",
-                help="Download all forward-looking insights for all audiences as CSV",
-            )
+        _ins_df_share = df_insights_all[_ins_dl_cols].copy()
+        render_share_bar("Forward Outlook Insights", df=_ins_df_share,
+                         file_name="forward_outlook_insights", key="fo_insights",
+                         subtitle="All Audiences")
 
     # ── Audience tabs ────────────────────────────────────────────────────────
     st.markdown(sec_div("🧠 Audience-Specific Insights"), unsafe_allow_html=True)
@@ -11080,7 +11185,7 @@ with tab_fo:
 # TAB 4 — VISITOR ECONOMY (Datafy)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ev:
-    _tab_controls("ev", label="Visitor Economy", df=df_dfy_ov, file_name="pulse_visitor_economy")
+    _tab_controls("ev")
     st.markdown(tab_intro(
         "Our Visitors",
         "Who is actually visiting Dana Point? This tab breaks down trip volume, spending, demographics, and whether your website and ads are driving real visits.",
@@ -11195,6 +11300,7 @@ with tab_ev:
             pass
 
         st.markdown(sec_div("🔢 Visitor Economy KPIs"), unsafe_allow_html=True)
+        render_share_bar("Visitor Economy", df=df_dfy_ov, file_name="visitor_economy", key="ev_kpis")
         st.markdown(callout(
             "🧭", "Understanding These Visitor Metrics",
             "<strong>Total Trips</strong> counts every visit to Dana Point — both people who slept in a hotel and day visitors who just came for the day. "
@@ -12136,7 +12242,7 @@ with tab_ev:
     # TAB 5 — FEEDER MARKETS
     # ══════════════════════════════════════════════════════════════════════════════
 with tab_fm:
-    _tab_controls("fm", label="Feeder Markets", df=df_dfy_dma, file_name="pulse_feeder_markets")
+    _tab_controls("fm")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Feeder Market Intelligence</div>
@@ -12797,7 +12903,7 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
 # TAB 6 — EVENT IMPACT
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ei:
-    _tab_controls("ei", label="Event Impact", df=df_vdp_events, file_name="pulse_event_impact")
+    _tab_controls("ei")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Event Impact Analysis</div>
@@ -13846,7 +13952,7 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
 # TAB 7 — SUPPLY & PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_sp:
-    _tab_controls("sp", label="Supply Pipeline", df=df_cs_pipe, file_name="pulse_supply_pipeline")
+    _tab_controls("sp")
     # Pipeline-specific filter: Status (not STR time-window)
     _sp_f1, _sp_f2, _sp_spacer = st.columns([2, 2, 4])
     with _sp_f1:
@@ -13895,6 +14001,7 @@ with tab_sp:
 
     # ── Pipeline summary KPIs ─────────────────────────────────────────────────
     st.markdown(sec_div("🏗️ Active Supply Pipeline"), unsafe_allow_html=True)
+    render_share_bar("Supply Pipeline", df=df_cs_pipe, file_name="supply_pipeline", key="sp_pipe")
     if not df_cs_pipe.empty:
         # Apply pipeline filters from filter widgets above
         _pipe_filtered = df_cs_pipe.copy()
@@ -13980,6 +14087,7 @@ with tab_sp:
         ), unsafe_allow_html=True)
 
     st.markdown(sec_div("📈 Annual Market Performance Context"), unsafe_allow_html=True)
+    render_share_bar("Market Intelligence", df=df_cs_mon, file_name="market_intelligence", key="cs_annual")
 
     # ── Annual performance context ─────────────────────────────────────────────
     st.markdown(_sh("📈", "Annual Market Performance · 2016–2024 Actuals + 2025–2030 Forecasts", "indigo", "COSTAR"), unsafe_allow_html=True)
@@ -14209,7 +14317,7 @@ with tab_sp:
 # TAB 8 — MARKET INTELLIGENCE (CoStar)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_cs:
-    _tab_controls("cs", label="Market Intelligence", df=df_cs_mon, file_name="pulse_market_intelligence")
+    _tab_controls("cs")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">South OC Market Intelligence</div>
@@ -15986,7 +16094,7 @@ with tab_cs:
     # TAB 5 — DATA LOG
     # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
-    _tab_controls("dl", show_filter_badge=False, label="Data Vault", df=df_log, file_name="pulse_data_log")
+    _tab_controls("dl", show_filter_badge=False)
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Data Vault</div>
@@ -16337,6 +16445,7 @@ with tab_dl:
                 )
 
     st.markdown(sec_div("🗺️ Brain Architecture & Database Inventory"), unsafe_allow_html=True)
+    render_share_bar("Data Vault", df=df_log, file_name="data_vault", key="dl_db")
 
     # ── Brain Architecture — Table Relationships ────────────────────────────
     with st.expander("🗺 Brain Architecture — Table Relationships", expanded=False):
