@@ -2685,7 +2685,7 @@ st.markdown("""
     Data: STR &nbsp;·&nbsp; Datafy &nbsp;·&nbsp; CoStar &nbsp;·&nbsp; Visit California
   </div>
   <div class="fp-right">
-    © 2026 Wilton John Picou &nbsp;·&nbsp; All data proprietary &amp; confidential
+    © 2026 GloCon Solutions LLC &nbsp;·&nbsp; Visit Dana Point &nbsp;·&nbsp; All data proprietary &amp; confidential
   </div>
 </div>
 """, unsafe_allow_html=True)
