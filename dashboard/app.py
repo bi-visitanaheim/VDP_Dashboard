@@ -5949,6 +5949,25 @@ days        = _DAYS_MAP.get(range_label, 90)
 # ─── Sidebar ──────────────────────────────────────────────────────────────────
 # GloCon Solutions LLC — Dana Point PULSE sidebar with VDP branding + images
 with st.sidebar:
+    # ── Close bar ──────────────────────────────────────────────────────────
+    st.markdown(
+        '<div style="display:flex;justify-content:flex-end;margin-bottom:4px;margin-top:-6px;">'
+        '<button onclick="(function(){'
+        'var b=document.querySelector(\'[data-testid=stSidebarCollapseButton] button\')'
+        '||document.querySelector(\'button[aria-label=\\\"Collapse sidebar\\\"]\')'
+        '||document.querySelector(\'button[aria-label=\\\"Close sidebar\\\"]\');'
+        'if(b)b.click();'
+        '})()" '
+        'style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);'
+        'border-radius:8px;padding:5px 14px;cursor:pointer;color:#C8E0F2;font-size:13px;'
+        'font-weight:600;font-family:Inter,sans-serif;display:flex;align-items:center;gap:6px;'
+        'transition:background 0.2s;" '
+        'onmouseover="this.style.background=\'rgba(0,212,200,0.15)\'" '
+        'onmouseout="this.style.background=\'rgba(255,255,255,0.07)\'">'
+        '&#8592; Hide</button>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     st.markdown(
         '<div style="background:rgba(8,145,178,0.06);border-radius:10px;padding:16px;'
         'margin-bottom:12px;border:1px solid rgba(8,145,178,0.16);">'
