@@ -7640,6 +7640,40 @@ def render_intel_panel(
                 del st.session_state[_ans_key]
 
 
+# ─── Sidebar toggle — always-visible button in main content ───────────────────
+_st_components.html("""
+<style>
+  body{margin:0;padding:0;background:transparent;overflow:hidden;}
+  #sb-toggle{
+    position:fixed;top:14px;left:14px;z-index:999999;
+    display:flex;align-items:center;gap:7px;
+    background:rgba(26,55,86,0.95);border:1px solid rgba(0,212,200,0.45);
+    border-radius:10px;padding:7px 14px;cursor:pointer;
+    color:#00D4C8;font-size:13px;font-weight:700;
+    font-family:'Inter',sans-serif;
+    box-shadow:0 2px 12px rgba(0,0,0,0.40);
+    backdrop-filter:blur(8px);
+    transition:background 0.2s,box-shadow 0.2s;
+    white-space:nowrap;
+  }
+  #sb-toggle:hover{background:rgba(0,212,200,0.18);box-shadow:0 4px 18px rgba(0,212,200,0.28);}
+  #sb-toggle svg{width:16px;height:16px;fill:#00D4C8;flex-shrink:0;}
+</style>
+<button id="sb-toggle" onclick="
+  var p=window.parent.document;
+  var open=p.querySelector('[data-testid=stSidebarCollapseButton] button')
+          ||p.querySelector('button[aria-label=\\'Collapse sidebar\\']')
+          ||p.querySelector('button[aria-label=\\'Close sidebar\\']');
+  var closed=p.querySelector('[data-testid=collapsedControl]')
+            ||p.querySelector('button[aria-label=\\'Open sidebar\\']')
+            ||p.querySelector('button[aria-label=\\'Expand sidebar\\']');
+  if(open){open.click();}else if(closed){closed.click();}
+">
+  <svg viewBox='0 0 24 24'><path d='M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z'/></svg>
+  Menu
+</button>
+""", height=52)
+
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
