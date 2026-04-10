@@ -2445,6 +2445,38 @@ st.markdown("""
 
   /* ── Global smooth scroll ─────────────────────────────────────────────── */
   html { scroll-behavior: smooth; }
+
+  /* ── Print styles ─────────────────────────────────────────────────────── */
+  @media print {
+    [data-testid="stSidebar"],
+    [data-testid="stHeader"],
+    [data-testid="stToolbar"],
+    [data-testid="stBottom"],
+    #back-to-top-btn,
+    #sb-toggle,
+    .stButton > button,
+    [data-testid="stDownloadButton"],
+    [data-testid="stLinkButton"],
+    iframe,
+    .stTabs [data-baseweb="tab-list"],
+    [data-testid="stSidebarCollapseButton"],
+    [data-testid="collapsedControl"] { display: none !important; }
+
+    body, .stApp, [data-testid="stAppViewContainer"] {
+      background: #ffffff !important; color: #000000 !important;
+    }
+    [data-testid="stMain"] { overflow: visible !important; height: auto !important; }
+    .stApp { height: auto !important; overflow: visible !important; }
+    .insight-card, .nlm-card, .kpi-card {
+      border: 1px solid #ccc !important;
+      background: #f9f9f9 !important;
+      color: #000 !important;
+      break-inside: avoid;
+    }
+    .hero-stat-val, .kpi-value { color: #000 !important; -webkit-text-fill-color: #000 !important; }
+    h1, h2, h3, .chart-header { color: #000 !important; -webkit-text-fill-color: #000 !important; }
+    @page { margin: 1in; }
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -5333,6 +5365,52 @@ def sec_div(title: str) -> str:
     )
 
 
+# ── Universal Share Bar ────────────────────────────────────────────────────────
+# Renders Print / Download CSV / Email share buttons for any section.
+# Usage: render_share_bar("Hotel Trends", df=df_daily, file_name="hotel_trends", key="tr")
+def render_share_bar(
+    label: str,
+    df: "pd.DataFrame | None" = None,
+    file_name: str = "pulse_data",
+    key: str = "share",
+    extra_html: str | None = None,
+) -> None:
+    """Render a consistent Print / Download / Email toolbar for any section."""
+    _sb_cols = st.columns([1, 1, 1, 6])
+    with _sb_cols[0]:
+        _st_components.html(
+            '<button onclick="window.parent.print()" style="'
+            'width:100%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.18);'
+            'border-radius:8px;padding:6px 0;cursor:pointer;color:#C8E0F2;'
+            'font-size:12px;font-weight:600;font-family:Inter,sans-serif;white-space:nowrap;'
+            'display:flex;align-items:center;justify-content:center;gap:5px;'
+            'transition:background 0.2s;" '
+            'onmouseover="this.style.background=\'rgba(0,212,200,0.15)\'" '
+            'onmouseout="this.style.background=\'rgba(255,255,255,0.07)\'">'
+            '🖨️ Print</button>',
+            height=38,
+        )
+    if df is not None and not df.empty:
+        with _sb_cols[1]:
+            st.download_button(
+                "⬇️ CSV",
+                df.to_csv(index=False).encode(),
+                file_name=f"{file_name}_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                key=f"dl_sb_{key}",
+                use_container_width=True,
+            )
+    with _sb_cols[2]:
+        _subj = f"Dana%20Point%20PULSE%20%E2%80%94%20{label.replace(' ', '%20')}"
+        _body = (
+            f"Please%20find%20the%20{label.replace(' ', '%20')}%20section%20from%20"
+            f"the%20Dana%20Point%20PULSE%20dashboard.%0A%0A"
+            f"Live%20dashboard%3A%20https%3A%2F%2Fvdp-analytics.streamlit.app"
+        )
+        st.link_button("✉️ Email", f"mailto:?subject={_subj}&body={_body}", use_container_width=True)
+
+
+
 def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
                       df_later_ig: "pd.DataFrame") -> str:
     """Bloomberg/1ax-style dual-row KPI ticker with live data."""
@@ -7631,14 +7709,50 @@ tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs
 # Tab header helper: refresh button + active filter badge on every tab
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _tab_controls(tab_id: str = "", show_filter_badge: bool = True):
-    """Render per-tab refresh button. GloCon Solutions LLC."""
-    _tc1, _tc2 = st.columns([1, 7])
+def _tab_controls(tab_id: str = "", show_filter_badge: bool = True,
+                   label: str = "Dana Point PULSE", df: "pd.DataFrame | None" = None,
+                   file_name: str = "pulse_data"):
+    """Render per-tab refresh + Print / Download / Email share bar. GloCon Solutions LLC."""
+    _tc1, _tc2, _tc3, _tc4, _tc5 = st.columns([1, 1, 1, 1, 4])
     with _tc1:
         if st.button("🔄 Refresh", key=f"tab_refresh_{tab_id}",
                      help="Clear cache and reload data.", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
+    with _tc2:
+        _st_components.html(
+            '<button onclick="window.parent.print()" title="Print this page" style="'
+            'width:100%;height:38px;background:rgba(255,255,255,0.07);'
+            'border:1px solid rgba(255,255,255,0.18);border-radius:8px;'
+            'cursor:pointer;color:#C8E0F2;font-size:12px;font-weight:600;'
+            'font-family:Inter,sans-serif;display:flex;align-items:center;'
+            'justify-content:center;gap:4px;transition:background 0.2s;" '
+            'onmouseover="this.style.background=\'rgba(0,212,200,0.15)\'" '
+            'onmouseout="this.style.background=\'rgba(255,255,255,0.07)\'">'
+            '🖨️ Print</button>',
+            height=42,
+        )
+    if df is not None and not df.empty:
+        with _tc3:
+            st.download_button(
+                "⬇️ CSV",
+                df.to_csv(index=False).encode(),
+                file_name=f"{file_name}_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                key=f"dl_tc_{tab_id}",
+                use_container_width=True,
+                help=f"Download {label} data as CSV",
+            )
+    with _tc4:
+        _subj = f"Dana%20Point%20PULSE%20%E2%80%94%20{label.replace(' ', '%20')}"
+        _body = (
+            f"Hi%2C%0A%0APlease%20find%20the%20{label.replace(' ', '%20')}%20"
+            f"section%20from%20the%20Dana%20Point%20PULSE%20dashboard.%0A%0A"
+            f"View%20live%20dashboard%3A%20https%3A%2F%2Fvdp-analytics.streamlit.app%0A%0A"
+            f"Best%2C%0AJohn%20Picou%20%7C%20GloCon%20Solutions%20LLC"
+        )
+        st.link_button("✉️ Share", f"mailto:?subject={_subj}&body={_body}",
+                       use_container_width=True, help="Email this section to stakeholders")
 
 
 def _str_filters(tab_id: str, show_grain: bool = True, show_metric: bool = True):
@@ -7717,7 +7831,7 @@ with tab_ov:
         }})();
         </script>""", height=1, scrolling=False)
 
-    _tab_controls("ov")
+    _tab_controls("ov", label="Overview Brain", df=df_kpi, file_name="pulse_overview")
     # Filter: Time Period only — Overview uses the window to compute 30-day KPI snapshot
     _str_filters("ov", show_grain=False, show_metric=False)
     st.markdown(tab_intro(
@@ -9524,7 +9638,7 @@ with tab_ov:
     # TAB 2 — TRENDS
     # ══════════════════════════════════════════════════════════════════════════════
 with tab_tr:
-    _tab_controls("tr")
+    _tab_controls("tr", label="Hotel Trends", df=df_sel, file_name="pulse_trends")
     # Full filters: Time Period + Daily/Monthly grain (metric controlled by "View Metric" below)
     _str_filters("tr", show_grain=True, show_metric=False)
     st.markdown(tab_intro(
@@ -9662,6 +9776,7 @@ with tab_tr:
             pass
 
         st.markdown(sec_div("📈 Trend Charts"), unsafe_allow_html=True)
+        render_share_bar("Hotel Trends", df=df_sel, file_name="hotel_trends", key="tr_chart")
         st.markdown(callout(
             "📈", "How to Read These Charts",
             "Each bar shows one month of hotel data. <strong>Teal = performing above the average</strong> for that metric. "
@@ -9982,6 +10097,7 @@ with tab_tr:
 
             if _ri_rev12 > 0 or _ri_trips > 0:
                 st.markdown(sec_div("💡 Revenue Intelligence — STR × Visitor Economy"), unsafe_allow_html=True)
+                render_share_bar("Revenue Intelligence", df=df_sel, file_name="revenue_intelligence", key="tr_ri")
                 _ri_c1, _ri_c2, _ri_c3, _ri_c4 = st.columns(4)
 
                 def _ri_metric(label, val, note, icon, color):
@@ -10345,7 +10461,7 @@ with tab_tr:
 # TAB 3 — FORWARD OUTLOOK
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_fo:
-    _tab_controls("fo")
+    _tab_controls("fo", label="Forward Outlook", df=df_kpi, file_name="pulse_forward_outlook")
     # Time Period filter: controls how much STR history backs the outlook narrative
     _str_filters("fo", show_grain=False, show_metric=False)
     st.markdown(tab_intro(
@@ -10964,7 +11080,7 @@ with tab_fo:
 # TAB 4 — VISITOR ECONOMY (Datafy)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ev:
-    _tab_controls("ev")
+    _tab_controls("ev", label="Visitor Economy", df=df_dfy_ov, file_name="pulse_visitor_economy")
     st.markdown(tab_intro(
         "Our Visitors",
         "Who is actually visiting Dana Point? This tab breaks down trip volume, spending, demographics, and whether your website and ads are driving real visits.",
@@ -12020,7 +12136,7 @@ with tab_ev:
     # TAB 5 — FEEDER MARKETS
     # ══════════════════════════════════════════════════════════════════════════════
 with tab_fm:
-    _tab_controls("fm")
+    _tab_controls("fm", label="Feeder Markets", df=df_dfy_dma, file_name="pulse_feeder_markets")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Feeder Market Intelligence</div>
@@ -12099,6 +12215,7 @@ with tab_fm:
 
     # ── DMA Overview ───────────────────────────────────────────────────────────
     st.markdown(sec_div("🗺️ Origin Market Volume vs. Value"), unsafe_allow_html=True)
+    render_share_bar("Feeder Markets", df=df_dfy_dma, file_name="feeder_markets", key="fm_dma")
     st.markdown(callout(
         "🗺️", "Drive Markets vs. Fly Markets — Why It Matters",
         "<strong>Drive markets</strong> (Los Angeles, San Diego, Inland Empire) send the most visitors by volume — they're close and easy to reach. "
@@ -12680,7 +12797,7 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
 # TAB 6 — EVENT IMPACT
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ei:
-    _tab_controls("ei")
+    _tab_controls("ei", label="Event Impact", df=df_vdp_events, file_name="pulse_event_impact")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Event Impact Analysis</div>
@@ -13123,6 +13240,7 @@ with tab_ei:
         )
 
     st.markdown(sec_div("💵 ADR Lift by Event vs. Monthly Baseline"), unsafe_allow_html=True)
+    render_share_bar("Event Impact", df=df_vdp_events, file_name="event_impact", key="ei_adr")
 
     # ══════════════════════════════════════════════════════════════════════════
     # ADR LIFT CHART — all events vs. monthly baseline
@@ -13728,7 +13846,7 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
 # TAB 7 — SUPPLY & PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_sp:
-    _tab_controls("sp")
+    _tab_controls("sp", label="Supply Pipeline", df=df_cs_pipe, file_name="pulse_supply_pipeline")
     # Pipeline-specific filter: Status (not STR time-window)
     _sp_f1, _sp_f2, _sp_spacer = st.columns([2, 2, 4])
     with _sp_f1:
@@ -14091,7 +14209,7 @@ with tab_sp:
 # TAB 8 — MARKET INTELLIGENCE (CoStar)
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_cs:
-    _tab_controls("cs")
+    _tab_controls("cs", label="Market Intelligence", df=df_cs_mon, file_name="pulse_market_intelligence")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">South OC Market Intelligence</div>
@@ -15868,7 +15986,7 @@ with tab_cs:
     # TAB 5 — DATA LOG
     # ══════════════════════════════════════════════════════════════════════════════
 with tab_dl:
-    _tab_controls("dl", show_filter_badge=False)
+    _tab_controls("dl", show_filter_badge=False, label="Data Vault", df=df_log, file_name="pulse_data_log")
     st.markdown("""
     <div class="hero-banner">
       <div class="hero-title">Data Vault</div>
