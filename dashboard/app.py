@@ -89,7 +89,7 @@ def _render_login_page():
     # Inject background separately (f-string) to avoid escaping issues in the main CSS block
     st.markdown(
         f"<style>[data-testid='stAppViewContainer'] {{"
-        f"background: linear-gradient(160deg,rgba(10,22,40,0.82) 0%,rgba(13,33,68,0.75) 100%),"
+        f"background: linear-gradient(160deg,rgba(18,48,85,0.70) 0%,rgba(22,58,104,0.62) 100%),"
         f"url('{_VDP_BG}') center/cover no-repeat fixed !important;}}</style>",
         unsafe_allow_html=True,
     )
@@ -587,19 +587,19 @@ st.markdown("""
   /* ── Google Fonts ────────────────────────────────────────────────────── */
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  /* ── Design Tokens — Coastal Slate (readable, bright ocean dark) ─────────── */
+  /* ── Design Tokens — Lightened Coastal Blue ─────────────────────────────── */
   :root {
-    --dp-bg:            #1A3756;
-    --dp-bg2:           #1E3D5E;
-    --dp-surface:       #224466;
-    --dp-card:          #264B6E;
-    --dp-card-solid:    #264B6E;
-    --dp-card-hover:    #2C547A;
-    --dp-border:        rgba(255,255,255,0.16);
-    --dp-border-accent: rgba(0,212,200,0.45);
+    --dp-bg:            #1F4A78;
+    --dp-bg2:           #235285;
+    --dp-surface:       #285A8E;
+    --dp-card:          #2E6298;
+    --dp-card-solid:    #2E6298;
+    --dp-card-hover:    #346AA0;
+    --dp-border:        rgba(255,255,255,0.18);
+    --dp-border-accent: rgba(0,212,200,0.50);
     --dp-teal:          #00D4C8;
     --dp-teal-dim:      rgba(0,212,200,0.18);
-    --dp-teal-glow:     rgba(0,212,200,0.30);
+    --dp-teal-glow:     rgba(0,212,200,0.32);
     --dp-blue:          #38BDF8;
     --dp-green:         #10B981;
     --dp-amber:         #F5B940;
@@ -609,12 +609,12 @@ st.markdown("""
     --dp-text-1:        #F4FAFF;
     --dp-text-2:        #C8E0F2;
     --dp-text-3:        #8EC4DC;
-    --dp-text-4:        #5A7A95;   /* muted/disabled — Linear 4th tier */
+    --dp-text-4:        #5A8AAA;
     --dp-radius:        12px;
     --dp-radius-lg:     16px;
-    --dp-shadow:        0 1px 4px rgba(0,0,0,0.30), 0 4px 20px rgba(0,0,0,0.22);
-    --dp-shadow-hover:  0 8px 32px rgba(0,0,0,0.38), 0 0 0 1px rgba(0,212,200,0.22);
-    --dp-shadow-deep:   0 16px 48px rgba(0,0,0,0.48);
+    --dp-shadow:        0 1px 4px rgba(0,0,0,0.22), 0 4px 20px rgba(0,0,0,0.16);
+    --dp-shadow-hover:  0 8px 32px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,212,200,0.22);
+    --dp-shadow-deep:   0 16px 48px rgba(0,0,0,0.36);
   }
 
   html, body, [class*="css"] {
@@ -664,8 +664,8 @@ st.markdown("""
 
   /* ── Global dark overrides — all white surfaces → dark glass ─────────── */
   [data-testid="stSidebar"] > div:first-child {
-    background: linear-gradient(180deg, #1C3B5A 0%, #1A3756 100%) !important;
-    border-right: 1px solid rgba(0,212,200,0.12) !important;
+    background: linear-gradient(180deg, #245A8C 0%, #1F4A78 100%) !important;
+    border-right: 1px solid rgba(0,212,200,0.14) !important;
   }
   [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
   [data-testid="stSidebar"] label,
@@ -820,6 +820,56 @@ st.markdown("""
     font-size: 14.5px; color: var(--dp-text-2);
     line-height: 1.70; margin: 0;
     padding-left: 12px;
+  }
+
+  /* ── Flip Card Engine (3D card flip on click, like openart.ai) ───────── */
+  .dp-flip-card {
+    perspective: 1200px;
+    cursor: pointer;
+    height: 210px;
+    margin-bottom: 10px;
+    position: relative;
+  }
+  .dp-flip-inner {
+    position: relative;
+    width: 100%; height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.58s cubic-bezier(0.4, 0.2, 0.2, 1);
+  }
+  .dp-flip-card.is-flipped .dp-flip-inner {
+    transform: rotateY(180deg);
+  }
+  .dp-flip-front, .dp-flip-back {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: var(--dp-radius-lg);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  /* Override insight-card hover lift while inside a flip card (avoid jitter) */
+  .dp-flip-card .insight-card {
+    margin-bottom: 0;
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .dp-flip-card .insight-card:hover {
+    transform: none;
+  }
+  .dp-flip-back {
+    transform: rotateY(180deg);
+  }
+  .dp-flip-hint {
+    font-size: 9px;
+    color: var(--dp-text-4);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin-top: auto;
+    padding-top: 8px;
+    display: block;
+    text-align: right;
+    opacity: 0.7;
   }
 
   /* ── AI Chip Badge ───────────────────────────────────────────────────── */
@@ -1788,7 +1838,7 @@ st.markdown("""
 
   /* ── Sidebar Styling ─────────────────────────────────────────────────── */
   [data-testid="stSidebar"] {
-    background: #1C3B5A !important;
+    background: #1F4A78 !important;
     border-right: 1px solid rgba(0,212,200,0.14) !important;
   }
   [data-testid="stSidebar"] .stRadio label {
@@ -2697,6 +2747,20 @@ st.markdown("""
 </button>
 
 <script>
+/* ── Flip Card Engine — event delegation on document ────────────────────────
+   Catches clicks on .dp-flip-card anywhere in the app.
+   document.addEventListener works in Streamlit (unlike onclick= attributes).
+   Guard prevents adding duplicate listeners on Streamlit rerenders.
+──────────────────────────────────────────────────────────────────────────── */
+(function(){
+  if (window.__dpFlipReady) return;
+  window.__dpFlipReady = true;
+  document.addEventListener('click', function(e) {
+    var card = e.target && e.target.closest && e.target.closest('.dp-flip-card');
+    if (card) { card.classList.toggle('is-flipped'); }
+  });
+})();
+
 (function(){
   // Nuke floating Streamlit badges
   function killBadges(){
@@ -5367,7 +5431,6 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
 def insight_card(title, body, kind="info", icon: str = "", date_label: str = "") -> str:
     svg_icon  = insight_icon_svg(kind, icon) if icon else ""
     icon_html = f'<span class="insight-icon">{svg_icon}</span>' if svg_icon else ""
-    # Kind → label + color
     _kind_meta = {
         "positive": ("OPPORTUNITY", "#10B981"),
         "negative": ("RISK",        "#F04E37"),
@@ -5376,21 +5439,38 @@ def insight_card(title, body, kind="info", icon: str = "", date_label: str = "")
     }
     _lbl, _clr = _kind_meta.get(kind, ("INSIGHT", "#8FA3B8"))
     date_html = (
-        f'<div style="font-size:10px;color:#4A5F74;margin-top:8px;padding-top:6px;'
-        f'border-top:1px solid rgba(0,0,0,0.08);">{date_label}</div>'
+        f'<div style="font-size:10px;color:var(--dp-text-4);margin-top:8px;padding-top:6px;'
+        f'border-top:1px solid var(--dp-border);">{date_label}</div>'
         if date_label else ""
     )
-    return (
-        f'<div class="insight-card insight-{kind}">'
-        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+    _badge = (
         f'<span style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
-        f'color:{_clr};padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.03);'
-        f'border:1px solid {_clr}33;">{_lbl}</span>'
-        f'</div>'
+        f'color:{_clr};padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.06);'
+        f'border:1px solid {_clr}44;">{_lbl}</span>'
+    )
+    return (
+        # ── Flip card wrapper ──────────────────────────────────────────────
+        f'<div class="dp-flip-card">'
+        f'<div class="dp-flip-inner">'
+        # Front face — badge + title + flip hint
+        f'<div class="dp-flip-front insight-card insight-{kind}" '
+        f'style="display:flex;flex-direction:column;">'
+        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        f'{_badge}</div>'
         f'<div class="insight-title">{icon_html}{md_to_html(title)}</div>'
-        f'<p class="insight-body">{md_to_html(body)}</p>'
-        f'{date_html}'
+        f'<span class="dp-flip-hint">↩ flip for details</span>'
         f'</div>'
+        # Back face — full body + date
+        f'<div class="dp-flip-back insight-card insight-{kind}" '
+        f'style="display:flex;flex-direction:column;">'
+        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        f'{_badge}</div>'
+        f'<p class="insight-body" style="padding-left:0;flex:1;">{md_to_html(body)}</p>'
+        f'{date_html}'
+        f'<span class="dp-flip-hint">↩ flip back</span>'
+        f'</div>'
+        f'</div>'  # dp-flip-inner
+        f'</div>'  # dp-flip-card
     )
 
 
@@ -11360,19 +11440,40 @@ with tab_fo:
                     as_of     = row.get("as_of_date", "")
 
                     with col:
-                        st.markdown(
-                            f'<div class="insight-card {style_cls}">'
-                            f'<div class="insight-title">{md_to_html(str(row["headline"]))}</div>'
-                            f'<p class="insight-body">{md_to_html(str(row["body"]))}</p>'
-                            f'<div class="nlm-source-row">'
+                        _meta_row = (
+                            f'<div class="nlm-source-row" style="margin-top:6px;">'
                             f'{_src_tags_html}'
-                            f'<span style="font-size:10px;opacity:0.45;background:rgba(255,255,255,0.07);'
-                            f'padding:2px 8px;border-radius:99px;">{category}</span>'
-                            f'<span style="font-size:10px;opacity:0.45;background:rgba(255,255,255,0.07);'
-                            f'padding:2px 8px;border-radius:99px;">⏱ {horizon}d</span>'
-                            f'<span style="font-size:10px;opacity:0.35;padding:2px 4px;">as of {as_of}</span>'
+                            f'<span style="font-size:10px;opacity:0.55;padding:2px 6px;'
+                            f'border-radius:99px;border:1px solid var(--dp-border);">{category}</span>'
+                            f'<span style="font-size:10px;opacity:0.55;padding:2px 6px;'
+                            f'border-radius:99px;border:1px solid var(--dp-border);">⏱ {horizon}d</span>'
                             f'</div>'
-                            f'</div>',
+                        )
+                        st.markdown(
+                            # Flip card wrapper
+                            f'<div class="dp-flip-card">'
+                            f'<div class="dp-flip-inner">'
+                            # Front — headline + source tags
+                            f'<div class="dp-flip-front insight-card {style_cls}" '
+                            f'style="display:flex;flex-direction:column;">'
+                            f'<div style="font-size:9px;font-weight:700;letter-spacing:.07em;'
+                            f'text-transform:uppercase;color:var(--dp-teal);margin-bottom:8px;">'
+                            f'{category}</div>'
+                            f'<div class="insight-title" style="flex:1;">'
+                            f'{md_to_html(str(row["headline"]))}</div>'
+                            f'{_meta_row}'
+                            f'<span class="dp-flip-hint">↩ flip for full insight</span>'
+                            f'</div>'
+                            # Back — full body + as_of
+                            f'<div class="dp-flip-back insight-card {style_cls}" '
+                            f'style="display:flex;flex-direction:column;">'
+                            f'<p class="insight-body" style="padding-left:0;flex:1;font-size:13px;">'
+                            f'{md_to_html(str(row["body"]))}</p>'
+                            f'<div style="font-size:9.5px;color:var(--dp-text-4);margin-top:6px;">'
+                            f'as of {as_of}</div>'
+                            f'<span class="dp-flip-hint">↩ flip back</span>'
+                            f'</div>'
+                            f'</div></div>',
                             unsafe_allow_html=True,
                         )
 
