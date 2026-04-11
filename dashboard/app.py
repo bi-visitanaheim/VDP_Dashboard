@@ -2698,14 +2698,14 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# ── Light/Dark theme — pure JS + localStorage approach ────────────────────────
-# Theme toggles instantly without any Streamlit rerender.
-# data-theme="light"|"dark" is set on <html> element; CSS reacts via attribute selector.
-# Persists across renders via localStorage['pulse-theme'].
+# ── Light/Dark theme — body.pulse-light class approach ────────────────────────
+# Toggle adds/removes 'pulse-light' class on <body>.
+# Event delegation on document catches all button clicks (onclick attr not needed).
+# setInterval re-applies after Streamlit React rerenders. Persists via localStorage.
 st.markdown("""
 <style>
 /* ══════════════════════════════════════════════════════════════════════════════
-   DANA POINT PULSE — Light Mode Overrides (html[data-theme="light"])
+   DANA POINT PULSE — Light Mode Overrides (body.pulse-light)
    Uses CSS attribute selector — activated instantly by JS, no page reload.
    color-scheme enables light-dark() function support in modern browsers.
 ══════════════════════════════════════════════════════════════════════════════ */
@@ -2714,7 +2714,7 @@ st.markdown("""
 :root { color-scheme: dark; }
 
 /* Light mode — redefine all design tokens + color-scheme */
-html[data-theme="light"] {
+body.pulse-light {
   color-scheme: light;
   --dp-bg:            #EEF3F8;
   --dp-bg2:           #E5ECF4;
@@ -2743,78 +2743,78 @@ html[data-theme="light"] {
 }
 
 /* Global backgrounds + text */
-html[data-theme="light"] body,
-html[data-theme="light"] [class*="css"],
-html[data-theme="light"] .main,
-html[data-theme="light"] .stApp,
-html[data-theme="light"] [data-testid="stAppViewContainer"] {
+body.pulse-light,
+body.pulse-light [class*="css"],
+body.pulse-light .main,
+body.pulse-light .stApp,
+body.pulse-light [data-testid="stAppViewContainer"] {
   background-color: #EEF3F8 !important;
   background-image: none !important;
   color: #0F172A !important;
 }
 
 /* Sidebar */
-html[data-theme="light"] [data-testid="stSidebar"] > div:first-child {
+body.pulse-light [data-testid="stSidebar"] > div:first-child {
   background: linear-gradient(180deg, #DCE9F5 0%, #D2E1EF 100%) !important;
   border-right: 1px solid rgba(8,145,178,0.14) !important;
 }
-html[data-theme="light"] [data-testid="stSidebar"] * { color: #1E3A5F !important; }
-html[data-theme="light"] [data-testid="stSidebar"] label,
-html[data-theme="light"] [data-testid="stSidebar"] [data-testid="stWidgetLabel"] { color: #475569 !important; }
-html[data-theme="light"] [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
-html[data-theme="light"] [data-testid="stSidebar"] input,
-html[data-theme="light"] [data-testid="stSidebar"] select {
+body.pulse-light [data-testid="stSidebar"] * { color: #1E3A5F !important; }
+body.pulse-light [data-testid="stSidebar"] label,
+body.pulse-light [data-testid="stSidebar"] [data-testid="stWidgetLabel"] { color: #475569 !important; }
+body.pulse-light [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
+body.pulse-light [data-testid="stSidebar"] input,
+body.pulse-light [data-testid="stSidebar"] select {
   background: rgba(255,255,255,0.88) !important;
   border-color: rgba(26,55,86,0.14) !important;
   color: #0F172A !important;
 }
 
 /* Inputs / selects */
-html[data-theme="light"] [data-baseweb="select"] > div,
-html[data-theme="light"] [data-baseweb="input"] > div,
-html[data-theme="light"] div[data-testid="stSelectbox"] > div > div {
+body.pulse-light [data-baseweb="select"] > div,
+body.pulse-light [data-baseweb="input"] > div,
+body.pulse-light div[data-testid="stSelectbox"] > div > div {
   background: rgba(255,255,255,0.92) !important;
   border-color: rgba(26,55,86,0.14) !important;
   color: #0F172A !important;
 }
-html[data-theme="light"] [data-baseweb="menu"],
-html[data-theme="light"] [data-baseweb="popover"] { background: #FFFFFF !important; }
-html[data-theme="light"] [data-baseweb="option"]:hover { background: rgba(8,145,178,0.07) !important; }
+body.pulse-light [data-baseweb="menu"],
+body.pulse-light [data-baseweb="popover"] { background: #FFFFFF !important; }
+body.pulse-light [data-baseweb="option"]:hover { background: rgba(8,145,178,0.07) !important; }
 
 /* Metrics */
-html[data-theme="light"] [data-testid="stMetric"] {
+body.pulse-light [data-testid="stMetric"] {
   background: #FFFFFF !important;
   border: 1px solid rgba(26,55,86,0.09) !important;
 }
-html[data-theme="light"] [data-testid="stMetricValue"] { color: #0F172A !important; }
-html[data-theme="light"] [data-testid="stMetricLabel"] { color: #475569 !important; }
+body.pulse-light [data-testid="stMetricValue"] { color: #0F172A !important; }
+body.pulse-light [data-testid="stMetricLabel"] { color: #475569 !important; }
 
 /* Expander */
-html[data-theme="light"] [data-testid="stExpander"] {
+body.pulse-light [data-testid="stExpander"] {
   background: #FFFFFF !important;
   border: 1px solid rgba(26,55,86,0.09) !important;
 }
-html[data-theme="light"] [data-testid="stExpander"] summary { color: #1E3A5F !important; }
-html[data-theme="light"] [data-testid="stDataFrame"] { background: #FFFFFF !important; }
+body.pulse-light [data-testid="stExpander"] summary { color: #1E3A5F !important; }
+body.pulse-light [data-testid="stDataFrame"] { background: #FFFFFF !important; }
 
 /* Tabs */
-html[data-theme="light"] [data-testid="stTabs"] [role="tablist"] {
+body.pulse-light [data-testid="stTabs"] [role="tablist"] {
   background: rgba(0,0,0,0.03) !important;
   border-bottom: 1px solid rgba(26,55,86,0.09) !important;
 }
-html[data-theme="light"] button[data-baseweb="tab"] { color: #475569 !important; }
-html[data-theme="light"] button[data-baseweb="tab"][aria-selected="true"] {
+body.pulse-light button[data-baseweb="tab"] { color: #475569 !important; }
+body.pulse-light button[data-baseweb="tab"][aria-selected="true"] {
   color: #0891B2 !important;
   border-bottom-color: #0891B2 !important;
 }
 
 /* Buttons */
-html[data-theme="light"] [data-testid="stButton"] > button {
+body.pulse-light [data-testid="stButton"] > button {
   background: rgba(8,145,178,0.06) !important;
   border: 1px solid rgba(8,145,178,0.18) !important;
   color: #0F172A !important;
 }
-html[data-theme="light"] [data-testid="stButton"] > button:hover {
+body.pulse-light [data-testid="stButton"] > button:hover {
   background: #0891B2 !important;
   border-color: #0891B2 !important;
   color: #FFFFFF !important;
@@ -2822,74 +2822,74 @@ html[data-theme="light"] [data-testid="stButton"] > button:hover {
 }
 
 /* Sidebar collapse button */
-html[data-theme="light"] [data-testid="stSidebarCollapseButton"] button,
-html[data-theme="light"] [data-testid="collapsedControl"] button {
+body.pulse-light [data-testid="stSidebarCollapseButton"] button,
+body.pulse-light [data-testid="collapsedControl"] button {
   background: rgba(8,145,178,0.10) !important;
   border: 1px solid rgba(8,145,178,0.28) !important;
   color: #0891B2 !important;
 }
-html[data-theme="light"] [data-testid="stSidebarCollapseButton"] svg,
-html[data-theme="light"] [data-testid="collapsedControl"] svg { color: #0891B2 !important; fill: #0891B2 !important; }
+body.pulse-light [data-testid="stSidebarCollapseButton"] svg,
+body.pulse-light [data-testid="collapsedControl"] svg { color: #0891B2 !important; fill: #0891B2 !important; }
 
 /* KPI ticker stays dark (part of hero area) */
-html[data-theme="light"] .pulse-ticker-wrap { background: linear-gradient(180deg,#1A3756 0%,#1E3D5E 100%) !important; }
-html[data-theme="light"] .pulse-ticker-wrap::before { background: linear-gradient(90deg,#1A3756 0%,transparent 100%) !important; }
-html[data-theme="light"] .pulse-ticker-wrap::after  { background: linear-gradient(270deg,#1A3756 0%,transparent 100%) !important; }
+body.pulse-light .pulse-ticker-wrap { background: linear-gradient(180deg,#1A3756 0%,#1E3D5E 100%) !important; }
+body.pulse-light .pulse-ticker-wrap::before { background: linear-gradient(90deg,#1A3756 0%,transparent 100%) !important; }
+body.pulse-light .pulse-ticker-wrap::after  { background: linear-gradient(270deg,#1A3756 0%,transparent 100%) !important; }
 
 /* Cards + text */
-html[data-theme="light"] .kpi-label { color: #475569 !important; }
-html[data-theme="light"] .kpi-value { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-html[data-theme="light"] .kpi-date  { color: #64748B !important; border-top-color: rgba(0,0,0,0.07) !important; }
-html[data-theme="light"] .insight-title { color: #0F172A !important; }
-html[data-theme="light"] .insight-body  { color: #334155 !important; }
-html[data-theme="light"] .chart-header  { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-html[data-theme="light"] .chart-primer  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; background: rgba(0,0,0,0.04) !important; }
-html[data-theme="light"] .chart-primer strong { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
-html[data-theme="light"] .section-label { color: #0891B2 !important; }
-html[data-theme="light"] .section-divider-title {
+body.pulse-light .kpi-label { color: #475569 !important; }
+body.pulse-light .kpi-value { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+body.pulse-light .kpi-date  { color: #64748B !important; border-top-color: rgba(0,0,0,0.07) !important; }
+body.pulse-light .insight-title { color: #0F172A !important; }
+body.pulse-light .insight-body  { color: #334155 !important; }
+body.pulse-light .chart-header  { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+body.pulse-light .chart-primer  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; background: rgba(0,0,0,0.04) !important; }
+body.pulse-light .chart-primer strong { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
+body.pulse-light .section-label { color: #0891B2 !important; }
+body.pulse-light .section-divider-title {
   background: rgba(8,145,178,0.10) !important;
   border: 1px solid rgba(8,145,178,0.30) !important;
   color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
 }
-html[data-theme="light"] .tab-summary { background: rgba(8,145,178,0.05) !important; border-color: rgba(8,145,178,0.16) !important; }
-html[data-theme="light"] .tab-summary .ts-bullets li { background: rgba(0,0,0,0.04) !important; border: 1px solid rgba(0,0,0,0.08) !important; color: #475569 !important; }
-html[data-theme="light"] .ai-chip { background: rgba(8,145,178,0.07) !important; color: #0891B2 !important; border: 1px solid rgba(8,145,178,0.18) !important; }
-html[data-theme="light"] .ai-command-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-html[data-theme="light"] .ai-command-sub   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-html[data-theme="light"] .ai-prompt-chip   { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.09) !important; color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
-html[data-theme="light"] .dp-callout p, html[data-theme="light"] .dp-callout-amber p,
-html[data-theme="light"] .dp-callout-purple p, html[data-theme="light"] .dp-callout-green p { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
-html[data-theme="light"] .dp-callout strong, html[data-theme="light"] .dp-callout-amber strong,
-html[data-theme="light"] .dp-callout-purple strong, html[data-theme="light"] .dp-callout-green strong { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-html[data-theme="light"] .nav-guide-name { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-html[data-theme="light"] .nav-guide-desc { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-html[data-theme="light"] .metric-plain   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-html[data-theme="light"] .src-name { color: #0F172A !important; }
-html[data-theme="light"] .src-meta { color: #475569 !important; }
-html[data-theme="light"] .mini-data-card-label { color: #475569 !important; }
-html[data-theme="light"] .mini-data-card-value { color: #0F172A !important; }
-html[data-theme="light"] .mini-data-card-sub   { color: #475569 !important; }
-html[data-theme="light"] .empty-title { color: #0F172A !important; }
-html[data-theme="light"] .empty-body  { color: #475569 !important; }
-html[data-theme="light"] .dp-howto-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-html[data-theme="light"] .dp-howto-text  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-html[data-theme="light"] .dp-howto-num   { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
-html[data-theme="light"] .vdp-status-bar { background: rgba(0,0,0,0.04) !important; border-color: rgba(26,55,86,0.08) !important; }
-html[data-theme="light"] .vdp-status-date { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-html[data-theme="light"] .vdp-qa-btn { background: rgba(15,23,42,0.05) !important; border: 1px solid rgba(15,23,42,0.10) !important; color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-html[data-theme="light"] .vdp-qa-btn:hover { background: rgba(8,145,178,0.09) !important; border-color: rgba(8,145,178,0.28) !important; }
-html[data-theme="light"] .section-nav { background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; }
-html[data-theme="light"] .section-nav-item { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-html[data-theme="light"] .section-nav-item.active { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
-html[data-theme="light"] .goal-track-bg { background: rgba(0,0,0,0.08) !important; }
-html[data-theme="light"] .goal-card-title { color: #0F172A !important; }
-html[data-theme="light"] .goal-progress-pct { color: #0F172A !important; }
-html[data-theme="light"] .goal-desc { color: #475569 !important; border-top-color: rgba(0,0,0,0.08) !important; }
-html[data-theme="light"] .goals-summary-num { color: #0F172A !important; }
-html[data-theme="light"] .goals-summary-lbl { color: #475569 !important; }
-html[data-theme="light"] ::-webkit-scrollbar-track { background: rgba(0,0,0,0.03) !important; }
-html[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(8,145,178,0.18) !important; }
-html[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(8,145,178,0.36) !important; }
+body.pulse-light .tab-summary { background: rgba(8,145,178,0.05) !important; border-color: rgba(8,145,178,0.16) !important; }
+body.pulse-light .tab-summary .ts-bullets li { background: rgba(0,0,0,0.04) !important; border: 1px solid rgba(0,0,0,0.08) !important; color: #475569 !important; }
+body.pulse-light .ai-chip { background: rgba(8,145,178,0.07) !important; color: #0891B2 !important; border: 1px solid rgba(8,145,178,0.18) !important; }
+body.pulse-light .ai-command-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+body.pulse-light .ai-command-sub   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+body.pulse-light .ai-prompt-chip   { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.09) !important; color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
+body.pulse-light .dp-callout p, body.pulse-light .dp-callout-amber p,
+body.pulse-light .dp-callout-purple p, body.pulse-light .dp-callout-green p { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
+body.pulse-light .dp-callout strong, body.pulse-light .dp-callout-amber strong,
+body.pulse-light .dp-callout-purple strong, body.pulse-light .dp-callout-green strong { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+body.pulse-light .nav-guide-name { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+body.pulse-light .nav-guide-desc { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+body.pulse-light .metric-plain   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+body.pulse-light .src-name { color: #0F172A !important; }
+body.pulse-light .src-meta { color: #475569 !important; }
+body.pulse-light .mini-data-card-label { color: #475569 !important; }
+body.pulse-light .mini-data-card-value { color: #0F172A !important; }
+body.pulse-light .mini-data-card-sub   { color: #475569 !important; }
+body.pulse-light .empty-title { color: #0F172A !important; }
+body.pulse-light .empty-body  { color: #475569 !important; }
+body.pulse-light .dp-howto-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+body.pulse-light .dp-howto-text  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+body.pulse-light .dp-howto-num   { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
+body.pulse-light .vdp-status-bar { background: rgba(0,0,0,0.04) !important; border-color: rgba(26,55,86,0.08) !important; }
+body.pulse-light .vdp-status-date { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+body.pulse-light .vdp-qa-btn { background: rgba(15,23,42,0.05) !important; border: 1px solid rgba(15,23,42,0.10) !important; color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+body.pulse-light .vdp-qa-btn:hover { background: rgba(8,145,178,0.09) !important; border-color: rgba(8,145,178,0.28) !important; }
+body.pulse-light .section-nav { background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; }
+body.pulse-light .section-nav-item { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+body.pulse-light .section-nav-item.active { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
+body.pulse-light .goal-track-bg { background: rgba(0,0,0,0.08) !important; }
+body.pulse-light .goal-card-title { color: #0F172A !important; }
+body.pulse-light .goal-progress-pct { color: #0F172A !important; }
+body.pulse-light .goal-desc { color: #475569 !important; border-top-color: rgba(0,0,0,0.08) !important; }
+body.pulse-light .goals-summary-num { color: #0F172A !important; }
+body.pulse-light .goals-summary-lbl { color: #475569 !important; }
+body.pulse-light ::-webkit-scrollbar-track { background: rgba(0,0,0,0.03) !important; }
+body.pulse-light ::-webkit-scrollbar-thumb { background: rgba(8,145,178,0.18) !important; }
+body.pulse-light ::-webkit-scrollbar-thumb:hover { background: rgba(8,145,178,0.36) !important; }
 
 /* ── Sidebar theme button (HTML, not Streamlit widget) ──────────────────── */
 .pulse-sidebar-theme-btn {
@@ -2910,12 +2910,12 @@ html[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(8,14
   color: #060C18 !important;
   box-shadow: 0 4px 18px rgba(0,212,200,0.28) !important;
 }
-html[data-theme="light"] .pulse-sidebar-theme-btn {
+body.pulse-light .pulse-sidebar-theme-btn {
   background: rgba(8,145,178,0.06);
   border: 1px solid rgba(8,145,178,0.20);
   color: #1E3A5F;
 }
-html[data-theme="light"] .pulse-sidebar-theme-btn:hover {
+body.pulse-light .pulse-sidebar-theme-btn:hover {
   background: #0891B2 !important;
   border-color: #0891B2 !important;
   color: #FFFFFF !important;
@@ -2923,49 +2923,62 @@ html[data-theme="light"] .pulse-sidebar-theme-btn:hover {
 </style>
 
 <script>
-/* ── PULSE Theme Engine v2 — localStorage + data-theme attribute ───────────
-   Pure client-side. No Streamlit rerender needed. Instant toggle.
-   Survives Streamlit rerenders because localStorage persists.
+/* ── PULSE Theme Engine v3 — body.pulse-light class ───────────────────────
+   Toggles 'pulse-light' class on <body>. No onclick attr needed.
+   Event delegation on document catches clicks on theme buttons.
+   setInterval re-applies after Streamlit React rerenders.
+   localStorage persists choice across page loads.
 ────────────────────────────────────────────────────────────────────────── */
-(function initPulseTheme() {
-  var stored = localStorage.getItem('pulse-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', stored);
-  _updateThemeButtons(stored);
+(function() {
+  if (window.__pulseThemeReady) return;
+  window.__pulseThemeReady = true;
 
-  function _updateThemeButtons(theme) {
-    document.querySelectorAll('.pulse-theme-toggle').forEach(function(btn) {
-      btn.innerHTML = theme === 'light' ? '&#9728;&#65039;' : '&#127769;';
-      btn.title = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+  function updateBtns(isLight) {
+    document.querySelectorAll('.pulse-theme-toggle').forEach(function(b) {
+      b.innerHTML = isLight ? '&#9728;&#65039;' : '&#127769;';
+      b.title     = isLight ? 'Switch to dark mode' : 'Switch to light mode';
     });
-    document.querySelectorAll('.pulse-sidebar-theme-btn').forEach(function(btn) {
-      btn.innerHTML = theme === 'light'
-        ? '&#9728;&#65039;&nbsp; Dark Mode'
-        : '&#127769;&nbsp; Light Mode';
+    document.querySelectorAll('.pulse-sidebar-theme-btn').forEach(function(b) {
+      b.innerHTML = isLight ? '&#9728;&#65039;&nbsp;&nbsp;Dark Mode'
+                            : '&#127769;&nbsp;&nbsp;Light Mode';
     });
   }
 
-  window.__pulseToggleTheme = function() {
-    var current = document.documentElement.getAttribute('data-theme') || 'dark';
-    var next    = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('pulse-theme', next);
-    _updateThemeButtons(next);
-  };
-
-  /* Re-apply after Streamlit rerenders (DOM mutation) */
-  if (window.MutationObserver) {
-    var _reapplyTimer;
-    new MutationObserver(function() {
-      clearTimeout(_reapplyTimer);
-      _reapplyTimer = setTimeout(function() {
-        var t = localStorage.getItem('pulse-theme') || 'dark';
-        if (document.documentElement.getAttribute('data-theme') !== t) {
-          document.documentElement.setAttribute('data-theme', t);
-        }
-        _updateThemeButtons(t);
-      }, 80);
-    }).observe(document.body, { childList: true, subtree: true });
+  function applyTheme() {
+    var isLight = localStorage.getItem('pulse-theme') === 'light';
+    if (isLight) {
+      document.body.classList.add('pulse-light');
+    } else {
+      document.body.classList.remove('pulse-light');
+    }
+    updateBtns(isLight);
   }
+
+  function toggleTheme() {
+    var isLight = document.body.classList.contains('pulse-light');
+    localStorage.setItem('pulse-theme', isLight ? 'dark' : 'light');
+    applyTheme();
+  }
+
+  /* Apply stored theme immediately */
+  applyTheme();
+
+  /* Re-apply every 350 ms — survives Streamlit React rerenders */
+  setInterval(applyTheme, 350);
+
+  /* Event delegation — catches clicks on both toggle buttons
+     Works even if onclick="" attribute is stripped by Streamlit */
+  document.addEventListener('click', function(e) {
+    var t = e.target;
+    if (t && t.closest &&
+        (t.closest('.pulse-theme-toggle') || t.closest('.pulse-sidebar-theme-btn'))) {
+      e.preventDefault();
+      toggleTheme();
+    }
+  });
+
+  /* Expose globally as fallback */
+  window.__pulseToggleTheme = toggleTheme;
 })();
 </script>
 """, unsafe_allow_html=True)
@@ -7068,8 +7081,7 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<button class="pulse-sidebar-theme-btn" onclick="window.__pulseToggleTheme()">'
-        '🌙&nbsp; Light Mode</button>',
+        '<button class="pulse-sidebar-theme-btn">🌙&nbsp;&nbsp;Light Mode</button>',
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -7147,9 +7159,7 @@ st.markdown(
     f'<div class="hero-banner" style="position:relative;">'
     # ── Theme toggle inside hero-banner (top-right) — pure JS, no reload
     f'<button class="pulse-theme-toggle" '
-    f'onclick="window.__pulseToggleTheme()" '
-    f'title="Switch theme" aria-label="Toggle theme">'
-    f'🌙</button>'
+    f'title="Switch theme" aria-label="Toggle theme">🌙</button>'
     f'<a href="?" style="text-decoration:none;">'
     f'<div class="hero-title">Dana Point <span>PULSE</span></div>'
     f'</a>'
