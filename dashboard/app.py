@@ -574,9 +574,7 @@ for _k, _v in [
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
-# Theme is managed purely client-side via localStorage + data-theme attribute.
-# No Python rerender needed — JS toggles instantly and persists via localStorage.
-_is_light = False  # unused by CSS; kept for any Python logic that may reference it
+_is_light = False  # dark-only app; light mode toggle was removed
 
 # ─── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -1962,31 +1960,6 @@ st.markdown("""
   .sh-gray   .sh-tag { color: #64748B !important; background: rgba(100,116,139,0.08) !important; border-color: rgba(100,116,139,0.18) !important; }
   .sh-gold   .sh-tag { color: #B45309 !important; background: rgba(180,83,9,0.08) !important;    border-color: rgba(180,83,9,0.18) !important; }
 
-  /* ── Theme Toggle Button (hero-banner top-right) ─────────────────────── */
-  .pulse-theme-toggle {
-    position: absolute; top: 20px; right: 24px;
-    width: 38px; height: 38px; border-radius: 50%;
-    background: rgba(255,255,255,0.10);
-    border: 1px solid rgba(255,255,255,0.20);
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 17px; line-height: 1;
-    color: rgba(200,230,255,0.90);
-    transition: background 0.20s ease, border-color 0.20s ease,
-                transform 0.18s ease, box-shadow 0.20s ease;
-    z-index: 200;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    outline: none;
-    padding: 0;
-  }
-  .pulse-theme-toggle:hover {
-    background: rgba(0,212,200,0.22);
-    border-color: rgba(0,212,200,0.55);
-    transform: scale(1.10) rotate(15deg);
-    box-shadow: 0 0 18px rgba(0,212,200,0.35);
-  }
-  .pulse-theme-toggle:active { transform: scale(0.93); }
 
   /* ── Strategy Goals — Progress Tracker ──────────────────────────────── */
   .goal-card {
@@ -2698,290 +2671,6 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# ── Light/Dark theme — body.pulse-light class approach ────────────────────────
-# Toggle adds/removes 'pulse-light' class on <body>.
-# Event delegation on document catches all button clicks (onclick attr not needed).
-# setInterval re-applies after Streamlit React rerenders. Persists via localStorage.
-st.markdown("""
-<style>
-/* ══════════════════════════════════════════════════════════════════════════════
-   DANA POINT PULSE — Light Mode Overrides (body.pulse-light)
-   Uses CSS attribute selector — activated instantly by JS, no page reload.
-   color-scheme enables light-dark() function support in modern browsers.
-══════════════════════════════════════════════════════════════════════════════ */
-
-/* Dark default color-scheme */
-:root { color-scheme: dark; }
-
-/* Light mode — redefine all design tokens + color-scheme */
-body.pulse-light {
-  color-scheme: light;
-  --dp-bg:            #EEF3F8;
-  --dp-bg2:           #E5ECF4;
-  --dp-surface:       #F5F8FC;
-  --dp-card:          #FFFFFF;
-  --dp-card-solid:    #FFFFFF;
-  --dp-card-hover:    #F4F8FC;
-  --dp-border:        rgba(26,55,86,0.10);
-  --dp-border-accent: rgba(8,130,160,0.35);
-  --dp-teal:          #0891B2;
-  --dp-teal-dim:      rgba(8,145,178,0.09);
-  --dp-teal-glow:     rgba(8,145,178,0.16);
-  --dp-blue:          #0567C8;
-  --dp-green:         #059669;
-  --dp-amber:         #D97706;
-  --dp-red:           #DC2626;
-  --dp-purple:        #7C3AED;
-  --dp-orange:        #EA580C;
-  --dp-text-1:        #0F172A;
-  --dp-text-2:        #1E3A5F;
-  --dp-text-3:        #475569;
-  --dp-text-4:        #94A3B8;
-  --dp-shadow:        0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.06);
-  --dp-shadow-hover:  0 8px 28px rgba(0,0,0,0.09), 0 0 0 1px rgba(8,145,178,0.12);
-  --dp-shadow-deep:   0 16px 40px rgba(0,0,0,0.09);
-}
-
-/* Global backgrounds + text */
-body.pulse-light,
-body.pulse-light [class*="css"],
-body.pulse-light .main,
-body.pulse-light .stApp,
-body.pulse-light [data-testid="stAppViewContainer"] {
-  background-color: #EEF3F8 !important;
-  background-image: none !important;
-  color: #0F172A !important;
-}
-
-/* Sidebar */
-body.pulse-light [data-testid="stSidebar"] > div:first-child {
-  background: linear-gradient(180deg, #DCE9F5 0%, #D2E1EF 100%) !important;
-  border-right: 1px solid rgba(8,145,178,0.14) !important;
-}
-body.pulse-light [data-testid="stSidebar"] * { color: #1E3A5F !important; }
-body.pulse-light [data-testid="stSidebar"] label,
-body.pulse-light [data-testid="stSidebar"] [data-testid="stWidgetLabel"] { color: #475569 !important; }
-body.pulse-light [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
-body.pulse-light [data-testid="stSidebar"] input,
-body.pulse-light [data-testid="stSidebar"] select {
-  background: rgba(255,255,255,0.88) !important;
-  border-color: rgba(26,55,86,0.14) !important;
-  color: #0F172A !important;
-}
-
-/* Inputs / selects */
-body.pulse-light [data-baseweb="select"] > div,
-body.pulse-light [data-baseweb="input"] > div,
-body.pulse-light div[data-testid="stSelectbox"] > div > div {
-  background: rgba(255,255,255,0.92) !important;
-  border-color: rgba(26,55,86,0.14) !important;
-  color: #0F172A !important;
-}
-body.pulse-light [data-baseweb="menu"],
-body.pulse-light [data-baseweb="popover"] { background: #FFFFFF !important; }
-body.pulse-light [data-baseweb="option"]:hover { background: rgba(8,145,178,0.07) !important; }
-
-/* Metrics */
-body.pulse-light [data-testid="stMetric"] {
-  background: #FFFFFF !important;
-  border: 1px solid rgba(26,55,86,0.09) !important;
-}
-body.pulse-light [data-testid="stMetricValue"] { color: #0F172A !important; }
-body.pulse-light [data-testid="stMetricLabel"] { color: #475569 !important; }
-
-/* Expander */
-body.pulse-light [data-testid="stExpander"] {
-  background: #FFFFFF !important;
-  border: 1px solid rgba(26,55,86,0.09) !important;
-}
-body.pulse-light [data-testid="stExpander"] summary { color: #1E3A5F !important; }
-body.pulse-light [data-testid="stDataFrame"] { background: #FFFFFF !important; }
-
-/* Tabs */
-body.pulse-light [data-testid="stTabs"] [role="tablist"] {
-  background: rgba(0,0,0,0.03) !important;
-  border-bottom: 1px solid rgba(26,55,86,0.09) !important;
-}
-body.pulse-light button[data-baseweb="tab"] { color: #475569 !important; }
-body.pulse-light button[data-baseweb="tab"][aria-selected="true"] {
-  color: #0891B2 !important;
-  border-bottom-color: #0891B2 !important;
-}
-
-/* Buttons */
-body.pulse-light [data-testid="stButton"] > button {
-  background: rgba(8,145,178,0.06) !important;
-  border: 1px solid rgba(8,145,178,0.18) !important;
-  color: #0F172A !important;
-}
-body.pulse-light [data-testid="stButton"] > button:hover {
-  background: #0891B2 !important;
-  border-color: #0891B2 !important;
-  color: #FFFFFF !important;
-  box-shadow: 0 4px 14px rgba(8,145,178,0.26) !important;
-}
-
-/* Sidebar collapse button */
-body.pulse-light [data-testid="stSidebarCollapseButton"] button,
-body.pulse-light [data-testid="collapsedControl"] button {
-  background: rgba(8,145,178,0.10) !important;
-  border: 1px solid rgba(8,145,178,0.28) !important;
-  color: #0891B2 !important;
-}
-body.pulse-light [data-testid="stSidebarCollapseButton"] svg,
-body.pulse-light [data-testid="collapsedControl"] svg { color: #0891B2 !important; fill: #0891B2 !important; }
-
-/* KPI ticker stays dark (part of hero area) */
-body.pulse-light .pulse-ticker-wrap { background: linear-gradient(180deg,#1A3756 0%,#1E3D5E 100%) !important; }
-body.pulse-light .pulse-ticker-wrap::before { background: linear-gradient(90deg,#1A3756 0%,transparent 100%) !important; }
-body.pulse-light .pulse-ticker-wrap::after  { background: linear-gradient(270deg,#1A3756 0%,transparent 100%) !important; }
-
-/* Cards + text */
-body.pulse-light .kpi-label { color: #475569 !important; }
-body.pulse-light .kpi-value { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-body.pulse-light .kpi-date  { color: #64748B !important; border-top-color: rgba(0,0,0,0.07) !important; }
-body.pulse-light .insight-title { color: #0F172A !important; }
-body.pulse-light .insight-body  { color: #334155 !important; }
-body.pulse-light .chart-header  { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-body.pulse-light .chart-primer  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; background: rgba(0,0,0,0.04) !important; }
-body.pulse-light .chart-primer strong { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
-body.pulse-light .section-label { color: #0891B2 !important; }
-body.pulse-light .section-divider-title {
-  background: rgba(8,145,178,0.10) !important;
-  border: 1px solid rgba(8,145,178,0.30) !important;
-  color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
-}
-body.pulse-light .tab-summary { background: rgba(8,145,178,0.05) !important; border-color: rgba(8,145,178,0.16) !important; }
-body.pulse-light .tab-summary .ts-bullets li { background: rgba(0,0,0,0.04) !important; border: 1px solid rgba(0,0,0,0.08) !important; color: #475569 !important; }
-body.pulse-light .ai-chip { background: rgba(8,145,178,0.07) !important; color: #0891B2 !important; border: 1px solid rgba(8,145,178,0.18) !important; }
-body.pulse-light .ai-command-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-body.pulse-light .ai-command-sub   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-body.pulse-light .ai-prompt-chip   { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.09) !important; color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
-body.pulse-light .dp-callout p, body.pulse-light .dp-callout-amber p,
-body.pulse-light .dp-callout-purple p, body.pulse-light .dp-callout-green p { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
-body.pulse-light .dp-callout strong, body.pulse-light .dp-callout-amber strong,
-body.pulse-light .dp-callout-purple strong, body.pulse-light .dp-callout-green strong { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-body.pulse-light .nav-guide-name { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-body.pulse-light .nav-guide-desc { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-body.pulse-light .metric-plain   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-body.pulse-light .src-name { color: #0F172A !important; }
-body.pulse-light .src-meta { color: #475569 !important; }
-body.pulse-light .mini-data-card-label { color: #475569 !important; }
-body.pulse-light .mini-data-card-value { color: #0F172A !important; }
-body.pulse-light .mini-data-card-sub   { color: #475569 !important; }
-body.pulse-light .empty-title { color: #0F172A !important; }
-body.pulse-light .empty-body  { color: #475569 !important; }
-body.pulse-light .dp-howto-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-body.pulse-light .dp-howto-text  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-body.pulse-light .dp-howto-num   { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
-body.pulse-light .vdp-status-bar { background: rgba(0,0,0,0.04) !important; border-color: rgba(26,55,86,0.08) !important; }
-body.pulse-light .vdp-status-date { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-body.pulse-light .vdp-qa-btn { background: rgba(15,23,42,0.05) !important; border: 1px solid rgba(15,23,42,0.10) !important; color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-body.pulse-light .vdp-qa-btn:hover { background: rgba(8,145,178,0.09) !important; border-color: rgba(8,145,178,0.28) !important; }
-body.pulse-light .section-nav { background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; }
-body.pulse-light .section-nav-item { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-body.pulse-light .section-nav-item.active { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
-body.pulse-light .goal-track-bg { background: rgba(0,0,0,0.08) !important; }
-body.pulse-light .goal-card-title { color: #0F172A !important; }
-body.pulse-light .goal-progress-pct { color: #0F172A !important; }
-body.pulse-light .goal-desc { color: #475569 !important; border-top-color: rgba(0,0,0,0.08) !important; }
-body.pulse-light .goals-summary-num { color: #0F172A !important; }
-body.pulse-light .goals-summary-lbl { color: #475569 !important; }
-body.pulse-light ::-webkit-scrollbar-track { background: rgba(0,0,0,0.03) !important; }
-body.pulse-light ::-webkit-scrollbar-thumb { background: rgba(8,145,178,0.18) !important; }
-body.pulse-light ::-webkit-scrollbar-thumb:hover { background: rgba(8,145,178,0.36) !important; }
-
-/* ── Sidebar theme button (HTML, not Streamlit widget) ──────────────────── */
-.pulse-sidebar-theme-btn {
-  display: flex; align-items: center; gap: 8px;
-  width: 100%; padding: 9px 16px; border-radius: 100em;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(0,212,200,0.22);
-  color: var(--dp-text-2);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px; font-weight: 600;
-  cursor: pointer; text-align: left;
-  transition: background 0.22s, color 0.22s, border-color 0.22s;
-  outline: none; box-sizing: border-box;
-}
-.pulse-sidebar-theme-btn:hover {
-  background: var(--dp-teal) !important;
-  border-color: var(--dp-teal) !important;
-  color: #060C18 !important;
-  box-shadow: 0 4px 18px rgba(0,212,200,0.28) !important;
-}
-body.pulse-light .pulse-sidebar-theme-btn {
-  background: rgba(8,145,178,0.06);
-  border: 1px solid rgba(8,145,178,0.20);
-  color: #1E3A5F;
-}
-body.pulse-light .pulse-sidebar-theme-btn:hover {
-  background: #0891B2 !important;
-  border-color: #0891B2 !important;
-  color: #FFFFFF !important;
-}
-</style>
-
-<script>
-/* ── PULSE Theme Engine v3 — body.pulse-light class ───────────────────────
-   Toggles 'pulse-light' class on <body>. No onclick attr needed.
-   Event delegation on document catches clicks on theme buttons.
-   setInterval re-applies after Streamlit React rerenders.
-   localStorage persists choice across page loads.
-────────────────────────────────────────────────────────────────────────── */
-(function() {
-  if (window.__pulseThemeReady) return;
-  window.__pulseThemeReady = true;
-
-  function updateBtns(isLight) {
-    document.querySelectorAll('.pulse-theme-toggle').forEach(function(b) {
-      b.innerHTML = isLight ? '&#9728;&#65039;' : '&#127769;';
-      b.title     = isLight ? 'Switch to dark mode' : 'Switch to light mode';
-    });
-    document.querySelectorAll('.pulse-sidebar-theme-btn').forEach(function(b) {
-      b.innerHTML = isLight ? '&#9728;&#65039;&nbsp;&nbsp;Dark Mode'
-                            : '&#127769;&nbsp;&nbsp;Light Mode';
-    });
-  }
-
-  function applyTheme() {
-    var isLight = localStorage.getItem('pulse-theme') === 'light';
-    if (isLight) {
-      document.body.classList.add('pulse-light');
-    } else {
-      document.body.classList.remove('pulse-light');
-    }
-    updateBtns(isLight);
-  }
-
-  function toggleTheme() {
-    var isLight = document.body.classList.contains('pulse-light');
-    localStorage.setItem('pulse-theme', isLight ? 'dark' : 'light');
-    applyTheme();
-  }
-
-  /* Apply stored theme immediately */
-  applyTheme();
-
-  /* Re-apply every 350 ms — survives Streamlit React rerenders */
-  setInterval(applyTheme, 350);
-
-  /* Event delegation — catches clicks on both toggle buttons
-     Works even if onclick="" attribute is stripped by Streamlit */
-  document.addEventListener('click', function(e) {
-    var t = e.target;
-    if (t && t.closest &&
-        (t.closest('.pulse-theme-toggle') || t.closest('.pulse-sidebar-theme-btn'))) {
-      e.preventDefault();
-      toggleTheme();
-    }
-  });
-
-  /* Expose globally as fallback */
-  window.__pulseToggleTheme = toggleTheme;
-})();
-</script>
-""", unsafe_allow_html=True)
 
 # ── Back-to-top button (fixed action button)
 st.markdown("""
@@ -7075,19 +6764,10 @@ with st.sidebar:
             err_text = (proc.stderr or proc.stdout or "No output captured").strip()
             st.code(err_text[-800:], language="text")
 
-    # ── Theme Toggle — bottom of sidebar (like GloCon Association Insights) ──
     st.markdown(
-        '<div style="margin-top:auto;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);">',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<button class="pulse-sidebar-theme-btn">🌙&nbsp;&nbsp;Light Mode</button>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
+        '<div style="margin-top:auto;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);">'
         '<div style="text-align:center;font-size:9.5px;color:rgba(140,180,200,0.45);'
-        'margin-top:10px;letter-spacing:.04em;">'
-        '© 2026 GloCon Solutions LLC</div></div>',
+        'letter-spacing:.04em;">© 2026 GloCon Solutions LLC</div></div>',
         unsafe_allow_html=True,
     )
 
@@ -7156,10 +6836,7 @@ def _h_delta_html(v, fmt="pct"):
     return f'<span class="hero-stat-delta {cls}">{arrow} {val_str}</span>'
 
 st.markdown(
-    f'<div class="hero-banner" style="position:relative;">'
-    # ── Theme toggle inside hero-banner (top-right) — pure JS, no reload
-    f'<button class="pulse-theme-toggle" '
-    f'title="Switch theme" aria-label="Toggle theme">🌙</button>'
+    f'<div class="hero-banner">'
     f'<a href="?" style="text-decoration:none;">'
     f'<div class="hero-title">Dana Point <span>PULSE</span></div>'
     f'</a>'
