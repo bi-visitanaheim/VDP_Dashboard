@@ -564,25 +564,19 @@ CRITICAL: NEVER present Zartico as current data. Use only for historical trend c
 """
 
 # ─── Session state ────────────────────────────────────────────────────────────
-# Sync theme from URL query param (persists across page loads, bookmarkable)
-_qp_theme = st.query_params.get("theme", "dark")
-if _qp_theme not in ("dark", "light"):
-    _qp_theme = "dark"
-
 for _k, _v in [
     ("ai_needs_call",    False),
     ("ai_current_prompt",""),
     ("ai_result",        ""),
     ("ai_prompt_label",  ""),
-    ("theme",            _qp_theme),
     ("goal_edit_id",     None),
 ]:
     if _k not in st.session_state:
         st.session_state[_k] = _v
 
-# Keep session state in sync with URL (handles browser back/forward)
-st.session_state["theme"] = _qp_theme
-_is_light = (_qp_theme == "light")
+# Theme is managed purely client-side via localStorage + data-theme attribute.
+# No Python rerender needed — JS toggles instantly and persists via localStorage.
+_is_light = False  # unused by CSS; kept for any Python logic that may reference it
 
 # ─── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -2704,21 +2698,30 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
-# ── Light-mode overrides (injected only when theme == "light") ────────────────
-if _is_light:
-    st.markdown("""
+# ── Light/Dark theme — pure JS + localStorage approach ────────────────────────
+# Theme toggles instantly without any Streamlit rerender.
+# data-theme="light"|"dark" is set on <html> element; CSS reacts via attribute selector.
+# Persists across renders via localStorage['pulse-theme'].
+st.markdown("""
 <style>
 /* ══════════════════════════════════════════════════════════════════════════════
-   DANA POINT PULSE — Light Mode Override v1
-   Overrides all dark :root tokens. Hero banner stays dark (intentional).
+   DANA POINT PULSE — Light Mode Overrides (html[data-theme="light"])
+   Uses CSS attribute selector — activated instantly by JS, no page reload.
+   color-scheme enables light-dark() function support in modern browsers.
 ══════════════════════════════════════════════════════════════════════════════ */
-:root {
+
+/* Dark default color-scheme */
+:root { color-scheme: dark; }
+
+/* Light mode — redefine all design tokens + color-scheme */
+html[data-theme="light"] {
+  color-scheme: light;
   --dp-bg:            #EEF3F8;
   --dp-bg2:           #E5ECF4;
   --dp-surface:       #F5F8FC;
   --dp-card:          #FFFFFF;
   --dp-card-solid:    #FFFFFF;
-  --dp-card-hover:    #F8FAFD;
+  --dp-card-hover:    #F4F8FC;
   --dp-border:        rgba(26,55,86,0.10);
   --dp-border-accent: rgba(8,130,160,0.35);
   --dp-teal:          #0891B2;
@@ -2735,161 +2738,236 @@ if _is_light:
   --dp-text-3:        #475569;
   --dp-text-4:        #94A3B8;
   --dp-shadow:        0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.06);
-  --dp-shadow-hover:  0 8px 28px rgba(0,0,0,0.10), 0 0 0 1px rgba(8,145,178,0.13);
-  --dp-shadow-deep:   0 16px 40px rgba(0,0,0,0.10);
+  --dp-shadow-hover:  0 8px 28px rgba(0,0,0,0.09), 0 0 0 1px rgba(8,145,178,0.12);
+  --dp-shadow-deep:   0 16px 40px rgba(0,0,0,0.09);
 }
-html, body, [class*="css"] {
-  background-color: #EEF3F8 !important;
-  color: #0F172A !important;
-}
-body, .main, .stApp, [data-testid="stAppViewContainer"] {
+
+/* Global backgrounds + text */
+html[data-theme="light"] body,
+html[data-theme="light"] [class*="css"],
+html[data-theme="light"] .main,
+html[data-theme="light"] .stApp,
+html[data-theme="light"] [data-testid="stAppViewContainer"] {
   background-color: #EEF3F8 !important;
   background-image: none !important;
+  color: #0F172A !important;
 }
-[data-testid="stSidebar"] > div:first-child {
-  background: linear-gradient(180deg, #DDEAF5 0%, #D4E2F0 100%) !important;
+
+/* Sidebar */
+html[data-theme="light"] [data-testid="stSidebar"] > div:first-child {
+  background: linear-gradient(180deg, #DCE9F5 0%, #D2E1EF 100%) !important;
   border-right: 1px solid rgba(8,145,178,0.14) !important;
 }
-[data-testid="stSidebar"] * { color: #1E3A5F !important; }
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] [data-testid="stWidgetLabel"] { color: #475569 !important; }
-[data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
-[data-testid="stSidebar"] input,
-[data-testid="stSidebar"] select {
-  background: rgba(255,255,255,0.85) !important;
+html[data-theme="light"] [data-testid="stSidebar"] * { color: #1E3A5F !important; }
+html[data-theme="light"] [data-testid="stSidebar"] label,
+html[data-theme="light"] [data-testid="stSidebar"] [data-testid="stWidgetLabel"] { color: #475569 !important; }
+html[data-theme="light"] [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
+html[data-theme="light"] [data-testid="stSidebar"] input,
+html[data-theme="light"] [data-testid="stSidebar"] select {
+  background: rgba(255,255,255,0.88) !important;
   border-color: rgba(26,55,86,0.14) !important;
   color: #0F172A !important;
 }
-[data-baseweb="select"] > div,
-[data-baseweb="input"] > div,
-div[data-testid="stSelectbox"] > div > div {
+
+/* Inputs / selects */
+html[data-theme="light"] [data-baseweb="select"] > div,
+html[data-theme="light"] [data-baseweb="input"] > div,
+html[data-theme="light"] div[data-testid="stSelectbox"] > div > div {
   background: rgba(255,255,255,0.92) !important;
   border-color: rgba(26,55,86,0.14) !important;
   color: #0F172A !important;
 }
-[data-baseweb="menu"], [data-baseweb="popover"] { background: #FFFFFF !important; }
-[data-baseweb="option"]:hover { background: rgba(8,145,178,0.07) !important; }
-[data-testid="stMetric"] {
+html[data-theme="light"] [data-baseweb="menu"],
+html[data-theme="light"] [data-baseweb="popover"] { background: #FFFFFF !important; }
+html[data-theme="light"] [data-baseweb="option"]:hover { background: rgba(8,145,178,0.07) !important; }
+
+/* Metrics */
+html[data-theme="light"] [data-testid="stMetric"] {
   background: #FFFFFF !important;
   border: 1px solid rgba(26,55,86,0.09) !important;
 }
-[data-testid="stMetricValue"] { color: #0F172A !important; }
-[data-testid="stMetricLabel"] { color: #475569 !important; }
-[data-testid="stExpander"] {
+html[data-theme="light"] [data-testid="stMetricValue"] { color: #0F172A !important; }
+html[data-theme="light"] [data-testid="stMetricLabel"] { color: #475569 !important; }
+
+/* Expander */
+html[data-theme="light"] [data-testid="stExpander"] {
   background: #FFFFFF !important;
   border: 1px solid rgba(26,55,86,0.09) !important;
 }
-[data-testid="stExpander"] summary { color: #1E3A5F !important; }
-[data-testid="stDataFrame"] { background: #FFFFFF !important; }
-[data-testid="stTabs"] [role="tablist"] {
+html[data-theme="light"] [data-testid="stExpander"] summary { color: #1E3A5F !important; }
+html[data-theme="light"] [data-testid="stDataFrame"] { background: #FFFFFF !important; }
+
+/* Tabs */
+html[data-theme="light"] [data-testid="stTabs"] [role="tablist"] {
   background: rgba(0,0,0,0.03) !important;
   border-bottom: 1px solid rgba(26,55,86,0.09) !important;
 }
-button[data-baseweb="tab"] { color: #475569 !important; }
-button[data-baseweb="tab"][aria-selected="true"] {
+html[data-theme="light"] button[data-baseweb="tab"] { color: #475569 !important; }
+html[data-theme="light"] button[data-baseweb="tab"][aria-selected="true"] {
   color: #0891B2 !important;
   border-bottom-color: #0891B2 !important;
 }
-[data-testid="stButton"] > button {
+
+/* Buttons */
+html[data-theme="light"] [data-testid="stButton"] > button {
   background: rgba(8,145,178,0.06) !important;
   border: 1px solid rgba(8,145,178,0.18) !important;
   color: #0F172A !important;
 }
-[data-testid="stButton"] > button:hover {
+html[data-theme="light"] [data-testid="stButton"] > button:hover {
   background: #0891B2 !important;
   border-color: #0891B2 !important;
   color: #FFFFFF !important;
-  box-shadow: 0 4px 14px rgba(8,145,178,0.28) !important;
+  box-shadow: 0 4px 14px rgba(8,145,178,0.26) !important;
 }
-[data-testid="stSidebarCollapseButton"] button,
-[data-testid="collapsedControl"] button {
+
+/* Sidebar collapse button */
+html[data-theme="light"] [data-testid="stSidebarCollapseButton"] button,
+html[data-theme="light"] [data-testid="collapsedControl"] button {
   background: rgba(8,145,178,0.10) !important;
   border: 1px solid rgba(8,145,178,0.28) !important;
   color: #0891B2 !important;
 }
-[data-testid="stSidebarCollapseButton"] svg,
-[data-testid="collapsedControl"] svg { color: #0891B2 !important; fill: #0891B2 !important; }
-/* Pulse ticker stays dark — it's part of the hero area */
-.pulse-ticker-wrap {
-  background: linear-gradient(180deg, #1A3756 0%, #1E3D5E 100%) !important;
-}
-.pulse-ticker-wrap::before { background: linear-gradient(90deg, #1A3756 0%, transparent 100%) !important; }
-.pulse-ticker-wrap::after  { background: linear-gradient(270deg, #1A3756 0%, transparent 100%) !important; }
-/* Cards and text */
-.kpi-label { color: #475569 !important; }
-.kpi-value { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-.kpi-date  { color: #64748B !important; border-top-color: rgba(0,0,0,0.07) !important; }
-.insight-title { color: #0F172A !important; }
-.insight-body  { color: #334155 !important; }
-.chart-header  { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-.chart-primer  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; background: rgba(0,0,0,0.04) !important; }
-.chart-primer strong { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
-.section-label { color: #0891B2 !important; }
-.section-divider-title {
-  background: rgba(8,145,178,0.11) !important;
-  border: 1px solid rgba(8,145,178,0.32) !important;
+html[data-theme="light"] [data-testid="stSidebarCollapseButton"] svg,
+html[data-theme="light"] [data-testid="collapsedControl"] svg { color: #0891B2 !important; fill: #0891B2 !important; }
+
+/* KPI ticker stays dark (part of hero area) */
+html[data-theme="light"] .pulse-ticker-wrap { background: linear-gradient(180deg,#1A3756 0%,#1E3D5E 100%) !important; }
+html[data-theme="light"] .pulse-ticker-wrap::before { background: linear-gradient(90deg,#1A3756 0%,transparent 100%) !important; }
+html[data-theme="light"] .pulse-ticker-wrap::after  { background: linear-gradient(270deg,#1A3756 0%,transparent 100%) !important; }
+
+/* Cards + text */
+html[data-theme="light"] .kpi-label { color: #475569 !important; }
+html[data-theme="light"] .kpi-value { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+html[data-theme="light"] .kpi-date  { color: #64748B !important; border-top-color: rgba(0,0,0,0.07) !important; }
+html[data-theme="light"] .insight-title { color: #0F172A !important; }
+html[data-theme="light"] .insight-body  { color: #334155 !important; }
+html[data-theme="light"] .chart-header  { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+html[data-theme="light"] .chart-primer  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; background: rgba(0,0,0,0.04) !important; }
+html[data-theme="light"] .chart-primer strong { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
+html[data-theme="light"] .section-label { color: #0891B2 !important; }
+html[data-theme="light"] .section-divider-title {
+  background: rgba(8,145,178,0.10) !important;
+  border: 1px solid rgba(8,145,178,0.30) !important;
   color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
 }
-.tab-summary {
-  background: rgba(8,145,178,0.05) !important;
-  border-color: rgba(8,145,178,0.16) !important;
+html[data-theme="light"] .tab-summary { background: rgba(8,145,178,0.05) !important; border-color: rgba(8,145,178,0.16) !important; }
+html[data-theme="light"] .tab-summary .ts-bullets li { background: rgba(0,0,0,0.04) !important; border: 1px solid rgba(0,0,0,0.08) !important; color: #475569 !important; }
+html[data-theme="light"] .ai-chip { background: rgba(8,145,178,0.07) !important; color: #0891B2 !important; border: 1px solid rgba(8,145,178,0.18) !important; }
+html[data-theme="light"] .ai-command-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+html[data-theme="light"] .ai-command-sub   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+html[data-theme="light"] .ai-prompt-chip   { background: rgba(0,0,0,0.05) !important; border-color: rgba(0,0,0,0.09) !important; color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
+html[data-theme="light"] .dp-callout p, html[data-theme="light"] .dp-callout-amber p,
+html[data-theme="light"] .dp-callout-purple p, html[data-theme="light"] .dp-callout-green p { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
+html[data-theme="light"] .dp-callout strong, html[data-theme="light"] .dp-callout-amber strong,
+html[data-theme="light"] .dp-callout-purple strong, html[data-theme="light"] .dp-callout-green strong { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+html[data-theme="light"] .nav-guide-name { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+html[data-theme="light"] .nav-guide-desc { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+html[data-theme="light"] .metric-plain   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+html[data-theme="light"] .src-name { color: #0F172A !important; }
+html[data-theme="light"] .src-meta { color: #475569 !important; }
+html[data-theme="light"] .mini-data-card-label { color: #475569 !important; }
+html[data-theme="light"] .mini-data-card-value { color: #0F172A !important; }
+html[data-theme="light"] .mini-data-card-sub   { color: #475569 !important; }
+html[data-theme="light"] .empty-title { color: #0F172A !important; }
+html[data-theme="light"] .empty-body  { color: #475569 !important; }
+html[data-theme="light"] .dp-howto-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+html[data-theme="light"] .dp-howto-text  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+html[data-theme="light"] .dp-howto-num   { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
+html[data-theme="light"] .vdp-status-bar { background: rgba(0,0,0,0.04) !important; border-color: rgba(26,55,86,0.08) !important; }
+html[data-theme="light"] .vdp-status-date { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+html[data-theme="light"] .vdp-qa-btn { background: rgba(15,23,42,0.05) !important; border: 1px solid rgba(15,23,42,0.10) !important; color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+html[data-theme="light"] .vdp-qa-btn:hover { background: rgba(8,145,178,0.09) !important; border-color: rgba(8,145,178,0.28) !important; }
+html[data-theme="light"] .section-nav { background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; }
+html[data-theme="light"] .section-nav-item { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+html[data-theme="light"] .section-nav-item.active { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
+html[data-theme="light"] .goal-track-bg { background: rgba(0,0,0,0.08) !important; }
+html[data-theme="light"] .goal-card-title { color: #0F172A !important; }
+html[data-theme="light"] .goal-progress-pct { color: #0F172A !important; }
+html[data-theme="light"] .goal-desc { color: #475569 !important; border-top-color: rgba(0,0,0,0.08) !important; }
+html[data-theme="light"] .goals-summary-num { color: #0F172A !important; }
+html[data-theme="light"] .goals-summary-lbl { color: #475569 !important; }
+html[data-theme="light"] ::-webkit-scrollbar-track { background: rgba(0,0,0,0.03) !important; }
+html[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(8,145,178,0.18) !important; }
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: rgba(8,145,178,0.36) !important; }
+
+/* ── Sidebar theme button (HTML, not Streamlit widget) ──────────────────── */
+.pulse-sidebar-theme-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 9px 16px; border-radius: 100em;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(0,212,200,0.22);
+  color: var(--dp-text-2);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; text-align: left;
+  transition: background 0.22s, color 0.22s, border-color 0.22s;
+  outline: none; box-sizing: border-box;
 }
-.tab-summary .ts-bullets li {
-  background: rgba(0,0,0,0.04) !important;
-  border: 1px solid rgba(0,0,0,0.08) !important;
-  color: #475569 !important;
+.pulse-sidebar-theme-btn:hover {
+  background: var(--dp-teal) !important;
+  border-color: var(--dp-teal) !important;
+  color: #060C18 !important;
+  box-shadow: 0 4px 18px rgba(0,212,200,0.28) !important;
 }
-.ai-chip {
-  background: rgba(8,145,178,0.07) !important;
-  color: #0891B2 !important;
-  border: 1px solid rgba(8,145,178,0.18) !important;
+html[data-theme="light"] .pulse-sidebar-theme-btn {
+  background: rgba(8,145,178,0.06);
+  border: 1px solid rgba(8,145,178,0.20);
+  color: #1E3A5F;
 }
-.ai-command-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-.ai-command-sub   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-.ai-prompt-chip {
-  background: rgba(0,0,0,0.05) !important;
-  border-color: rgba(0,0,0,0.09) !important;
-  color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important;
+html[data-theme="light"] .pulse-sidebar-theme-btn:hover {
+  background: #0891B2 !important;
+  border-color: #0891B2 !important;
+  color: #FFFFFF !important;
 }
-.dp-callout p, .dp-callout-amber p, .dp-callout-purple p, .dp-callout-green p {
-  color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important;
-}
-.dp-callout strong, .dp-callout-amber strong, .dp-callout-purple strong, .dp-callout-green strong {
-  color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
-}
-.nav-guide-name { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-.nav-guide-desc { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-.metric-plain   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-.src-name { color: #0F172A !important; }
-.src-meta { color: #475569 !important; }
-.mini-data-card-label { color: #475569 !important; }
-.mini-data-card-value { color: #0F172A !important; }
-.mini-data-card-sub   { color: #475569 !important; }
-.empty-title { color: #0F172A !important; }
-.empty-body  { color: #475569 !important; }
-.dp-howto-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
-.dp-howto-text  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-.dp-howto-num   { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
-.vdp-status-bar { background: rgba(0,0,0,0.04) !important; border-color: rgba(26,55,86,0.08) !important; }
-.vdp-status-date { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-.vdp-qa-btn {
-  background: rgba(15,23,42,0.05) !important;
-  border: 1px solid rgba(15,23,42,0.10) !important;
-  color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
-}
-.vdp-qa-btn:hover {
-  background: rgba(8,145,178,0.09) !important;
-  border-color: rgba(8,145,178,0.28) !important;
-}
-.section-nav { background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; }
-.section-nav-item { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
-.section-nav-item.active { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
-::-webkit-scrollbar-track { background: rgba(0,0,0,0.03) !important; }
-::-webkit-scrollbar-thumb { background: rgba(8,145,178,0.18) !important; }
-::-webkit-scrollbar-thumb:hover { background: rgba(8,145,178,0.38) !important; }
-/* Strategy goal progress bars in light mode */
-.goal-track-bg { background: rgba(0,0,0,0.08) !important; }
 </style>
+
+<script>
+/* ── PULSE Theme Engine v2 — localStorage + data-theme attribute ───────────
+   Pure client-side. No Streamlit rerender needed. Instant toggle.
+   Survives Streamlit rerenders because localStorage persists.
+────────────────────────────────────────────────────────────────────────── */
+(function initPulseTheme() {
+  var stored = localStorage.getItem('pulse-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', stored);
+  _updateThemeButtons(stored);
+
+  function _updateThemeButtons(theme) {
+    document.querySelectorAll('.pulse-theme-toggle').forEach(function(btn) {
+      btn.innerHTML = theme === 'light' ? '&#9728;&#65039;' : '&#127769;';
+      btn.title = theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode';
+    });
+    document.querySelectorAll('.pulse-sidebar-theme-btn').forEach(function(btn) {
+      btn.innerHTML = theme === 'light'
+        ? '&#9728;&#65039;&nbsp; Dark Mode'
+        : '&#127769;&nbsp; Light Mode';
+    });
+  }
+
+  window.__pulseToggleTheme = function() {
+    var current = document.documentElement.getAttribute('data-theme') || 'dark';
+    var next    = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('pulse-theme', next);
+    _updateThemeButtons(next);
+  };
+
+  /* Re-apply after Streamlit rerenders (DOM mutation) */
+  if (window.MutationObserver) {
+    var _reapplyTimer;
+    new MutationObserver(function() {
+      clearTimeout(_reapplyTimer);
+      _reapplyTimer = setTimeout(function() {
+        var t = localStorage.getItem('pulse-theme') || 'dark';
+        if (document.documentElement.getAttribute('data-theme') !== t) {
+          document.documentElement.setAttribute('data-theme', t);
+        }
+        _updateThemeButtons(t);
+      }, 80);
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # ── Back-to-top button (fixed action button)
@@ -6989,17 +7067,11 @@ with st.sidebar:
         '<div style="margin-top:auto;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);">',
         unsafe_allow_html=True,
     )
-    _theme_icon  = "☀️" if _is_light else "🌙"
-    _theme_label = "Dark Mode" if _is_light else "Light Mode"
-    _new_theme   = "dark"    if _is_light else "light"
-    if st.button(
-        f"{_theme_icon}  {_theme_label}",
-        key="theme_toggle_sidebar",
-        use_container_width=True,
-        help="Switch between dark and light mode",
-    ):
-        st.query_params["theme"] = _new_theme
-        st.rerun()
+    st.markdown(
+        '<button class="pulse-sidebar-theme-btn" onclick="window.__pulseToggleTheme()">'
+        '🌙&nbsp; Light Mode</button>',
+        unsafe_allow_html=True,
+    )
     st.markdown(
         '<div style="text-align:center;font-size:9.5px;color:rgba(140,180,200,0.45);'
         'margin-top:10px;letter-spacing:.04em;">'
@@ -7071,17 +7143,13 @@ def _h_delta_html(v, fmt="pct"):
     val_str = f"{v:+.1f}%" if fmt == "pct" else f"{v:+.1f}pp"
     return f'<span class="hero-stat-delta {cls}">{arrow} {val_str}</span>'
 
-_hero_theme_icon = "☀️" if _is_light else "🌙"
-_hero_new_theme  = "dark" if _is_light else "light"
 st.markdown(
     f'<div class="hero-banner" style="position:relative;">'
-    # ── Theme toggle inside hero-banner (top-right, always dark bg)
+    # ── Theme toggle inside hero-banner (top-right) — pure JS, no reload
     f'<button class="pulse-theme-toggle" '
-    f'onclick="(function(){{var p=new URLSearchParams(window.location.search);'
-    f'p.set(\'theme\',\'{_hero_new_theme}\');'
-    f'window.location.href=window.location.pathname+\'?\'+p.toString();}})()" '
-    f'title="Switch to {_hero_new_theme} mode" aria-label="Toggle theme">'
-    f'{_hero_theme_icon}</button>'
+    f'onclick="window.__pulseToggleTheme()" '
+    f'title="Switch theme" aria-label="Toggle theme">'
+    f'🌙</button>'
     f'<a href="?" style="text-decoration:none;">'
     f'<div class="hero-title">Dana Point <span>PULSE</span></div>'
     f'</a>'
