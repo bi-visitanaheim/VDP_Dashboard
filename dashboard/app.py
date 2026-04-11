@@ -100,7 +100,7 @@ def _render_login_page():
     .login-wrap {
         max-width: 420px; margin: 80px auto 0 auto;
         background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(26,55,86,0.12);
+        border: 1px solid rgba(255,255,255,0.12);
         border-radius: 16px; padding: 40px 36px 32px 36px;
         backdrop-filter: blur(20px);
         box-shadow: 0 24px 64px rgba(0,0,0,0.55);
@@ -123,7 +123,7 @@ def _render_login_page():
         display: flex; align-items: center; gap: 10px;
         margin: 18px 0;
     }
-    .login-divider-line { flex: 1; height: 1px; background: rgba(26,55,86,0.12); }
+    .login-divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.12); }
     .login-divider-text { font-size: 11px; color: rgba(255,255,255,0.40); white-space: nowrap; }
     .oauth-btn {
         display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -587,34 +587,34 @@ st.markdown("""
   /* ── Google Fonts ────────────────────────────────────────────────────── */
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  /* ── Design Tokens — Blue backdrop, white cards ─────────────────────────── */
+  /* ── Design Tokens — Coastal Slate (readable, bright ocean dark) ─────────── */
   :root {
     --dp-bg:            #1A3756;
     --dp-bg2:           #1E3D5E;
-    --dp-surface:       #FFFFFF;
-    --dp-card:          #FFFFFF;
-    --dp-card-solid:    #FFFFFF;
-    --dp-card-hover:    #F5F9FF;
-    --dp-border:        rgba(26,55,86,0.12);
-    --dp-border-accent: rgba(0,168,196,0.50);
-    --dp-teal:          #00A8C4;
-    --dp-teal-dim:      rgba(0,168,196,0.10);
-    --dp-teal-glow:     rgba(0,168,196,0.22);
-    --dp-blue:          #1D6FA4;
-    --dp-green:         #059669;
-    --dp-amber:         #D97706;
-    --dp-red:           #DC2626;
-    --dp-purple:        #7C3AED;
-    --dp-orange:        #EA580C;
-    --dp-text-1:        #0F172A;
-    --dp-text-2:        #1E3A5F;
-    --dp-text-3:        #475569;
-    --dp-text-4:        #94A3B8;
+    --dp-surface:       #224466;
+    --dp-card:          #264B6E;
+    --dp-card-solid:    #264B6E;
+    --dp-card-hover:    #2C547A;
+    --dp-border:        rgba(255,255,255,0.16);
+    --dp-border-accent: rgba(0,212,200,0.45);
+    --dp-teal:          #00D4C8;
+    --dp-teal-dim:      rgba(0,212,200,0.18);
+    --dp-teal-glow:     rgba(0,212,200,0.30);
+    --dp-blue:          #38BDF8;
+    --dp-green:         #10B981;
+    --dp-amber:         #F5B940;
+    --dp-red:           #EF4444;
+    --dp-purple:        #A78BFA;
+    --dp-orange:        #FB923C;
+    --dp-text-1:        #F4FAFF;
+    --dp-text-2:        #C8E0F2;
+    --dp-text-3:        #8EC4DC;
+    --dp-text-4:        #5A7A95;   /* muted/disabled — Linear 4th tier */
     --dp-radius:        12px;
     --dp-radius-lg:     16px;
-    --dp-shadow:        0 1px 4px rgba(0,0,0,0.08), 0 4px 20px rgba(0,0,0,0.10);
-    --dp-shadow-hover:  0 8px 32px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,168,196,0.18);
-    --dp-shadow-deep:   0 16px 48px rgba(0,0,0,0.18);
+    --dp-shadow:        0 1px 4px rgba(0,0,0,0.30), 0 4px 20px rgba(0,0,0,0.22);
+    --dp-shadow-hover:  0 8px 32px rgba(0,0,0,0.38), 0 0 0 1px rgba(0,212,200,0.22);
+    --dp-shadow-deep:   0 16px 48px rgba(0,0,0,0.48);
   }
 
   html, body, [class*="css"] {
@@ -622,11 +622,6 @@ st.markdown("""
     background-color: var(--dp-bg) !important;
     color: var(--dp-text-1) !important;
     font-size: 15px !important;
-  }
-  /* Main content area — white so cards sit on white, blue peeks behind */
-  [data-testid="stMain"],
-  [data-testid="stMainBlockContainer"] {
-    background-color: #FFFFFF !important;
   }
   /* ── Global font scale-up — all text bumped ~15% larger ──────────────── */
   p, li, span, label, div { font-size: inherit; }
@@ -667,24 +662,24 @@ st.markdown("""
     background-color: transparent !important;
   }
 
-  /* ── Sidebar stays dark blue — keep text light ───────────────────────── */
+  /* ── Global dark overrides — all white surfaces → dark glass ─────────── */
   [data-testid="stSidebar"] > div:first-child {
     background: linear-gradient(180deg, #1C3B5A 0%, #1A3756 100%) !important;
     border-right: 1px solid rgba(0,212,200,0.12) !important;
   }
-  [data-testid="stSidebar"] * { color: #C8E0F2 !important; }
+  [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
   [data-testid="stSidebar"] label,
   [data-testid="stSidebar"] .st-emotion-cache-16idsys p,
   [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
-    color: #8EC4DC !important; font-size: 12px !important;
+    color: var(--dp-text-2) !important; font-size: 12px !important;
   }
   [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
   [data-testid="stSidebar"] [data-testid="stMultiSelect"] > div > div,
   [data-testid="stSidebar"] input,
   [data-testid="stSidebar"] select {
-    background: rgba(255,255,255,0.06) !important;
-    border-color: rgba(200,230,255,0.15) !important;
-    color: #F4FAFF !important;
+    background: rgba(255,255,255,0.05) !important;
+    border-color: rgba(255,255,255,0.10) !important;
+    color: var(--dp-text-1) !important;
   }
   /* Streamlit metric dark */
   [data-testid="stMetric"] {
@@ -710,11 +705,11 @@ st.markdown("""
   [data-baseweb="input"] > div,
   div[data-testid="stSelectbox"] > div > div {
     background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(26,55,86,0.12) !important;
+    border-color: rgba(255,255,255,0.10) !important;
     color: var(--dp-text-1) !important;
   }
   [data-baseweb="menu"],
-  [data-baseweb="popover"] { background: #FFFFFF !important; color: #0F172A !important; }
+  [data-baseweb="popover"] { background: #264B6E !important; }
   [data-baseweb="option"]:hover { background: rgba(0,212,200,0.10) !important; }
   /* Tab bar dark */
   [data-testid="stTabs"] [role="tablist"] {
@@ -1166,7 +1161,7 @@ st.markdown("""
   }
   .tab-summary .ts-bullets li {
     font-size: 11.5px; color: var(--dp-text-3);
-    background: rgba(255,255,255,0.05); border: 1px solid rgba(26,55,86,0.12);
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
     border-radius: 20px; padding: 3px 12px; display: inline-flex; align-items: center; gap: 5px;
   }
   .tab-summary .ts-bullets li::before { content: "→"; color: var(--dp-teal); font-weight: 700; }
@@ -1217,7 +1212,7 @@ st.markdown("""
     display: flex; align-items: flex-start; gap: 10px;
     padding: 9px 12px; border-radius: 8px; margin-bottom: 4px;
     background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(26,55,86,0.10);
+    border: 1px solid rgba(255,255,255,0.08);
     transition: background 0.18s ease;
   }
   .nav-guide-item:hover { background: rgba(0,212,200,0.08); }
@@ -1277,7 +1272,7 @@ st.markdown("""
     display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
     background: rgba(0,0,0,0.22); border-radius: 10px;
     padding: 10px 18px; margin: 0 0 18px 0;
-    border: 1px solid rgba(26,55,86,0.10);
+    border: 1px solid rgba(255,255,255,0.08);
   }
   .vdp-status-date {
     font-size: 11px; font-weight: 700; color: #8AAEC6;
@@ -1336,7 +1331,7 @@ st.markdown("""
     display: inline-flex; align-items: center; gap: 4px;
     padding: 5px 13px; border-radius: 99px; font-size: 11.5px;
     font-weight: 600; cursor: pointer;
-    background: rgba(255,255,255,0.06); border: 1px solid rgba(26,55,86,0.12);
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
     color: #C8E0F2; -webkit-text-fill-color: #C8E0F2;
     transition: background 0.15s, border-color 0.15s;
   }
@@ -1346,7 +1341,7 @@ st.markdown("""
   .section-nav {
     display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 20px 0;
     padding: 10px 14px; background: rgba(255,255,255,0.03);
-    border-radius: 8px; border: 1px solid rgba(26,55,86,0.10);
+    border-radius: 8px; border: 1px solid rgba(255,255,255,0.07);
   }
   .section-nav-item {
     font-size: 11px; font-weight: 700; color: #8AAEC6;
@@ -1531,7 +1526,7 @@ st.markdown("""
   .nlm-source-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
     margin-top: 10px; padding-top: 8px;
-    border-top: 1px solid rgba(26,55,86,0.10);
+    border-top: 1px solid rgba(255,255,255,0.07);
   }
 
   /* ── Questions Block ─────────────────────────────────────────────────── */
@@ -1798,7 +1793,7 @@ st.markdown("""
   }
   [data-testid="stSidebar"] .stRadio label {
     font-size: 13px !important; font-weight: 500 !important;
-    color: #C8E0F2 !important;
+    color: var(--dp-text-2) !important;
   }
   [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
   [data-testid="stSidebar"] .stMarkdown p { color: var(--dp-text-3) !important; }
@@ -1807,12 +1802,12 @@ st.markdown("""
   [data-testid="stSelectbox"] > div,
   [data-testid="stDateInput"] > div {
     background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(26,55,86,0.12) !important;
+    border-color: rgba(255,255,255,0.10) !important;
     border-radius: 8px !important; color: var(--dp-text-1) !important;
   }
   [data-testid="stSelectbox"] [data-baseweb="select"] > div {
     background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(26,55,86,0.12) !important;
+    border-color: rgba(255,255,255,0.10) !important;
     color: var(--dp-text-1) !important;
   }
 
@@ -1839,7 +1834,7 @@ st.markdown("""
   }
   .filter-bar .stSelectbox > div > div {
     background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(26,55,86,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
     border-radius: 8px !important;
     font-size: 13px !important; color: var(--dp-text-1) !important;
   }
@@ -1912,7 +1907,7 @@ st.markdown("""
     display: flex !important; align-items: center !important; gap: 12px !important;
     padding: 13px 20px !important; border-radius: 10px !important;
     margin: 28px 0 14px 0 !important;
-    background: rgba(26,55,86,0.10) !important;
+    background: rgba(255,255,255,0.07) !important;
     border: 1px solid rgba(255,255,255,0.14) !important;
     border-left: 4px solid var(--sh-accent, #00D4C8) !important;
     box-shadow: 0 2px 12px rgba(0,0,0,0.25) !important;
@@ -2007,7 +2002,7 @@ st.markdown("""
   }
   .goal-meta-item { display: flex; align-items: center; gap: 4px; }
   .goal-track-bg {
-    height: 8px; background: rgba(26,55,86,0.10);
+    height: 8px; background: rgba(255,255,255,0.08);
     border-radius: 99px; overflow: hidden; margin: 6px 0 8px 0;
   }
   .goal-track-fill {
@@ -2215,7 +2210,7 @@ st.markdown("""
     font-size: 12px; font-weight: 600;
     color: rgba(255,255,255,0.65);
     white-space: nowrap;
-    border-right: 1px solid rgba(26,55,86,0.10);
+    border-right: 1px solid rgba(255,255,255,0.07);
     transition: color 0.2s ease;
   }
   .pulse-ticker-item:hover { color: rgba(255,255,255,0.90); }
@@ -2459,7 +2454,7 @@ st.markdown("""
   }
   .master-card-body {
     font-family: 'DM Sans', sans-serif; font-size: 13px; color: rgba(255,255,255,0.55);
-    line-height: 1.65; border-top: 1px solid rgba(26,55,86,0.10);
+    line-height: 1.65; border-top: 1px solid rgba(255,255,255,0.08);
     padding-top: 10px; margin-top: 4px;
   }
   .master-card-body strong { color: rgba(255,255,255,0.85); }
@@ -2555,7 +2550,7 @@ st.markdown("""
   .levi-card-body { font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--dp-text-2); line-height: 1.75; }
   .levi-card-stats {
     display: flex; gap: 24px; flex-wrap: wrap;
-    border-top: 1px solid rgba(26,55,86,0.10); margin-top: 18px; padding-top: 18px;
+    border-top: 1px solid rgba(255,255,255,0.07); margin-top: 18px; padding-top: 18px;
   }
   .levi-stat-value {
     font-family: 'Outfit', sans-serif; font-size: 1.6rem; font-weight: 900;
@@ -2884,16 +2879,16 @@ st.markdown("""
     background: rgba(36,67,102,0.72);
     backdrop-filter: blur(18px) saturate(1.5);
     -webkit-backdrop-filter: blur(18px) saturate(1.5);
-    border: 1px solid rgba(26,55,86,0.12);
+    border: 1px solid rgba(255,255,255,0.10);
     border-radius: 16px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(26,55,86,0.10);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08);
     transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
                 box-shadow 0.28s cubic-bezier(0.22,1,0.36,1);
   }
   .glass-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,212,200,0.22),
-                inset 0 1px 0 rgba(26,55,86,0.12);
+                inset 0 1px 0 rgba(255,255,255,0.12);
   }
 
   /* ── Noise texture overlay (premium grain) ───────────────────── */
@@ -2939,7 +2934,7 @@ st.markdown("""
   .skeleton {
     background: linear-gradient(90deg,
       rgba(255,255,255,0.04) 0%,
-      rgba(26,55,86,0.12) 50%,
+      rgba(255,255,255,0.10) 50%,
       rgba(255,255,255,0.04) 100%);
     background-size: 800px 100%;
     animation: shimmer-slide 1.6s linear infinite;
@@ -3009,7 +3004,7 @@ st.markdown("""
   .chart-wrap {
     background: rgba(22,40,66,0.65);
     border-radius: 14px;
-    border: 1px solid rgba(26,55,86,0.10);
+    border: 1px solid rgba(255,255,255,0.07);
     padding: 0;
     overflow: hidden;
     box-shadow: 0 2px 16px rgba(0,0,0,0.28);
@@ -5466,12 +5461,12 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         showgrid    = False,
         zeroline    = False,
         tickfont    = dict(size=11, family=_font, color="#8AAEC6"),
-        linecolor   = "rgba(26,55,86,0.12)",
+        linecolor   = "rgba(255,255,255,0.10)",
         linewidth   = 1,
         showline    = True,
         ticks       = "outside",
         ticklen     = 3,
-        tickcolor   = "rgba(26,55,86,0.10)",
+        tickcolor   = "rgba(255,255,255,0.08)",
         automargin  = True,
         tickangle   = 0,
     )
@@ -5650,13 +5645,13 @@ def render_share_bar(
         f"Best%2C%0AJohn%20Picou%20%7C%20GloCon%20Solutions%20LLC"
     )
     _btn_style = (
-        "width:100%;height:32px;background:rgba(26,55,86,0.10);"
+        "width:100%;height:32px;background:rgba(255,255,255,0.07);"
         "border:1px solid rgba(255,255,255,0.18);border-radius:8px;"
-        "cursor:pointer;color:#1E3A5F;font-size:11px;font-weight:600;"
+        "cursor:pointer;color:#C8E0F2;font-size:11px;font-weight:600;"
         "font-family:Inter,sans-serif;transition:background 0.2s;"
     )
     _hover_on  = "this.style.background='rgba(0,212,200,0.15)'"
-    _hover_off = "this.style.background='rgba(26,55,86,0.10)'"
+    _hover_off = "this.style.background='rgba(255,255,255,0.07)'"
 
     # Column layout — include PDF + CSV only when df available
     if _has_df:
@@ -6375,9 +6370,9 @@ with st.sidebar:
   body { margin:0; padding:0; background:transparent; }
   #hide-btn {
     display:flex; align-items:center; gap:6px;
-    background:rgba(26,55,86,0.10); border:1px solid rgba(255,255,255,0.18);
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
     border-radius:8px; padding:6px 16px; cursor:pointer;
-    color:#1E3A5F; font-size:13px; font-weight:600;
+    color:#C8E0F2; font-size:13px; font-weight:600;
     font-family:'Inter',sans-serif; float:right;
     transition:background 0.2s;
   }
@@ -6401,12 +6396,12 @@ with st.sidebar:
         '<a href="?" style="text-decoration:none;">'
         '<div class="sidebar-brand">Dana Point PULSE</div>'
         '</a>'
-        '<div style="font-size:10px;color:#475569;font-weight:600;margin-top:1px;">'
+        '<div style="font-size:10px;color:#8EC4DC;font-weight:600;margin-top:1px;">'
         'South Orange County, CA</div>'
         '</div>'
         '</div>'
         '<div style="font-size:10px;color:#8AAEC6;letter-spacing:.05em;font-weight:600;'
-        'text-transform:uppercase;border-top:1px solid rgba(26,55,86,0.12);padding-top:8px;">'
+        'text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.10);padding-top:8px;">'
         'Performance · Intelligence · Strategy</div>'
         '</div>'
         '<div style="font-size:10.5px;color:#8AAEC6;margin-bottom:4px;">'
@@ -6770,7 +6765,7 @@ with st.sidebar:
             st.code(err_text[-800:], language="text")
 
     st.markdown(
-        '<div style="margin-top:auto;padding-top:24px;border-top:1px solid rgba(26,55,86,0.10);">'
+        '<div style="margin-top:auto;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);">'
         '<div style="text-align:center;font-size:9.5px;color:rgba(140,180,200,0.45);'
         'letter-spacing:.04em;">© 2026 GloCon Solutions LLC</div></div>',
         unsafe_allow_html=True,
@@ -6852,9 +6847,9 @@ st.markdown(
     f'<span style="font-size:10px;font-weight:700;color:#22D3EE;letter-spacing:.07em;'
     f'text-transform:uppercase;background:rgba(34,211,238,0.15);border:1px solid rgba(34,211,238,0.35);'
     f'padding:2px 10px;border-radius:20px;">⬤ LIVE</span>'
-    f'<span style="font-size:11px;color:#1E3A5F;font-weight:500;">{range_label} window</span>'
-    f'<span style="font-size:11px;color:rgba(26,55,86,0.35);">·</span>'
-    f'<span style="font-size:11px;color:#1E3A5F;font-weight:500;">Updated {last_upd}</span>'
+    f'<span style="font-size:11px;color:rgba(200,230,255,0.85);font-weight:500;">{range_label} window</span>'
+    f'<span style="font-size:11px;color:rgba(255,255,255,0.40);">·</span>'
+    f'<span style="font-size:11px;color:rgba(200,230,255,0.85);font-weight:500;">Updated {last_upd}</span>'
     f'</div>'
     f'<div class="hero-stats-row">'
     f'<div class="hero-stat">'
@@ -8280,7 +8275,7 @@ with tab_ov:
             return (
                 f'<div style="flex:1;min-width:140px;padding:14px 18px;'
                 f'background:rgba(255,255,255,0.05);'
-                f'border-radius:12px;border:1px solid rgba(26,55,86,0.12);'
+                f'border-radius:12px;border:1px solid rgba(255,255,255,0.10);'
                 f'border-top:3px solid {color};'
                 f'box-shadow:0 2px 8px rgba(0,0,0,0.20);">'
                 f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;'
@@ -8404,7 +8399,7 @@ with tab_ov:
 
     # ── Demo: 4 Killer Questions ───────────────────────────────────────────────
     st.markdown(
-        '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(26,55,86,0.10);">'
+        '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">'
         '<span style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:#94A3B8;text-transform:uppercase;">🎯 Demo Questions</span>'
         '</div>',
         unsafe_allow_html=True,
@@ -8735,7 +8730,7 @@ with tab_ov:
                     return (
                         f'<div style="flex:1;min-width:130px;padding:16px 18px;'
                         f'background:rgba(255,255,255,0.04);border-radius:12px;'
-                        f'border:1px solid rgba(26,55,86,0.10);border-top:3px solid {accent};">'
+                        f'border:1px solid rgba(255,255,255,0.08);border-top:3px solid {accent};">'
                         f'<div style="font-size:9px;font-weight:800;letter-spacing:.09em;'
                         f'text-transform:uppercase;color:#8AAEC6;margin-bottom:6px;">{label}</div>'
                         f'<div style="font-size:26px;font-weight:900;font-family:\'Outfit\',sans-serif;'
@@ -9034,7 +9029,7 @@ with tab_ov:
                         _body_txt = str(_cx_row.body)[:200] + ("…" if len(str(_cx_row.body)) > 200 else "")
                         st.markdown(
                             f'<div style="background:rgba(255,255,255,0.04);border-radius:12px;'
-                            f'padding:14px 16px;border:1px solid rgba(26,55,86,0.10);'
+                            f'padding:14px 16px;border:1px solid rgba(255,255,255,0.08);'
                             f'border-top:3px solid {_cx_col};height:100%;">'
                             f'<div style="font-size:9px;font-weight:800;letter-spacing:.09em;'
                             f'text-transform:uppercase;color:{_cx_col};margin-bottom:8px;'
@@ -9239,11 +9234,11 @@ with tab_ov:
                     f'border-bottom:1px solid rgba(255,255,255,0.06);font-family:\'Syne\',sans-serif;'
                     f'background:rgba(255,255,255,0.03);">'
                     f'<div style="font-size:16px;flex-shrink:0;">{_dot}</div>'
-                    f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#0F172A;">{metric}</div>'
+                    f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#F4FAFF;">{metric}</div>'
                     f'<div style="flex:0.8;font-size:14px;font-weight:900;color:{_col};">{value}</div>'
                     f'<div style="flex:1;font-size:11px;font-weight:800;color:{_col};text-transform:uppercase;'
                     f'letter-spacing:.06em;">{_lbl}</div>'
-                    f'<div style="flex:2;font-size:12px;color:#1E3A5F;line-height:1.4;">{note}</div>'
+                    f'<div style="flex:2;font-size:12px;color:#C8E0F2;line-height:1.4;">{note}</div>'
                     f'<div style="flex:0.8;font-size:10px;font-weight:700;letter-spacing:.05em;'
                     f'color:rgba(200,224,242,0.55);text-transform:uppercase;">{source}</div>'
                     f'</div>'
@@ -9269,12 +9264,12 @@ with tab_ov:
             _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
 
             _rc_html = (
-                '<div style="background:#FFFFFF;border-radius:14px;'
+                '<div style="background:#1E3D5E;border-radius:14px;'
                 'border:1px solid rgba(0,212,200,0.20);border-left:5px solid #D97706;'
                 'overflow:hidden;font-family:\'Syne\',sans-serif;margin-bottom:16px;'
                 'box-shadow:0 4px 16px rgba(0,0,0,0.30);">'
                 '<div style="padding:11px 16px;background:rgba(0,0,0,0.28);'
-                'border-bottom:1px solid rgba(26,55,86,0.12);font-size:10px;font-weight:800;'
+                'border-bottom:1px solid rgba(255,255,255,0.10);font-size:10px;font-weight:800;'
                 'letter-spacing:.07em;text-transform:uppercase;color:rgba(200,224,242,0.65);display:flex;gap:40px;">'
                 '<span style="flex:0.15"></span>'
                 '<span style="flex:1.4">Metric</span>'
@@ -9361,7 +9356,7 @@ with tab_ov:
                     _type_colors = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}
                     _tc = _type_colors.get(signal_type, "#0567C8")
                     return (
-                        f'<div style="background:#FFFFFF;border-radius:12px;padding:16px 18px;'
+                        f'<div style="background:#264B6E;border-radius:12px;padding:16px 18px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
                         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
@@ -10693,7 +10688,7 @@ with tab_tr:
 
                 def _ri_metric(label, val, note, icon, color):
                     return (
-                        f'<div style="background:#FFFFFF;border-radius:10px;padding:14px 16px;'
+                        f'<div style="background:#264B6E;border-radius:10px;padding:14px 16px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid {color};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
                         f'<div style="font-size:18px;margin-bottom:4px;">{icon}</div>'
@@ -10762,7 +10757,7 @@ with tab_tr:
                         f'<strong style="color:#059669;font-size:16px;">${_wf_tot/1e6:.2f}M</strong></div>'
                         f'<div style="color:#5A7A95;align-self:center;font-size:18px;">=</div>'
                         f'<div style="background:#0567C8;border-radius:8px;padding:8px 14px;">'
-                        f'<span style="color:rgba(26,55,86,0.75);font-size:10px;">Total Public Revenue</span><br>'
+                        f'<span style="color:rgba(255,255,255,0.8);font-size:10px;">Total Public Revenue</span><br>'
                         f'<strong style="color:#FFFFFF;font-size:18px;">${_wf_total_public/1e6:.2f}M</strong></div>'
                         f'</div></div>',
                         unsafe_allow_html=True,
@@ -10839,7 +10834,7 @@ with tab_tr:
                             f'<span style="color:var(--dp-text-1);">{_tr["term"]}</span>'
                             f'<span style="color:var(--dp-teal);font-weight:700;">{_pct}</span>'
                             f'</div>'
-                            f'<div style="height:4px;background:rgba(26,55,86,0.10);border-radius:3px;">'
+                            f'<div style="height:4px;background:rgba(255,255,255,0.07);border-radius:3px;">'
                             f'<div style="width:{_pct}%;height:100%;background:var(--dp-teal,#00C3BE);border-radius:3px;"></div>'
                             f'</div></div>',
                             unsafe_allow_html=True,
@@ -11143,7 +11138,7 @@ with tab_fo:
 
     def _kfm_card(label, value, delta, delta_color="#718096"):
         return (
-            f'<div style="background:#FFFFFF;'
+            f'<div style="background:#264B6E;'
             f'border-radius:12px;padding:16px 18px;'
             f'border:1px solid rgba(0,0,0,0.08);border-left:4px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
@@ -11151,7 +11146,7 @@ with tab_fo:
             f'<div style="font-size:10px;color:#718096;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:.10em;margin-bottom:6px;">{label}</div>'
             f'<div style="font-size:1.9rem;font-weight:900;letter-spacing:-0.04em;line-height:1.1;'
-            f'color:#0F172A;">{value}</div>'
+            f'color:#F4FAFF;">{value}</div>'
             f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:5px;">{delta}</div>'
             f'</div>'
         )
@@ -11371,9 +11366,9 @@ with tab_fo:
                             f'<p class="insight-body">{md_to_html(str(row["body"]))}</p>'
                             f'<div class="nlm-source-row">'
                             f'{_src_tags_html}'
-                            f'<span style="font-size:10px;opacity:0.45;background:rgba(26,55,86,0.10);'
+                            f'<span style="font-size:10px;opacity:0.45;background:rgba(255,255,255,0.07);'
                             f'padding:2px 8px;border-radius:99px;">{category}</span>'
-                            f'<span style="font-size:10px;opacity:0.45;background:rgba(26,55,86,0.10);'
+                            f'<span style="font-size:10px;opacity:0.45;background:rgba(255,255,255,0.07);'
                             f'padding:2px 8px;border-radius:99px;">⏱ {horizon}d</span>'
                             f'<span style="font-size:10px;opacity:0.35;padding:2px 4px;">as of {as_of}</span>'
                             f'</div>'
@@ -11487,7 +11482,7 @@ with tab_fo:
                         f'{_ev_icon} {_ev["name"]}</div>'
                     )
                 _is_current = (_fm.year == _today_cal.year and _fm.month == _today_cal.month)
-                _border_extra = "border:2px solid #22D3EE;" if _is_current else "border:1px solid rgba(26,55,86,0.10);"
+                _border_extra = "border:2px solid #22D3EE;" if _is_current else "border:1px solid rgba(255,255,255,0.08);"
                 st.markdown(
                     f'<div style="padding:14px 14px 10px 14px;border-radius:12px;'
                     f'background:{_bg};{_border_extra}margin-bottom:8px;">'
@@ -11501,7 +11496,7 @@ with tab_fo:
                     f'${_proj_adr:,.0f} <span style="font-size:10px;color:#64748B;font-weight:400;">proj. ADR</span></div>'
                     f'<div style="margin-top:6px;">'
                     f'<div style="font-size:9px;color:#94A3B8;margin-bottom:2px;">Historical compression</div>'
-                    f'<div style="height:4px;background:rgba(26,55,86,0.10);border-radius:3px;">'
+                    f'<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:3px;">'
                     f'<div style="width:{_comp_bar_w}%;height:100%;background:{_ac};border-radius:3px;"></div>'
                     f'</div></div>'
                     f'{_evt_html}'
@@ -13325,14 +13320,14 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                 _hom_v = f"${int(_hom.iloc[0]):,}" if not _hom.empty else "—"
                 short_geo = geo.replace(" County, CA", "").replace(" County", "")
                 st.markdown(
-                    f'<div style="background:#FFFFFF;border:1px solid rgba(26,55,86,0.10);border-radius:12px;'
+                    f'<div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
                     f'border-top:3px solid #7C3AED;padding:14px 18px;">'
                     f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7A95;margin-bottom:6px;">{short_geo}</div>'
                     f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
                     f'<div style="font-size:11px;color:#5A7A95;">Population</div>'
-                    f'<div style="font-size:14px;font-weight:700;color:#0F172A;margin-top:6px;">{_inc_v}</div>'
+                    f'<div style="font-size:14px;font-weight:700;color:#F4FAFF;margin-top:6px;">{_inc_v}</div>'
                     f'<div style="font-size:11px;color:#5A7A95;">Median HH Income</div>'
-                    f'<div style="font-size:13px;font-weight:600;color:#0F172A;margin-top:4px;">{_hom_v}</div>'
+                    f'<div style="font-size:13px;font-weight:600;color:#F4FAFF;margin-top:4px;">{_hom_v}</div>'
                     f'<div style="font-size:11px;color:#5A7A95;">Median Home Value</div>'
                     f'</div>',
                     unsafe_allow_html=True,
@@ -13476,7 +13471,7 @@ with tab_ei:
                 f'<span style="font-size:24px;">🎸</span>'
                 f'<div>'
                 f'<div style="font-size:13px;font-weight:800;color:#FED7AA;letter-spacing:.06em;text-transform:uppercase;">Ohana Fest 2026 — Sep 25–28</div>'
-                f'<div style="font-size:11px;color:rgba(26,55,86,0.55);margin-top:2px;">Dana Point\'s #1 hotel demand driver · {_days_ohana} days away</div>'
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">Dana Point\'s #1 hotel demand driver · {_days_ohana} days away</div>'
                 f'</div>'
                 f'<span style="margin-left:auto;background:rgba(249,115,22,0.20);color:#FB923C;'
                 f'font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;'
@@ -13486,7 +13481,7 @@ with tab_ei:
                 f'<div style="display:flex;flex-wrap:wrap;gap:10px;">'
                 + "".join([
                     f'<div style="flex:1;min-width:110px;background:rgba(255,255,255,0.04);'
-                    f'border-radius:10px;padding:12px 14px;border:1px solid rgba(26,55,86,0.10);">'
+                    f'border-radius:10px;padding:12px 14px;border:1px solid rgba(255,255,255,0.08);">'
                     f'<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94A3B8;margin-bottom:5px;">{lbl}</div>'
                     f'<div style="font-size:20px;font-weight:900;font-family:\'Outfit\',sans-serif;color:#FFFFFF;">{val}</div>'
                     f'<div style="font-size:10px;color:#64748B;margin-top:3px;">{sub}</div></div>'
@@ -13514,7 +13509,7 @@ with tab_ei:
                 f'<span style="font-size:22px;">🏖️</span>'
                 f'<div style="flex:1;">'
                 f'<div style="font-size:12px;font-weight:800;color:#C7D2FE;">Memorial Day Weekend — May 23–25, 2026</div>'
-                f'<div style="font-size:11px;color:rgba(26,55,86,0.55);margin-top:3px;">'
+                f'<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:3px;">'
                 f'{_days_memday} days away · Book now for best rates · '
                 f'Expected ADR premium: ~+${_memday_adr_premium:.0f} vs. shoulder season</div>'
                 f'</div>'
@@ -13601,7 +13596,7 @@ with tab_ei:
                 marker=dict(
                     color=_bar_color,
                     opacity=0.90,
-                    line=dict(color="rgba(255,255,255,0.25)" if _is_maj else "rgba(26,55,86,0.12)",
+                    line=dict(color="rgba(255,255,255,0.25)" if _is_maj else "rgba(255,255,255,0.10)",
                               width=1 if _is_maj else 0),
                 ),
                 hovertemplate=(
@@ -17087,34 +17082,34 @@ _GLOSSARY_TERMS = {
 
 _SOURCES_HTML = """
 <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
-  <div style="background:#FFFFFF;border:1px solid rgba(26,55,86,0.10);
+  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">STR</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">STR</div>
     <div style="color:#8AAEC6;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
   </div>
-  <div style="background:#FFFFFF;border:1px solid rgba(26,55,86,0.10);
+  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Datafy</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Datafy</div>
     <div style="color:#8AAEC6;">Visitor economy platform · trips, spend, DMA attribution</div>
   </div>
-  <div style="background:#FFFFFF;border:1px solid rgba(26,55,86,0.10);
+  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">CoStar</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">CoStar</div>
     <div style="color:#8AAEC6;">Market data · comp set, pipeline, profitability</div>
   </div>
-  <div style="background:#FFFFFF;border:1px solid rgba(26,55,86,0.10);
+  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Visit California</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Visit California</div>
     <div style="color:#8AAEC6;">State forecasts · lodging, travel volume, airport traffic</div>
   </div>
-  <div style="background:#FFFFFF;border:1px solid rgba(26,55,86,0.10);
+  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Zartico</div>
+    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Zartico</div>
     <div style="color:#8AAEC6;">Historical reference · Jun 2025 snapshot · visitor trends</div>
   </div>
 </div>
