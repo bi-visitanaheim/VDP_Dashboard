@@ -552,18 +552,37 @@ CRITICAL: NEVER present Zartico as current data. Use only for historical trend c
 - `insights_daily` — Forward-looking insights for 5 audiences (dmo, city, visitor, resident, cross). \
   Columns: as_of_date, audience, category, headline, body, metric_basis (JSON), priority, horizon_days, data_sources.
 - `table_relationships` — 125+ documented cross-table joins and derivations.
-- `load_log` — ETL pipeline audit trail (source, grain, file_name, rows_inserted, run_at).\
+- `load_log` — ETL pipeline audit trail (source, grain, file_name, rows_inserted, run_at).
+- `strategy_goals` — VDP destination strategy goals with live progress tracking. \
+  Columns: id, title, description, category (revenue/visitors/occupancy/tbid/marketing/social/custom), \
+  metric_name, metric_unit, target_value, current_value, baseline_value, \
+  start_date, target_date, status (active/achieved/paused/missed), priority (1=high/2=med/3=low), \
+  auto_compute, compute_query. \
+  current_value is auto-refreshed from live data on every pipeline run. \
+  Use this table to contextualize performance data against stated strategic objectives. \
+  Example: if RevPAR goal target is $180 and current is $162, VDP is 90% of the way to goal.\
 """
 
 # ─── Session state ────────────────────────────────────────────────────────────
+# Sync theme from URL query param (persists across page loads, bookmarkable)
+_qp_theme = st.query_params.get("theme", "dark")
+if _qp_theme not in ("dark", "light"):
+    _qp_theme = "dark"
+
 for _k, _v in [
     ("ai_needs_call",    False),
     ("ai_current_prompt",""),
     ("ai_result",        ""),
     ("ai_prompt_label",  ""),
+    ("theme",            _qp_theme),
+    ("goal_edit_id",     None),
 ]:
     if _k not in st.session_state:
         st.session_state[_k] = _v
+
+# Keep session state in sync with URL (handles browser back/forward)
+st.session_state["theme"] = _qp_theme
+_is_light = (_qp_theme == "light")
 
 # ─── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -1949,6 +1968,138 @@ st.markdown("""
   .sh-gray   .sh-tag { color: #64748B !important; background: rgba(100,116,139,0.08) !important; border-color: rgba(100,116,139,0.18) !important; }
   .sh-gold   .sh-tag { color: #B45309 !important; background: rgba(180,83,9,0.08) !important;    border-color: rgba(180,83,9,0.18) !important; }
 
+  /* ── Theme Toggle Button (hero-banner top-right) ─────────────────────── */
+  .pulse-theme-toggle {
+    position: absolute; top: 20px; right: 24px;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.20);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; line-height: 1;
+    color: rgba(200,230,255,0.90);
+    transition: background 0.20s ease, border-color 0.20s ease,
+                transform 0.18s ease, box-shadow 0.20s ease;
+    z-index: 200;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    outline: none;
+    padding: 0;
+  }
+  .pulse-theme-toggle:hover {
+    background: rgba(0,212,200,0.22);
+    border-color: rgba(0,212,200,0.55);
+    transform: scale(1.10) rotate(15deg);
+    box-shadow: 0 0 18px rgba(0,212,200,0.35);
+  }
+  .pulse-theme-toggle:active { transform: scale(0.93); }
+
+  /* ── Strategy Goals — Progress Tracker ──────────────────────────────── */
+  .goal-card {
+    background: var(--dp-card);
+    border: 1px solid var(--dp-border);
+    border-radius: var(--dp-radius-lg);
+    padding: 18px 20px 16px 20px;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.22s ease, transform 0.22s ease;
+    box-shadow: var(--dp-shadow);
+  }
+  .goal-card:hover {
+    box-shadow: var(--dp-shadow-hover);
+    transform: translateY(-2px);
+  }
+  .goal-card-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 10px; gap: 12px;
+  }
+  .goal-card-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px; font-weight: 800; color: var(--dp-text-1);
+    letter-spacing: -.02em; line-height: 1.3;
+  }
+  .goal-card-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 9.5px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .10em; padding: 3px 10px; border-radius: 20px;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .goal-badge-active   { background: rgba(16,185,129,0.12);  color: #10B981; border: 1px solid rgba(16,185,129,0.28); }
+  .goal-badge-achieved { background: rgba(0,212,200,0.12);   color: #00D4C8; border: 1px solid rgba(0,212,200,0.35); }
+  .goal-badge-paused   { background: rgba(245,158,11,0.12);  color: #F5B940; border: 1px solid rgba(245,158,11,0.28); }
+  .goal-badge-missed   { background: rgba(239,68,68,0.12);   color: #EF4444; border: 1px solid rgba(239,68,68,0.28); }
+  .goal-meta {
+    font-size: 10.5px; color: var(--dp-text-3); margin-bottom: 10px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  }
+  .goal-meta-item { display: flex; align-items: center; gap: 4px; }
+  .goal-track-bg {
+    height: 8px; background: rgba(255,255,255,0.08);
+    border-radius: 99px; overflow: hidden; margin: 6px 0 8px 0;
+  }
+  .goal-track-fill {
+    height: 100%; border-radius: 99px;
+    transition: width 0.6s cubic-bezier(0.37,0,0.22,1);
+  }
+  .goal-fill-active   { background: linear-gradient(90deg, #0891B2, #00D4C8); }
+  .goal-fill-achieved { background: linear-gradient(90deg, #059669, #10B981); }
+  .goal-fill-paused   { background: linear-gradient(90deg, #D97706, #F5B940); }
+  .goal-fill-missed   { background: linear-gradient(90deg, #DC2626, #EF4444); }
+  .goal-progress-row {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; color: var(--dp-text-3); margin-top: 2px;
+  }
+  .goal-progress-pct {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px; font-weight: 900; letter-spacing: -.04em;
+    color: var(--dp-text-1); line-height: 1;
+  }
+  .goal-progress-label { font-size: 10px; color: var(--dp-text-4); margin-top: 1px; }
+  .goal-desc {
+    font-size: 12px; color: var(--dp-text-3); line-height: 1.55;
+    margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);
+    padding-top: 8px;
+  }
+  /* Category colors on left border */
+  .goal-cat-revenue    { border-left: 4px solid #10B981; }
+  .goal-cat-visitors   { border-left: 4px solid #38BDF8; }
+  .goal-cat-occupancy  { border-left: 4px solid #00D4C8; }
+  .goal-cat-tbid       { border-left: 4px solid #F5B940; }
+  .goal-cat-marketing  { border-left: 4px solid #A78BFA; }
+  .goal-cat-social     { border-left: 4px solid #FB923C; }
+  .goal-cat-custom     { border-left: 4px solid #8EC4DC; }
+  /* Section header for goals */
+  .goals-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 0 0 16px 0;
+  }
+  .goals-section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 800; letter-spacing: -.01em;
+    color: var(--dp-text-1);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .goals-summary-bar {
+    background: rgba(0,212,200,0.06);
+    border: 1px solid rgba(0,212,200,0.18);
+    border-radius: var(--dp-radius);
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    display: flex; gap: 24px; flex-wrap: wrap; align-items: center;
+  }
+  .goals-summary-stat {
+    display: flex; flex-direction: column; gap: 1px; align-items: center;
+  }
+  .goals-summary-num {
+    font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 900;
+    letter-spacing: -.04em; color: var(--dp-text-1); line-height: 1;
+  }
+  .goals-summary-lbl {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .10em; color: var(--dp-text-3);
+  }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -2551,6 +2702,194 @@ st.markdown("""
   }
 })();
 </script>
+""", unsafe_allow_html=True)
+
+# ── Light-mode overrides (injected only when theme == "light") ────────────────
+if _is_light:
+    st.markdown("""
+<style>
+/* ══════════════════════════════════════════════════════════════════════════════
+   DANA POINT PULSE — Light Mode Override v1
+   Overrides all dark :root tokens. Hero banner stays dark (intentional).
+══════════════════════════════════════════════════════════════════════════════ */
+:root {
+  --dp-bg:            #EEF3F8;
+  --dp-bg2:           #E5ECF4;
+  --dp-surface:       #F5F8FC;
+  --dp-card:          #FFFFFF;
+  --dp-card-solid:    #FFFFFF;
+  --dp-card-hover:    #F8FAFD;
+  --dp-border:        rgba(26,55,86,0.10);
+  --dp-border-accent: rgba(8,130,160,0.35);
+  --dp-teal:          #0891B2;
+  --dp-teal-dim:      rgba(8,145,178,0.09);
+  --dp-teal-glow:     rgba(8,145,178,0.16);
+  --dp-blue:          #0567C8;
+  --dp-green:         #059669;
+  --dp-amber:         #D97706;
+  --dp-red:           #DC2626;
+  --dp-purple:        #7C3AED;
+  --dp-orange:        #EA580C;
+  --dp-text-1:        #0F172A;
+  --dp-text-2:        #1E3A5F;
+  --dp-text-3:        #475569;
+  --dp-text-4:        #94A3B8;
+  --dp-shadow:        0 1px 3px rgba(0,0,0,0.05), 0 4px 16px rgba(0,0,0,0.06);
+  --dp-shadow-hover:  0 8px 28px rgba(0,0,0,0.10), 0 0 0 1px rgba(8,145,178,0.13);
+  --dp-shadow-deep:   0 16px 40px rgba(0,0,0,0.10);
+}
+html, body, [class*="css"] {
+  background-color: #EEF3F8 !important;
+  color: #0F172A !important;
+}
+body, .main, .stApp, [data-testid="stAppViewContainer"] {
+  background-color: #EEF3F8 !important;
+  background-image: none !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+  background: linear-gradient(180deg, #DDEAF5 0%, #D4E2F0 100%) !important;
+  border-right: 1px solid rgba(8,145,178,0.14) !important;
+}
+[data-testid="stSidebar"] * { color: #1E3A5F !important; }
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] { color: #475569 !important; }
+[data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div,
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] select {
+  background: rgba(255,255,255,0.85) !important;
+  border-color: rgba(26,55,86,0.14) !important;
+  color: #0F172A !important;
+}
+[data-baseweb="select"] > div,
+[data-baseweb="input"] > div,
+div[data-testid="stSelectbox"] > div > div {
+  background: rgba(255,255,255,0.92) !important;
+  border-color: rgba(26,55,86,0.14) !important;
+  color: #0F172A !important;
+}
+[data-baseweb="menu"], [data-baseweb="popover"] { background: #FFFFFF !important; }
+[data-baseweb="option"]:hover { background: rgba(8,145,178,0.07) !important; }
+[data-testid="stMetric"] {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(26,55,86,0.09) !important;
+}
+[data-testid="stMetricValue"] { color: #0F172A !important; }
+[data-testid="stMetricLabel"] { color: #475569 !important; }
+[data-testid="stExpander"] {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(26,55,86,0.09) !important;
+}
+[data-testid="stExpander"] summary { color: #1E3A5F !important; }
+[data-testid="stDataFrame"] { background: #FFFFFF !important; }
+[data-testid="stTabs"] [role="tablist"] {
+  background: rgba(0,0,0,0.03) !important;
+  border-bottom: 1px solid rgba(26,55,86,0.09) !important;
+}
+button[data-baseweb="tab"] { color: #475569 !important; }
+button[data-baseweb="tab"][aria-selected="true"] {
+  color: #0891B2 !important;
+  border-bottom-color: #0891B2 !important;
+}
+[data-testid="stButton"] > button {
+  background: rgba(8,145,178,0.06) !important;
+  border: 1px solid rgba(8,145,178,0.18) !important;
+  color: #0F172A !important;
+}
+[data-testid="stButton"] > button:hover {
+  background: #0891B2 !important;
+  border-color: #0891B2 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(8,145,178,0.28) !important;
+}
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="collapsedControl"] button {
+  background: rgba(8,145,178,0.10) !important;
+  border: 1px solid rgba(8,145,178,0.28) !important;
+  color: #0891B2 !important;
+}
+[data-testid="stSidebarCollapseButton"] svg,
+[data-testid="collapsedControl"] svg { color: #0891B2 !important; fill: #0891B2 !important; }
+/* Pulse ticker stays dark — it's part of the hero area */
+.pulse-ticker-wrap {
+  background: linear-gradient(180deg, #1A3756 0%, #1E3D5E 100%) !important;
+}
+.pulse-ticker-wrap::before { background: linear-gradient(90deg, #1A3756 0%, transparent 100%) !important; }
+.pulse-ticker-wrap::after  { background: linear-gradient(270deg, #1A3756 0%, transparent 100%) !important; }
+/* Cards and text */
+.kpi-label { color: #475569 !important; }
+.kpi-value { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+.kpi-date  { color: #64748B !important; border-top-color: rgba(0,0,0,0.07) !important; }
+.insight-title { color: #0F172A !important; }
+.insight-body  { color: #334155 !important; }
+.chart-header  { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+.chart-primer  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; background: rgba(0,0,0,0.04) !important; }
+.chart-primer strong { color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important; }
+.section-label { color: #0891B2 !important; }
+.section-divider-title {
+  background: rgba(8,145,178,0.11) !important;
+  border: 1px solid rgba(8,145,178,0.32) !important;
+  color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
+}
+.tab-summary {
+  background: rgba(8,145,178,0.05) !important;
+  border-color: rgba(8,145,178,0.16) !important;
+}
+.tab-summary .ts-bullets li {
+  background: rgba(0,0,0,0.04) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  color: #475569 !important;
+}
+.ai-chip {
+  background: rgba(8,145,178,0.07) !important;
+  color: #0891B2 !important;
+  border: 1px solid rgba(8,145,178,0.18) !important;
+}
+.ai-command-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+.ai-command-sub   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+.ai-prompt-chip {
+  background: rgba(0,0,0,0.05) !important;
+  border-color: rgba(0,0,0,0.09) !important;
+  color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important;
+}
+.dp-callout p, .dp-callout-amber p, .dp-callout-purple p, .dp-callout-green p {
+  color: #1E3A5F !important; -webkit-text-fill-color: #1E3A5F !important;
+}
+.dp-callout strong, .dp-callout-amber strong, .dp-callout-purple strong, .dp-callout-green strong {
+  color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
+}
+.nav-guide-name { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+.nav-guide-desc { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+.metric-plain   { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+.src-name { color: #0F172A !important; }
+.src-meta { color: #475569 !important; }
+.mini-data-card-label { color: #475569 !important; }
+.mini-data-card-value { color: #0F172A !important; }
+.mini-data-card-sub   { color: #475569 !important; }
+.empty-title { color: #0F172A !important; }
+.empty-body  { color: #475569 !important; }
+.dp-howto-title { color: #0F172A !important; -webkit-text-fill-color: #0F172A !important; }
+.dp-howto-text  { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+.dp-howto-num   { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
+.vdp-status-bar { background: rgba(0,0,0,0.04) !important; border-color: rgba(26,55,86,0.08) !important; }
+.vdp-status-date { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+.vdp-qa-btn {
+  background: rgba(15,23,42,0.05) !important;
+  border: 1px solid rgba(15,23,42,0.10) !important;
+  color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
+}
+.vdp-qa-btn:hover {
+  background: rgba(8,145,178,0.09) !important;
+  border-color: rgba(8,145,178,0.28) !important;
+}
+.section-nav { background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.06) !important; }
+.section-nav-item { color: #475569 !important; -webkit-text-fill-color: #475569 !important; }
+.section-nav-item.active { color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.03) !important; }
+::-webkit-scrollbar-thumb { background: rgba(8,145,178,0.18) !important; }
+::-webkit-scrollbar-thumb:hover { background: rgba(8,145,178,0.38) !important; }
+/* Strategy goal progress bars in light mode */
+.goal-track-bg { background: rgba(0,0,0,0.08) !important; }
+</style>
 """, unsafe_allow_html=True)
 
 # ── Back-to-top button (fixed action button)
@@ -4298,6 +4637,20 @@ def get_table_counts() -> dict:
         except Exception:
             counts[key] = "—"
     return counts
+
+@st.cache_data(ttl=60)   # short TTL so progress updates show quickly
+def load_strategy_goals(status_filter: str | None = None) -> pd.DataFrame:
+    """Load strategy goals from analytics.sqlite. Optionally filter by status."""
+    conn = get_connection()
+    try:
+        query = "SELECT * FROM strategy_goals"
+        if status_filter:
+            query += f" WHERE status = '{status_filter}'"
+        query += " ORDER BY priority ASC, target_date ASC"
+        df = pd.read_sql_query(query, conn)
+        return df
+    except Exception:
+        return pd.DataFrame()
 
 # ─── Metric context builder ───────────────────────────────────────────────────
 
@@ -6631,6 +6984,29 @@ with st.sidebar:
             err_text = (proc.stderr or proc.stdout or "No output captured").strip()
             st.code(err_text[-800:], language="text")
 
+    # ── Theme Toggle — bottom of sidebar (like GloCon Association Insights) ──
+    st.markdown(
+        '<div style="margin-top:auto;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);">',
+        unsafe_allow_html=True,
+    )
+    _theme_icon  = "☀️" if _is_light else "🌙"
+    _theme_label = "Dark Mode" if _is_light else "Light Mode"
+    _new_theme   = "dark"    if _is_light else "light"
+    if st.button(
+        f"{_theme_icon}  {_theme_label}",
+        key="theme_toggle_sidebar",
+        use_container_width=True,
+        help="Switch between dark and light mode",
+    ):
+        st.query_params["theme"] = _new_theme
+        st.rerun()
+    st.markdown(
+        '<div style="text-align:center;font-size:9.5px;color:rgba(140,180,200,0.45);'
+        'margin-top:10px;letter-spacing:.04em;">'
+        '© 2026 GloCon Solutions LLC</div></div>',
+        unsafe_allow_html=True,
+    )
+
 # ─── Active dataset (grain-aware) + filtered selection ────────────────────────
 # grain='Daily'   → df_active uses df_daily   (explicit grain='daily'  query)
 # grain='Monthly' → df_active uses df_monthly  (explicit grain='monthly' query)
@@ -6695,8 +7071,17 @@ def _h_delta_html(v, fmt="pct"):
     val_str = f"{v:+.1f}%" if fmt == "pct" else f"{v:+.1f}pp"
     return f'<span class="hero-stat-delta {cls}">{arrow} {val_str}</span>'
 
+_hero_theme_icon = "☀️" if _is_light else "🌙"
+_hero_new_theme  = "dark" if _is_light else "light"
 st.markdown(
-    f'<div class="hero-banner">'
+    f'<div class="hero-banner" style="position:relative;">'
+    # ── Theme toggle inside hero-banner (top-right, always dark bg)
+    f'<button class="pulse-theme-toggle" '
+    f'onclick="(function(){{var p=new URLSearchParams(window.location.search);'
+    f'p.set(\'theme\',\'{_hero_new_theme}\');'
+    f'window.location.href=window.location.pathname+\'?\'+p.toString();}})()" '
+    f'title="Switch to {_hero_new_theme} mode" aria-label="Toggle theme">'
+    f'{_hero_theme_icon}</button>'
     f'<a href="?" style="text-decoration:none;">'
     f'<div class="hero-title">Dana Point <span>PULSE</span></div>'
     f'</a>'
@@ -6758,6 +7143,7 @@ def generate_board_report_html(
     df_cs_snap_in: "pd.DataFrame",
     df_insights_in: "pd.DataFrame",
     df_dfy_media_in: "pd.DataFrame",
+    df_goals_in: "pd.DataFrame | None" = None,
 ) -> str:
     """Return a complete, self-contained NotebookLM-style HTML board report."""
     now = datetime.now()
@@ -6956,6 +7342,58 @@ def generate_board_report_html(
         if dma_rows else
         "<p style='color:#5f6368;font-size:9.5pt'>DMA breakdown will appear after Datafy data is loaded.</p>"
     )
+
+    # ── Strategy Goals section for board report ────────────────────────────────
+    _goals_html = ""
+    if df_goals_in is not None and not df_goals_in.empty:
+        _gl_rows = ""
+        for _, _gr in df_goals_in.iterrows():
+            _gt = float(_gr.get("target_value") or 1)
+            _gc = float(_gr.get("current_value") or 0)
+            _gb = float(_gr.get("baseline_value") or 0)
+            _grange = _gt - _gb if _gt > _gb else _gt
+            _gprog  = max(0.0, min(1.0, (_gc - _gb) / _grange if _grange else 0))
+            _gpct   = _gprog * 100
+            _gunit  = str(_gr.get("metric_unit") or "")
+            def _bfmt(v, u):
+                if u == "USD": return f"${v:,.0f}"
+                if u == "%": return f"{v:.1f}%"
+                if u == "x": return f"{v:.1f}x"
+                return f"{v:,.0f} {u}" if u else f"{v:,.0f}"
+            _gstatus = str(_gr.get("status","active"))
+            _gcol = {"active":"#10B981","achieved":"#0891B2","paused":"#D97706","missed":"#DC2626"}.get(_gstatus,"#10B981")
+            _gl_rows += (
+                f"<tr>"
+                f"<td style='font-weight:700;padding:8px 10px;border-bottom:1px solid #f0f0f0;'>{_gr.get('title','')}</td>"
+                f"<td style='padding:8px 10px;border-bottom:1px solid #f0f0f0;color:#5f6368;font-size:9pt;'>"
+                f"{_gr.get('category','').upper()}</td>"
+                f"<td style='padding:8px 10px;border-bottom:1px solid #f0f0f0;'>"
+                f"<div style='background:#f0f0f0;border-radius:4px;height:8px;width:140px;overflow:hidden;'>"
+                f"<div style='background:{_gcol};height:100%;width:{min(_gpct,100):.1f}%;border-radius:4px;'></div>"
+                f"</div><div style='font-size:8.5pt;color:#5f6368;margin-top:3px;'>{_gpct:.0f}% — {_bfmt(_gc,_gunit)} of {_bfmt(_gt,_gunit)}</div>"
+                f"</td>"
+                f"<td style='padding:8px 10px;border-bottom:1px solid #f0f0f0;'>"
+                f"<span style='color:{_gcol};font-weight:700;font-size:9pt;text-transform:uppercase;'>{_gstatus}</span></td>"
+                f"<td style='padding:8px 10px;border-bottom:1px solid #f0f0f0;color:#5f6368;font-size:9pt;'>{_gr.get('target_date','')}</td>"
+                f"</tr>"
+            )
+        _goals_html = f"""
+<div class="section">
+<h2>🎯 Strategy Goals — Progress Tracker</h2>
+<p style="font-size:9.5pt;color:#5f6368;margin-bottom:12px;">
+Active destination goals with current progress vs. target. Updated automatically from live STR, Datafy, and CoStar data on every pipeline run.
+</p>
+<table style="width:100%;border-collapse:collapse;font-size:10pt;">
+<thead><tr style="background:#f8f9fa;border-bottom:2px solid #e0e0e0;">
+<th style="padding:8px 10px;text-align:left;font-size:9pt;font-weight:700;color:#1a1a2e;">Goal</th>
+<th style="padding:8px 10px;text-align:left;font-size:9pt;font-weight:700;color:#1a1a2e;">Category</th>
+<th style="padding:8px 10px;text-align:left;font-size:9pt;font-weight:700;color:#1a1a2e;">Progress</th>
+<th style="padding:8px 10px;text-align:left;font-size:9pt;font-weight:700;color:#1a1a2e;">Status</th>
+<th style="padding:8px 10px;text-align:left;font-size:9pt;font-weight:700;color:#1a1a2e;">Target Date</th>
+</tr></thead>
+<tbody>{_gl_rows}</tbody>
+</table>
+</div>"""
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -7731,6 +8169,9 @@ on pace for <strong>${tbid_ann:,.0f} annually</strong>.
 </div>
 </div>
 
+<!-- STRATEGY GOALS -->
+{_goals_html}
+
 <!-- DATA SOURCES & FOOTER -->
 <div class="section">
 <h2>Data Sources &amp; Methodology</h2>
@@ -8275,7 +8716,7 @@ with tab_ov:
     st.markdown("---")
 
     # ── Overview Sub-Tabs ──────────────────────────────────────────────────────
-    _ov_t1, _ov_t2, _ov_t3 = st.tabs(["📊 Performance Metrics", "📋 Board Report", "🧠 More Analysis"])
+    _ov_t1, _ov_t2, _ov_t3, _ov_t4 = st.tabs(["📊 Performance Metrics", "📋 Board Report", "🧠 More Analysis", "🎯 Strategy Goals"])
 
     # ── Board Report → sub-tab 2 ──────────────────────────────────────────────
     with _ov_t2:
@@ -8476,6 +8917,7 @@ with tab_ov:
                     df_cs_snap,
                     df_insights,
                     df_dfy_media,
+                    load_strategy_goals(),
                 )
                 st.download_button(
                     label="📥 Download Board Report (Print-Ready HTML)",
@@ -9801,6 +10243,227 @@ with tab_ov:
                     )
         except Exception:
             pass
+
+    # ── Strategy Goals Sub-Tab ─────────────────────────────────────────────────
+    with _ov_t4:
+        st.markdown(sec_div("🎯 Strategy Goals Tracker"), unsafe_allow_html=True)
+        st.markdown(
+            '<div class="tab-summary">'
+            '<span class="ts-label">🎯 Strategy Intelligence</span>'
+            'Track progress towards VDP&#8217;s destination goals. Each goal is linked to live hotel, visitor, '
+            'and marketing data — progress updates automatically every pipeline run. '
+            '<strong>Add goals in admin mode (?admin=true).</strong>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        df_goals = load_strategy_goals()
+
+        if df_goals.empty:
+            st.markdown(
+                '<div class="empty-card">'
+                '<div class="empty-icon">🎯</div>'
+                '<div class="empty-title">No strategy goals yet</div>'
+                '<div class="empty-body">Run the pipeline once to seed default goals, '
+                'or add goals in admin mode (?admin=true).</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+        else:
+            # ── Summary bar ─────────────────────────────────────────────────────
+            _n_active   = len(df_goals[df_goals["status"] == "active"])
+            _n_achieved = len(df_goals[df_goals["status"] == "achieved"])
+            _n_total    = len(df_goals)
+            _avg_pct    = 0.0
+            if _n_total > 0:
+                _pcts = []
+                for _, _gr in df_goals.iterrows():
+                    _t = float(_gr.get("target_value") or 1)
+                    _c = float(_gr.get("current_value") or 0)
+                    _b = float(_gr.get("baseline_value") or 0)
+                    _range = _t - _b if _t > _b else _t
+                    _prog  = max(0.0, min(1.0, (_c - _b) / _range if _range else 0))
+                    _pcts.append(_prog * 100)
+                _avg_pct = sum(_pcts) / len(_pcts)
+
+            st.markdown(
+                f'<div class="goals-summary-bar">'
+                f'<div class="goals-summary-stat">'
+                f'<span class="goals-summary-num">{_n_total}</span>'
+                f'<span class="goals-summary-lbl">Total Goals</span></div>'
+                f'<div class="goals-summary-stat">'
+                f'<span class="goals-summary-num" style="color:#10B981;">{_n_active}</span>'
+                f'<span class="goals-summary-lbl">Active</span></div>'
+                f'<div class="goals-summary-stat">'
+                f'<span class="goals-summary-num" style="color:#00D4C8;">{_n_achieved}</span>'
+                f'<span class="goals-summary-lbl">Achieved</span></div>'
+                f'<div class="goals-summary-stat">'
+                f'<span class="goals-summary-num">{_avg_pct:.0f}%</span>'
+                f'<span class="goals-summary-lbl">Avg Progress</span></div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+            # ── Filter row ──────────────────────────────────────────────────────
+            _gc1, _gc2 = st.columns([2, 1])
+            with _gc1:
+                _gcat_filter = st.multiselect(
+                    "Filter by Category",
+                    options=sorted(df_goals["category"].unique().tolist()),
+                    default=[],
+                    key="goal_cat_filter",
+                    label_visibility="collapsed",
+                    placeholder="All categories",
+                )
+            with _gc2:
+                _gstat_filter = st.selectbox(
+                    "Status",
+                    options=["All", "active", "achieved", "paused", "missed"],
+                    key="goal_stat_filter",
+                    label_visibility="collapsed",
+                )
+
+            _df_disp = df_goals.copy()
+            if _gcat_filter:
+                _df_disp = _df_disp[_df_disp["category"].isin(_gcat_filter)]
+            if _gstat_filter != "All":
+                _df_disp = _df_disp[_df_disp["status"] == _gstat_filter]
+
+            # ── Goal Cards ──────────────────────────────────────────────────────
+            _CAT_ICONS = {
+                "revenue": "💰", "visitors": "👥", "occupancy": "🏨",
+                "tbid": "📊", "marketing": "📣", "social": "📱", "custom": "🎯",
+            }
+            _STATUS_BADGE = {
+                "active":   ("goal-badge-active",   "● ACTIVE"),
+                "achieved": ("goal-badge-achieved",  "✓ ACHIEVED"),
+                "paused":   ("goal-badge-paused",    "⏸ PAUSED"),
+                "missed":   ("goal-badge-missed",    "✗ MISSED"),
+            }
+            _FILL_CLASS = {
+                "active": "goal-fill-active", "achieved": "goal-fill-achieved",
+                "paused": "goal-fill-paused", "missed": "goal-fill-missed",
+            }
+
+            _gcols = st.columns(2)
+            for _gi, (_gidx, _grow) in enumerate(_df_disp.iterrows()):
+                _gcat    = str(_grow.get("category", "custom"))
+                _gstatus = str(_grow.get("status", "active"))
+                _gtarget = float(_grow.get("target_value") or 1)
+                _gcurr   = float(_grow.get("current_value") or 0)
+                _gbase   = float(_grow.get("baseline_value") or 0)
+                _gunit   = str(_grow.get("metric_unit") or "")
+                _grange  = _gtarget - _gbase if _gtarget > _gbase else _gtarget
+                _gprog   = max(0.0, min(1.0, (_gcurr - _gbase) / _grange if _grange else 0))
+                _gpct    = _gprog * 100
+
+                _gbadge_cls, _gbadge_txt = _STATUS_BADGE.get(_gstatus, ("goal-badge-active", "● ACTIVE"))
+                _gfill_cls = _FILL_CLASS.get(_gstatus, "goal-fill-active")
+                _gicon = _CAT_ICONS.get(_gcat, "🎯")
+
+                # Format values
+                def _fmt_val(v, unit):
+                    if unit == "USD":
+                        return f"${v:,.0f}" if v >= 1000 else f"${v:.2f}"
+                    if unit == "%":
+                        return f"{v:.1f}%"
+                    if unit in ("trips", "days", "travelers"):
+                        return f"{v:,.0f} {unit}"
+                    if unit == "x":
+                        return f"{v:.1f}x"
+                    return f"{v:,.1f} {unit}" if unit else f"{v:,.1f}"
+
+                _curr_str   = _fmt_val(_gcurr, _gunit)
+                _target_str = _fmt_val(_gtarget, _gunit)
+                _base_str   = _fmt_val(_gbase, _gunit) if _gbase else None
+
+                # Days remaining
+                try:
+                    _td = datetime.strptime(str(_grow.get("target_date", "")), "%Y-%m-%d")
+                    _days_left = (_td - datetime.now()).days
+                    _days_lbl = f"{_days_left}d left" if _days_left > 0 else "Past due"
+                except Exception:
+                    _days_lbl = ""
+
+                _priority_lbl = {1: "🔴 High", 2: "🟡 Medium", 3: "⚪ Low"}.get(int(_grow.get("priority") or 2), "")
+                _gdesc = str(_grow.get("description") or "")[:120]
+
+                with _gcols[_gi % 2]:
+                    st.markdown(
+                        f'<div class="goal-card goal-cat-{_gcat}">'
+                        f'<div class="goal-card-header">'
+                        f'<div class="goal-card-title">{_gicon} {_grow.get("title","")}</div>'
+                        f'<span class="goal-card-badge {_gbadge_cls}">{_gbadge_txt}</span>'
+                        f'</div>'
+                        f'<div class="goal-meta">'
+                        f'<span class="goal-meta-item">📅 {_days_lbl}</span>'
+                        f'<span class="goal-meta-item">{_priority_lbl}</span>'
+                        f'<span class="goal-meta-item" style="font-size:10px;color:var(--dp-teal);">{_gcat.upper()}</span>'
+                        f'</div>'
+                        # Progress number + bar
+                        f'<div style="display:flex;align-items:center;gap:14px;margin-bottom:4px;">'
+                        f'<div>'
+                        f'<div class="goal-progress-pct">{_gpct:.0f}%</div>'
+                        f'<div class="goal-progress-label">of target</div>'
+                        f'</div>'
+                        f'<div style="flex:1;">'
+                        f'<div class="goal-track-bg">'
+                        f'<div class="{_gfill_cls} goal-track-fill" style="width:{min(_gpct,100):.1f}%;"></div>'
+                        f'</div>'
+                        f'<div class="goal-progress-row">'
+                        f'<span>{_curr_str} current</span>'
+                        f'<span style="color:var(--dp-text-1);font-weight:700;">→ {_target_str}</span>'
+                        f'</div>'
+                        f'</div>'
+                        f'</div>'
+                        + (f'<div class="goal-desc">{_gdesc}</div>' if _gdesc else "")
+                        + f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+            # ── Admin: Add / Edit Goals ──────────────────────────────────────────
+            if _is_admin:
+                st.markdown("---")
+                st.markdown(sec_div("⚙️ Manage Goals (Admin)"), unsafe_allow_html=True)
+
+                with st.expander("➕ Add New Goal", expanded=False):
+                    _ag1, _ag2 = st.columns(2)
+                    with _ag1:
+                        _new_title  = st.text_input("Goal Title", key="new_goal_title")
+                        _new_cat    = st.selectbox("Category", ["revenue","visitors","occupancy","tbid","marketing","social","custom"], key="new_goal_cat")
+                        _new_target = st.number_input("Target Value", min_value=0.0, key="new_goal_target")
+                        _new_unit   = st.text_input("Unit (USD, %, trips, days, x)", key="new_goal_unit")
+                    with _ag2:
+                        _new_desc   = st.text_area("Description", key="new_goal_desc", height=80)
+                        _new_start  = st.date_input("Start Date", key="new_goal_start")
+                        _new_end    = st.date_input("Target Date", key="new_goal_end")
+                        _new_pri    = st.selectbox("Priority", [1,2,3], format_func=lambda x: {1:"High",2:"Medium",3:"Low"}[x], key="new_goal_pri")
+                    _new_query  = st.text_area("Auto-Compute SQL (optional)", key="new_goal_query", height=60,
+                                               placeholder="SELECT value FROM table WHERE ...")
+                    if st.button("💾 Save Goal", key="save_new_goal", type="primary"):
+                        if _new_title and _new_target > 0:
+                            try:
+                                _g_conn = sqlite3.connect(str(ROOT / "data" / "analytics.sqlite"))
+                                _g_conn.execute("""
+                                    INSERT INTO strategy_goals
+                                      (title,description,category,metric_name,metric_unit,
+                                       target_value,baseline_value,start_date,target_date,
+                                       priority,auto_compute,compute_query)
+                                    VALUES (?,?,?,?,?,?,0,?,?,?,?,?)
+                                """, (_new_title, _new_desc, _new_cat, _new_cat,
+                                      _new_unit, _new_target,
+                                      str(_new_start), str(_new_end),
+                                      _new_pri, 1 if _new_query else 0,
+                                      _new_query or None))
+                                _g_conn.commit()
+                                _g_conn.close()
+                                st.cache_data.clear()
+                                st.success(f"Goal '{_new_title}' saved!")
+                                st.rerun()
+                            except Exception as _ge:
+                                st.error(f"Error saving goal: {_ge}")
+                        else:
+                            st.warning("Title and target value are required.")
 
     # ══════════════════════════════════════════════════════════════════════════════
     # TAB 2 — TRENDS
