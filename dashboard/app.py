@@ -587,14 +587,14 @@ st.markdown("""
   /* ── Google Fonts ────────────────────────────────────────────────────── */
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  /* ── Design Tokens — Lightened Coastal Blue ─────────────────────────────── */
+  /* ── Design Tokens — Deep Coastal Dark ─────────────────────────────── */
   :root {
-    --dp-bg:            #1F4A78;
-    --dp-bg2:           #235285;
-    --dp-surface:       #285A8E;
-    --dp-card:          #2E6298;
-    --dp-card-solid:    #2E6298;
-    --dp-card-hover:    #346AA0;
+    --dp-bg:            #0E1B2A;
+    --dp-bg2:           #122133;
+    --dp-surface:       #192D42;
+    --dp-card:          #1E3550;
+    --dp-card-solid:    #1E3550;
+    --dp-card-hover:    #243D5C;
     --dp-border:        rgba(255,255,255,0.18);
     --dp-border-accent: rgba(0,212,200,0.50);
     --dp-teal:          #00D4C8;
@@ -664,7 +664,7 @@ st.markdown("""
 
   /* ── Global dark overrides — all white surfaces → dark glass ─────────── */
   [data-testid="stSidebar"] > div:first-child {
-    background: linear-gradient(180deg, #245A8C 0%, #1F4A78 100%) !important;
+    background: linear-gradient(180deg, #192D42 0%, #0E1B2A 100%) !important;
     border-right: 1px solid rgba(0,212,200,0.14) !important;
   }
   [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
@@ -709,7 +709,7 @@ st.markdown("""
     color: var(--dp-text-1) !important;
   }
   [data-baseweb="menu"],
-  [data-baseweb="popover"] { background: #264B6E !important; }
+  [data-baseweb="popover"] { background: #192D42 !important; }
   [data-baseweb="option"]:hover { background: rgba(0,212,200,0.10) !important; }
   /* Tab bar dark */
   [data-testid="stTabs"] [role="tablist"] {
@@ -1838,7 +1838,7 @@ st.markdown("""
 
   /* ── Sidebar Styling ─────────────────────────────────────────────────── */
   [data-testid="stSidebar"] {
-    background: #1F4A78 !important;
+    background: #0E1B2A !important;
     border-right: 1px solid rgba(0,212,200,0.14) !important;
   }
   [data-testid="stSidebar"] .stRadio label {
@@ -9436,7 +9436,7 @@ with tab_ov:
                     _type_colors = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}
                     _tc = _type_colors.get(signal_type, "#0567C8")
                     return (
-                        f'<div style="background:#264B6E;border-radius:12px;padding:16px 18px;'
+                        f'<div style="background:#1E3550;border-radius:12px;padding:16px 18px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
                         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
@@ -10768,7 +10768,7 @@ with tab_tr:
 
                 def _ri_metric(label, val, note, icon, color):
                     return (
-                        f'<div style="background:#264B6E;border-radius:10px;padding:14px 16px;'
+                        f'<div style="background:#1E3550;border-radius:10px;padding:14px 16px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid {color};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
                         f'<div style="font-size:18px;margin-bottom:4px;">{icon}</div>'
@@ -11218,7 +11218,7 @@ with tab_fo:
 
     def _kfm_card(label, value, delta, delta_color="#718096"):
         return (
-            f'<div style="background:#264B6E;'
+            f'<div style="background:#1E3550;'
             f'border-radius:12px;padding:16px 18px;'
             f'border:1px solid rgba(0,0,0,0.08);border-left:4px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
@@ -13421,7 +13421,7 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                 _hom_v = f"${int(_hom.iloc[0]):,}" if not _hom.empty else "—"
                 short_geo = geo.replace(" County, CA", "").replace(" County", "")
                 st.markdown(
-                    f'<div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
+                    f'<div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
                     f'border-top:3px solid #7C3AED;padding:14px 18px;">'
                     f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7A95;margin-bottom:6px;">{short_geo}</div>'
                     f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
@@ -17183,31 +17183,31 @@ _GLOSSARY_TERMS = {
 
 _SOURCES_HTML = """
 <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">STR</div>
     <div style="color:#8AAEC6;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
   </div>
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Datafy</div>
     <div style="color:#8AAEC6;">Visitor economy platform · trips, spend, DMA attribution</div>
   </div>
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">CoStar</div>
     <div style="color:#8AAEC6;">Market data · comp set, pipeline, profitability</div>
   </div>
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Visit California</div>
     <div style="color:#8AAEC6;">State forecasts · lodging, travel volume, airport traffic</div>
   </div>
-  <div style="background:#264B6E;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Zartico</div>
