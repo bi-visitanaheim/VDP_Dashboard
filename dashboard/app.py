@@ -38,6 +38,65 @@ def md_to_html(text: str) -> str:
     text = text.replace('\n', '<br>')
     return text
 
+
+def _parse_narrative_sections(body: str) -> dict:
+    """Parse SITUATION → TENSION → SIGNAL → ACTION sections from insight body.
+
+    Narrative arc format (from compute_insights.py):
+      'situation text||TENSION:tension text||SIGNAL:signal text||ACTION:action text'
+
+    Returns dict with keys: situation, tension, signal, action.
+    Falls back gracefully if body is plain prose (no || delimiters).
+    """
+    sects: dict = {"situation": "", "tension": "", "signal": "", "action": ""}
+    if "||" not in body:
+        sects["situation"] = body
+        return sects
+    raw = body.split("||")
+    sects["situation"] = raw[0].strip()
+    for chunk in raw[1:]:
+        if chunk.startswith("TENSION:"):
+            sects["tension"] = chunk[8:].strip()
+        elif chunk.startswith("SIGNAL:"):
+            sects["signal"] = chunk[7:].strip()
+        elif chunk.startswith("ACTION:"):
+            sects["action"] = chunk[7:].strip()
+    return sects
+
+
+def narrative_frame(question: str, baseline: str, current: str, action: str) -> str:
+    """Render a narrative framing box above a chart or data section.
+
+    Adapted from Cole Nussbaumer Knaflic's Storytelling with Data framework:
+    every section answers ONE specific question with a clear Setup → Tension → Action arc.
+    This makes the chart immediately useful, not just pretty.
+    """
+    return (
+        f'<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);'
+        f'border-radius:10px;padding:12px 16px;margin:0 0 14px 0;">'
+        f'<div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;'
+        f'color:#5A7A95;margin-bottom:6px;">The question this answers</div>'
+        f'<div style="font-size:13px;font-weight:600;color:#EFF6FF;margin-bottom:10px;'
+        f'line-height:1.4;">{question}</div>'
+        f'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
+        f'<div style="padding:7px 9px;border-radius:6px;background:rgba(16,185,129,0.07);'
+        f'border:1px solid rgba(16,185,129,0.15);">'
+        f'<div style="font-size:8.5px;font-weight:700;letter-spacing:.1em;color:#10B981;'
+        f'text-transform:uppercase;margin-bottom:3px;">Normal Baseline</div>'
+        f'<div style="font-size:11px;color:#94C4A8;line-height:1.4;">{baseline}</div></div>'
+        f'<div style="padding:7px 9px;border-radius:6px;background:rgba(245,185,64,0.07);'
+        f'border:1px solid rgba(245,185,64,0.15);">'
+        f'<div style="font-size:8.5px;font-weight:700;letter-spacing:.1em;color:#F5B940;'
+        f'text-transform:uppercase;margin-bottom:3px;">Right Now</div>'
+        f'<div style="font-size:11px;color:#C8B87A;line-height:1.4;">{current}</div></div>'
+        f'<div style="padding:7px 9px;border-radius:6px;background:rgba(0,212,200,0.07);'
+        f'border:1px solid rgba(0,212,200,0.15);">'
+        f'<div style="font-size:8.5px;font-weight:700;letter-spacing:.1em;color:#00D4C8;'
+        f'text-transform:uppercase;margin-bottom:3px;">Act on This</div>'
+        f'<div style="font-size:11px;color:#7FCFCA;line-height:1.4;">{action}</div></div>'
+        f'</div></div>'
+    )
+
 # Load .env from the project root (one level above dashboard/)
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -425,13 +484,30 @@ dollars — not just displacement of existing visitors. In board communications,
    Never present industry-wide statistics as Dana Point-specific facts.
 
 ## Response Format and Communication Standards
+
+**THE GOLDEN RULE: Every response must teach something. A dashboard that looks cool but nobody \
+learns from is decoration. Every answer must answer: WHO is affected, WHAT the data shows, \
+WHEN action is needed, and HOW to act. If the reader can't take an action within 24 hours, \
+the response failed.**
+
+**Narrative Arc (required for every analysis response):**
+Structure every substantive response as a 4-part arc:
+1. **SITUATION** — What is the current baseline? What is normal for Dana Point?
+2. **TENSION** — What is changing, off-trend, or creating an opportunity/risk?
+3. **SIGNAL** — The specific data-driven finding: the number that proves the tension is real.
+4. **ACTION** — Exactly ONE concrete, time-bound step the reader can take immediately.
+
+Example: "RevPAR is $325 in summer (SITUATION). But midweek occupancy drops 28 pts below weekend \
+(TENSION). Tuesday–Thursday leaves $180K/month on the table at current ADR (SIGNAL). \
+Launch a 3-night midweek package targeting LA corporate travelers by May 1 (ACTION)."
+
+**Chart Type Discipline:** When recommending visualizations or describing data patterns, name the \
+correct chart type: evolution = line chart; ranking = horizontal bar (never pie); \
+correlation = scatter plot; composition = stacked bar. Never describe a pie chart as the right \
+choice for more than 2–3 categories.
+
 **Length:** Under 250 words unless the user explicitly requests depth ("detailed", "full analysis", \
 "comprehensive report"). If brevity and depth conflict, prioritize brevity — the audience is busy executives.
-
-**Structure:**
-- Open with the KEY FINDING or most important number — never with background or context-setting
-- Support with 2–3 concise bullets that each cite a specific data point
-- Close with exactly ONE specific, time-bound action item
 
 **Formatting:** Use **bold** for all key numbers, dollar amounts, and percentage changes. Use bullet \
 points for lists. Avoid numbered lists unless explicitly ranking items by priority.
@@ -445,6 +521,7 @@ in which case, say so once and move to what IS clear.
 - Fabricate numbers or extrapolate beyond the data provided
 - Present generic hotel-industry benchmarks as Dana Point-specific facts
 - Offer more than one action item per response (dilutes focus and reduces board uptake)
+- Give a "cool" answer nobody acts on — every response must be actionable
 
 **Always do:**
 - Cite the specific metric, time period, and value from the data you receive
@@ -452,6 +529,9 @@ in which case, say so once and move to what IS clear.
   city council (TOT/economic impact), or destination marketing staff (demand/campaign targeting)
 - Anchor every recommendation in the data provided, not in generic best practices
 - End with a single, clear, time-bound call to action that a board member could act on immediately
+- Reference occupancy benchmarks: <60% = soft demand; 60–79% = healthy; 80–89% = strong/compression \
+  risk; ≥90% = compression (raise rates, enforce minimums immediately)
+- Reference ADR benchmarks: +26.5% YOY (current Dana Point) outperforms coastal CA average of ~+8% YOY
 
 ## Full Database Schema (analytics.sqlite — 57 tables)
 
@@ -5429,6 +5509,15 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
 
 
 def insight_card(title, body, kind="info", icon: str = "", date_label: str = "") -> str:
+    """Render an insight flip card with a 4-part narrative arc on the back.
+
+    Front: badge + headline + "flip for details" hint
+    Back:  SITUATION → TENSION → SIGNAL → ACTION (parsed from body)
+
+    Narrative arc format: plain prose = SITUATION only.
+    Structured format: 'situation||TENSION:t||SIGNAL:s||ACTION:a' renders 4 labeled sections.
+    Inspired by Storytelling with Data (Knaflic) and From Data to Viz (Holtz).
+    """
     svg_icon  = insight_icon_svg(kind, icon) if icon else ""
     icon_html = f'<span class="insight-icon">{svg_icon}</span>' if svg_icon else ""
     _kind_meta = {
@@ -5448,26 +5537,72 @@ def insight_card(title, body, kind="info", icon: str = "", date_label: str = "")
         f'color:{_clr};padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.06);'
         f'border:1px solid {_clr}44;">{_lbl}</span>'
     )
+
+    # ── Parse narrative sections (SITUATION / TENSION / SIGNAL / ACTION) ──────
+    _sects = _parse_narrative_sections(body)
+    _has_structure = bool(_sects["tension"] or _sects["signal"] or _sects["action"])
+
+    # Build back-face body HTML
+    _back_body_html = ""
+    if _has_structure:
+        # Structured narrative arc — 4 labeled sections
+        _sect_cfg = [
+            ("situation", "📍 Situation",  "#8AAEC6", "rgba(255,255,255,0.03)", "rgba(255,255,255,0.06)"),
+            ("tension",   "⚡ Tension",    "#F5B940", "rgba(245,185,64,0.06)",  "rgba(245,185,64,0.18)"),
+            ("signal",    "💡 Signal",     "#00D4C8", "rgba(0,212,200,0.06)",   "rgba(0,212,200,0.18)"),
+            ("action",    "→ Action",      "#10B981", "rgba(16,185,129,0.08)",  "rgba(16,185,129,0.22)"),
+        ]
+        for _sk, _slbl, _sclr, _sbg, _sborder_clr in _sect_cfg:
+            _txt = _sects.get(_sk, "")
+            if not _txt:
+                continue
+            _back_body_html += (
+                f'<div style="margin-bottom:7px;padding:7px 9px;border-radius:6px;'
+                f'background:{_sbg};border-left:2px solid {_sborder_clr};">'
+                f'<div style="font-size:8.5px;font-weight:700;letter-spacing:.1em;'
+                f'text-transform:uppercase;color:{_sclr};margin-bottom:3px;">{_slbl}</div>'
+                f'<div style="font-size:11px;color:var(--dp-text-2);line-height:1.5;">'
+                f'{md_to_html(_txt)}</div>'
+                f'</div>'
+            )
+    else:
+        # Fallback: plain prose body
+        _back_body_html = (
+            f'<p class="insight-body" style="padding-left:0;flex:1;">{md_to_html(body)}</p>'
+        )
+
+    # ── Front face preview: show ACTION teaser if available ──────────────────
+    _action_preview = ""
+    if _sects.get("action"):
+        _prev = _sects["action"][:90] + ("…" if len(_sects["action"]) > 90 else "")
+        _action_preview = (
+            f'<div style="font-size:10px;color:{_clr};opacity:0.7;margin-top:6px;'
+            f'padding:4px 7px;border-radius:4px;background:rgba(255,255,255,0.03);'
+            f'border:1px solid rgba(255,255,255,0.06);">'
+            f'→ {md_to_html(_prev)}</div>'
+        )
+
     return (
-        # ── Flip card wrapper ──────────────────────────────────────────────
+        # ── Flip card wrapper ──────────────────────────────────────────────────
         f'<div class="dp-flip-card">'
         f'<div class="dp-flip-inner">'
-        # Front face — badge + title + flip hint
+        # Front face — badge + title + action preview + flip hint
         f'<div class="dp-flip-front insight-card insight-{kind}" '
         f'style="display:flex;flex-direction:column;">'
         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
         f'{_badge}</div>'
         f'<div class="insight-title">{icon_html}{md_to_html(title)}</div>'
-        f'<span class="dp-flip-hint">↩ flip for details</span>'
+        f'{_action_preview}'
+        f'<span class="dp-flip-hint">↩ flip for situation · signal · action</span>'
         f'</div>'
-        # Back face — full body + date
+        # Back face — structured narrative arc
         f'<div class="dp-flip-back insight-card insight-{kind}" '
-        f'style="display:flex;flex-direction:column;">'
+        f'style="display:flex;flex-direction:column;overflow-y:auto;">'
         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
         f'{_badge}</div>'
-        f'<p class="insight-body" style="padding-left:0;flex:1;">{md_to_html(body)}</p>'
+        f'{_back_body_html}'
         f'{date_html}'
-        f'<span class="dp-flip-hint">↩ flip back</span>'
+        f'<span class="dp-flip-hint" style="margin-top:6px;">↩ flip back</span>'
         f'</div>'
         f'</div>'  # dp-flip-inner
         f'</div>'  # dp-flip-card
@@ -5620,6 +5755,83 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
             title_x    = 0,
             title_pad  = dict(l=4, t=4),
         )
+    return fig
+
+
+def add_occ_severity_bands(fig: go.Figure) -> go.Figure:
+    """Add hotel occupancy severity tier bands to an occupancy chart.
+
+    Mirrors the WHO air quality PM2.5 tier system — makes thresholds immediately legible
+    without requiring domain knowledge. Based on STR industry compression benchmarks:
+
+    Tier          Range    Color  Meaning
+    ─────────────────────────────────────────────────────────────────────
+    Soft demand   0–59%    muted  Revenue gap; demand programs needed
+    Healthy       60–79%   green  Normal leisure market; maintain rate floors
+    Strong        80–89%   amber  Pre-compression; rate increase signal
+    Compression   90–100%  red    Maximum rate leverage; 2-night minimums
+
+    Call AFTER style_fig() so bands sit behind trace data.
+    """
+    # Soft demand zone (below 60%) — muted blue
+    fig.add_hrect(
+        y0=0, y1=60,
+        fillcolor="rgba(148,163,184,0.04)", line_width=0,
+        annotation_text="SOFT", annotation_position="top left",
+        annotation_font_size=8, annotation_font_color="rgba(148,163,184,0.35)",
+    )
+    # Healthy zone (60–79%) — subtle green
+    fig.add_hrect(
+        y0=60, y1=80,
+        fillcolor="rgba(16,185,129,0.04)", line_width=0,
+    )
+    # Strong / pre-compression (80–89%) — amber
+    fig.add_hrect(
+        y0=80, y1=90,
+        fillcolor="rgba(245,185,64,0.04)", line_width=0,
+    )
+    # Compression zone (90–100%) — red
+    fig.add_hrect(
+        y0=90, y1=100,
+        fillcolor="rgba(239,68,68,0.04)", line_width=0,
+        annotation_text="COMPRESSION", annotation_position="top right",
+        annotation_font_size=8, annotation_font_color="rgba(239,68,68,0.45)",
+    )
+    # Reference line: 80% — strong demand threshold
+    fig.add_hline(
+        y=80, line_dash="dash",
+        line_color="rgba(245,185,64,0.35)", line_width=1,
+        annotation_text=" 80% — rate increase signal",
+        annotation_position="bottom right",
+        annotation_font_size=8.5,
+        annotation_font_color="rgba(245,185,64,0.60)",
+    )
+    # Reference line: 90% — compression threshold
+    fig.add_hline(
+        y=90, line_dash="dot",
+        line_color="rgba(239,68,68,0.35)", line_width=1,
+        annotation_text=" 90% — compression / 2-night min",
+        annotation_position="top right",
+        annotation_font_size=8.5,
+        annotation_font_color="rgba(239,68,68,0.60)",
+    )
+    return fig
+
+
+def add_revpar_reference(fig: go.Figure, baseline_revpar: float, label: str = "baseline") -> go.Figure:
+    """Add a dashed RevPAR reference line (like WHO guideline line on air quality charts).
+    Use to show the historical average or prior-year value for immediate context.
+    """
+    if not baseline_revpar or baseline_revpar <= 0:
+        return fig
+    fig.add_hline(
+        y=baseline_revpar, line_dash="dash",
+        line_color="rgba(167,139,250,0.40)", line_width=1,
+        annotation_text=f" {label}: ${baseline_revpar:,.0f}",
+        annotation_position="bottom right",
+        annotation_font_size=8.5,
+        annotation_font_color="rgba(167,139,250,0.65)",
+    )
     return fig
 
 
@@ -8288,6 +8500,26 @@ with tab_ov:
             "🗺️ See 'Where They're From' tab for feeder market breakdown",
         ]
     ), unsafe_allow_html=True)
+
+    # ── Narrative Frame: the question this tab answers ─────────────────────────
+    _ov_rvp  = m.get("revpar_30", 0.0) if m else 0.0
+    _ov_occ  = m.get("occ_30", 0.0) if m else 0.0
+    _ov_rvpy = m.get("revpar_yoy", 0.0) if m else 0.0
+    _ov_comp = sum(1 for r in (df_kpi.itertuples() if not df_kpi.empty else [])
+                   if getattr(r, "is_occ_80", 0)) if not df_kpi.empty else 0
+    _ov_occ_zone = ("COMPRESSION ≥90%" if _ov_occ >= 90
+                    else "STRONG 80–89%" if _ov_occ >= 80
+                    else "HEALTHY 60–79%" if _ov_occ >= 60
+                    else "SOFT <60%")
+    st.markdown(narrative_frame(
+        question="Is Dana Point's hotel market healthy right now — and what should the TBID board do about it?",
+        baseline="Healthy market = 60–79% occ; strong = 80–89%; compression ≥90% triggers rate increases. "
+                 "Dana Point peaks in Q3 (July–Sept) and softens in Q1 (Jan–Mar).",
+        current=f"30-day avg occ {_ov_occ:.1f}% ({_ov_occ_zone}) · RevPAR ${_ov_rvp:,.0f} "
+                f"({'+' if _ov_rvpy >= 0 else ''}{_ov_rvpy:.1f}% YOY) · "
+                f"{_ov_comp} compression days in trailing window",
+        action="Scroll down → AI Analyst → 'Full Story' for the complete board narrative with specific rate actions.",
+    ), unsafe_allow_html=True)
     # ── Board Executive Summary Banner ─────────────────────────────────────────
     try:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
@@ -10317,6 +10549,24 @@ with tab_tr:
             "⬇️ Download any dataset as a CSV from the Data Vault tab",
         ]
     ), unsafe_allow_html=True)
+
+    # ── Narrative Frame ────────────────────────────────────────────────────────
+    _tr_rvp   = m.get("revpar_30", 0.0) if m else 0.0
+    _tr_adr   = m.get("adr_30", 0.0) if m else 0.0
+    _tr_occ   = m.get("occ_30", 0.0) if m else 0.0
+    _tr_ry    = m.get("revpar_yoy", 0.0) if m else 0.0
+    _tr_ay    = m.get("adr_yoy", 0.0) if m else 0.0
+    _tr_driven = "ADR-driven (quality growth)" if abs(_tr_ay or 0) >= abs((_tr_occ or 0) * 0.1) else "volume-driven"
+    st.markdown(narrative_frame(
+        question="Is Dana Point's hotel revenue growth sustainable — and is it being driven by rate or volume?",
+        baseline="Sustainable RevPAR growth comes from ADR gains, not just filling more rooms. "
+                 "ADR-driven growth is margin-positive; volume-driven growth can erode rate positioning.",
+        current=f"RevPAR ${_tr_rvp:,.0f} ({'+' if _tr_ry >= 0 else ''}{_tr_ry:.1f}% YOY) · "
+                f"ADR ${_tr_adr:,.0f} ({'+' if _tr_ay >= 0 else ''}{_tr_ay:.1f}% YOY) · "
+                f"Occ {_tr_occ:.1f}% · Growth is {_tr_driven}",
+        action="Look for months where ADR grew faster than occupancy — those are your rate discipline wins to replicate.",
+    ), unsafe_allow_html=True)
+
     # ── Metric toggle filter ────────────────────────────────────────────────────
     _str_metric_label = st.selectbox(
         "View Metric",
@@ -11140,6 +11390,24 @@ with tab_fo:
             "🏠 Resident tab: peak crowd alerts, economic benefits, quiet windows",
         ]
     ), unsafe_allow_html=True)
+
+    # ── Narrative Frame ────────────────────────────────────────────────────────
+    _fo_today = datetime.today()
+    _fo_q     = f"Q{(_fo_today.month - 1) // 3 + 1}"
+    _fo_comp90 = 0
+    if not df_insights_fo.empty if "df_insights_fo" in dir() else True:
+        pass
+    st.markdown(narrative_frame(
+        question="What should Visit Dana Point do differently in the next 90 days — and why does it matter right now?",
+        baseline="Each insight card below was generated from live data today. "
+                 "Every card has 4 labeled sections: Situation (what's normal), Tension (what's changing), "
+                 "Signal (the specific number), and Action (what to do).",
+        current=f"Insights for {_fo_q} {_fo_today.year} — flip any card to see the full analysis. "
+                f"HIDDEN SIGNALS (cross-dataset) are the most valuable — they can't be seen in any single source alone.",
+        action="Start with Priority 1 cards (red border). Then cross-dataset 'Hidden Signal' cards. "
+               "Share 'Board Report' from Overview tab with leadership for the full narrative.",
+    ), unsafe_allow_html=True)
+
     # ── Audience selector strip ────────────────────────────────────────────────
     st.markdown(
         '<div class="vdp-status-bar">'
@@ -11736,16 +12004,15 @@ with tab_fo:
                                  for v in _monthly_occ["occ"]],
                     hovertemplate="%{x}<br>Avg Occ: %{y:.1f}%<extra></extra>"
                 ))
-                fig_comp.add_hline(y=80, line_dash="dot", line_color="#F43F5E",
-                                   annotation_text="Compression (80%)", annotation_font_size=10)
-                fig_comp.add_hline(y=70, line_dash="dot", line_color="#F59E0B",
-                                   annotation_text="Threshold (70%)", annotation_font_size=10)
+                # Severity tier bands (WHO-style: Soft/Healthy/Strong/Compression)
+                add_occ_severity_bands(fig_comp)
                 fig_comp.update_layout(
                     title="Monthly Occupancy — Compression Calendar",
                     height=280,
                     margin=dict(l=10, r=10, t=40, b=40),
                     xaxis=dict(showgrid=False, color="#718096", tickangle=-45),
-                    yaxis=dict(title="Avg Occ %", gridcolor="rgba(0,0,0,0.06)", color="#718096"),
+                    yaxis=dict(title="Avg Occ %", gridcolor="rgba(0,0,0,0.06)", color="#718096",
+                               range=[0, 105]),
                     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(family="DM Sans", color="#4A5568")
                 )
@@ -11770,6 +12037,22 @@ with tab_ev:
             "📢 Attribution shows which marketing channels drove measurable visitor trips",
             "🧑‍🤝‍🧑 Demographics reveal age, income, and travel-party profiles",
         ]
+    ), unsafe_allow_html=True)
+
+    # ── Narrative Frame ────────────────────────────────────────────────────────
+    _ev_trips  = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+    _ev_on_pct = float(df_dfy_ov.iloc[0].get("overnight_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
+    _ev_oos    = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+    _ev_dt_pct = float(df_dfy_ov.iloc[0].get("day_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
+    _ev_conv   = int(_ev_trips * (_ev_dt_pct / 100) * 0.03) if _ev_trips else 0
+    st.markdown(narrative_frame(
+        question="Who visits Dana Point, and is VDP converting enough of them into hotel guests?",
+        baseline=f"Day trips are economically valuable but generate zero hotel revenue. "
+                 f"Every 1% of day trips converted to overnight = ~{int(_ev_trips * 0.01):,} hotel room nights annually.",
+        current=f"{_ev_trips/1e6:.2f}M annual trips · {_ev_on_pct:.1f}% overnight · "
+                f"{_ev_dt_pct:.1f}% same-day · {_ev_oos:.1f}% from out of state",
+        action=f"3% day-trip conversion = ~{_ev_conv:,} more overnight stays. "
+               f"See 'Where They're From' tab to target highest-value feeder markets for conversion campaigns.",
     ), unsafe_allow_html=True)
     st.markdown("""
     <div class="hero-banner">
@@ -12835,6 +13118,27 @@ with tab_fm:
         ]
     ), unsafe_allow_html=True)
 
+    # ── Narrative Frame ────────────────────────────────────────────────────────
+    _fmn_top_dma = "Los Angeles"; _fmn_top_pct = 0.0; _fmn_hs_mkt = "N/A"; _fmn_hs_val = 0.0
+    if not df_dfy_dma.empty:
+        _fmn_t10 = df_dfy_dma[df_dfy_dma["visitor_days_share_pct"].notna()].head(10)
+        if not _fmn_t10.empty:
+            _fmn_top_dma = str(_fmn_t10.iloc[0]["dma"])
+            _fmn_top_pct = float(_fmn_t10.iloc[0]["visitor_days_share_pct"])
+        _fmn_hs_row = df_dfy_dma[df_dfy_dma["avg_spend_usd"].notna()].nlargest(1, "avg_spend_usd")
+        if not _fmn_hs_row.empty:
+            _fmn_hs_mkt = str(_fmn_hs_row.iloc[0]["dma"])
+            _fmn_hs_val = float(_fmn_hs_row.iloc[0]["avg_spend_usd"])
+    st.markdown(narrative_frame(
+        question="Which visitor origin markets deliver the most hotel revenue — and is VDP's marketing spend targeting them correctly?",
+        baseline="High-volume drive markets (LA, OC, SD) fill rooms but at lower ADR. "
+                 "Low-volume fly markets (SLC, Dallas, NYC) generate 1.3–1.4× more revenue per trip.",
+        current=f"Top volume market: {_fmn_top_dma} ({_fmn_top_pct:.1f}% of visits) · "
+                f"Top spend market: {_fmn_hs_mkt} (${_fmn_hs_val:,.0f}/visitor avg)",
+        action="Scroll to Market Value Matrix → top-right quadrant = high volume AND high spend. "
+               "Shift 15–20% of campaign budget toward fly markets. Measure cost-per-trip, not just impressions.",
+    ), unsafe_allow_html=True)
+
     # ── Feeder Markets Section Intelligence ─────────────────────────────────
     try:
         if not df_dfy_dma.empty:
@@ -13494,6 +13798,16 @@ with tab_ei:
             "📊 Compare event weeks vs. baseline to see the exact revenue lift",
             "📆 Calendar view shows all upcoming events and their expected impact",
         ]
+    ), unsafe_allow_html=True)
+
+    # ── Narrative Frame ────────────────────────────────────────────────────────
+    st.markdown(narrative_frame(
+        question="Do Dana Point's major events generate incremental tourism revenue — or just displace existing visitors?",
+        baseline="Events that draw high out-of-state attendance (60%+) and generate 3×+ spend multipliers "
+                 "are genuine demand creators. Events that mainly attract locals can displace regular visitors without net gain.",
+        current="Ohana Fest 2025: $14.6M direct spend · 3.2× multiplier · 68% out-of-state · "
+                "ADR lift +$139/night (+45%) vs baseline · 24% of attendees booked hotels",
+        action="Use the ADR lift vs. baseline chart below to identify which event weeks justify 2-night minimums and premium rates.",
     ), unsafe_allow_html=True)
 
     # ── Monthly baseline lookup from live KPI data ─────────────────────────────
@@ -14793,9 +15107,8 @@ with tab_sp:
                     marker_pattern_shape="/",
                     hovertemplate="<b>%{x} Forecast</b><br>Occ: %{y:.1f}%<extra></extra>",
                 ))
-                # Target line at 70%
-                _fig_occ.add_hline(y=70, line_dash="dot", line_color="rgba(5,150,105,0.50)",
-                                   annotation_text="70% target", annotation_font_size=9)
+                # Severity tier reference lines (like WHO air quality tiers)
+                add_occ_severity_bands(_fig_occ)
                 _fig_occ.update_layout(barmode="group", yaxis_ticksuffix="%", yaxis_title="Occupancy %")
                 st.plotly_chart(style_fig(_fig_occ, height=280), use_container_width=True, config=PLOTLY_CONFIG)
 
@@ -14909,6 +15222,20 @@ with tab_cs:
             "⛽ Gas price & travel demand signals show leading indicators for booking pace",
             "📈 CoStar forecasts model room revenue through 2030 for planning",
         ]
+    ), unsafe_allow_html=True)
+
+    # ── Narrative Frame ────────────────────────────────────────────────────────
+    _cs_port_adr_nf = m.get("adr_30", 0) if m else 0
+    _cs_mkt_adr_nf  = float(df_cs_snap.iloc[0].get("adr_usd", 0) or 0) if not df_cs_snap.empty else 0
+    _cs_ari_nf = "above market" if _cs_port_adr_nf > _cs_mkt_adr_nf else "below market"
+    st.markdown(narrative_frame(
+        question="Is the VDP hotel portfolio outperforming the South OC competitive market — or leaving rate on the table?",
+        baseline="MPI > 100 = filling more rooms than competitors. ARI > 100 = charging more than competitors. "
+                 "RGI > 100 = outperforming on total revenue. All three above 100 simultaneously is the gold standard.",
+        current=f"VDP Portfolio ADR: ${_cs_port_adr_nf:,.0f} · South OC Market ADR: ${_cs_mkt_adr_nf:,.0f} · "
+                f"Portfolio rate is {_cs_ari_nf} average · See MPI/ARI/RGI index charts below",
+        action="If ARI < 100, close the rate gap with targeted revenue management. "
+               "If MPI < 100 but ARI > 100, invest in demand generation campaigns. Scroll to Index Benchmarks section.",
     ), unsafe_allow_html=True)
 
     # ── Market Intelligence Section Intelligence ─────────────────────────────
