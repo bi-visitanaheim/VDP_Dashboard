@@ -6,6 +6,9 @@ secondaryBackgroundColor = "#1E3D5E"
 textColor = "#F4FAFF"
 font = "sans serif"
 
+[runner]
+fastReruns = true
+
 [server]
 headless = true
 enableXsrfProtection = false

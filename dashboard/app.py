@@ -73,6 +73,80 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ─── Branded loading splash — rendered FIRST so it covers the screen immediately ─
+# Must be the first st.markdown() after set_page_config so it streams to the
+# browser before the ~3,000 lines of CSS/JS below execute.  The overlay is
+# self-contained (no dependency on later CSS blocks) and auto-dismisses after 3 s.
+st.markdown("""
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;600&display=swap');
+  @keyframes splash-fade-out {
+    0%   { opacity: 1; pointer-events: auto; }
+    80%  { opacity: 1; pointer-events: none; }
+    100% { opacity: 0; pointer-events: none; visibility: hidden; }
+  }
+  @keyframes splash-bob {
+    0%,100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-7px) scale(1.05); }
+  }
+  @keyframes splash-spin { to { transform: rotate(360deg); } }
+  #pulse-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background:
+      radial-gradient(ellipse at 75% 10%, rgba(0,212,200,0.18) 0%, transparent 50%),
+      radial-gradient(ellipse at 10% 88%, rgba(56,189,248,0.12) 0%, transparent 45%),
+      linear-gradient(160deg, #0B1E38 0%, #1A3756 60%, #1E3D5E 100%);
+    animation: splash-fade-out 0.6s ease-out 3s forwards;
+  }
+  /* Hide Streamlit's own status/running widget while the splash is covering the page */
+  #stStatusWidget,
+  [data-testid="stStatusWidget"],
+  [data-testid="stDecoration"] { display: none !important; }
+  .splash-wave {
+    font-size: 52px;
+    margin-bottom: 18px;
+    animation: splash-bob 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 18px rgba(0,212,200,0.55));
+  }
+  .splash-title {
+    font-family: 'Syne', 'Outfit', system-ui, sans-serif;
+    font-size: 26px; font-weight: 800;
+    color: #F4FAFF; letter-spacing: -0.03em; margin-bottom: 4px;
+  }
+  .splash-title span { color: #00D4C8; }
+  .splash-sub {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13px; color: rgba(200,224,242,0.60);
+    letter-spacing: 0.04em; margin-bottom: 36px;
+  }
+  .splash-spinner {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 3px solid rgba(0,212,200,0.15);
+    border-top-color: #00D4C8;
+    animation: splash-spin 0.9s linear infinite;
+    margin-bottom: 20px;
+  }
+  .splash-status {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 12px; color: rgba(200,224,242,0.45);
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+</style>
+<div id="pulse-splash">
+  <div class="splash-wave">🌊</div>
+  <div class="splash-title">Dana Point <span>PULSE</span></div>
+  <div class="splash-sub">Destination Intelligence Platform</div>
+  <div class="splash-spinner"></div>
+  <div class="splash-status">Loading intelligence</div>
+</div>
+""", unsafe_allow_html=True)
+
 # ─── Login Gate ───────────────────────────────────────────────────────────────
 # © 2026 Wilton John Picou · GloCon Solutions LLC
 # Supports simple credential login now; Google/Microsoft OAuth can be added once
@@ -3477,74 +3551,6 @@ st.markdown("""
   }
 
 </style>
-""", unsafe_allow_html=True)
-
-# ─── Branded loading splash — auto-dismisses via CSS after 3s, no JS loop ─────
-# NOTE: uses CSS animation-fill-mode:forwards + pointer-events:none after delay
-# so it never blocks content even if the div gets recreated on rerender.
-st.markdown("""
-<style>
-  @keyframes splash-fade-out {
-    0%   { opacity: 1; pointer-events: auto; }
-    80%  { opacity: 1; pointer-events: none; }
-    100% { opacity: 0; pointer-events: none; visibility: hidden; }
-  }
-  @keyframes splash-bob {
-    0%,100% { transform: translateY(0) scale(1); }
-    50%      { transform: translateY(-7px) scale(1.05); }
-  }
-  @keyframes splash-spin { to { transform: rotate(360deg); } }
-  #pulse-splash {
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background:
-      radial-gradient(ellipse at 75% 10%, rgba(0,212,200,0.18) 0%, transparent 50%),
-      radial-gradient(ellipse at 10% 88%, rgba(56,189,248,0.12) 0%, transparent 45%),
-      linear-gradient(160deg, #0B1E38 0%, #1A3756 60%, #1E3D5E 100%);
-    animation: splash-fade-out 0.6s ease-out 3s forwards;
-  }
-  .splash-wave {
-    font-size: 52px;
-    margin-bottom: 18px;
-    animation: splash-bob 1.8s ease-in-out infinite;
-    filter: drop-shadow(0 0 18px rgba(0,212,200,0.55));
-  }
-  .splash-title {
-    font-family: 'Syne', 'Outfit', system-ui, sans-serif;
-    font-size: 26px; font-weight: 800;
-    color: #F4FAFF; letter-spacing: -0.03em; margin-bottom: 4px;
-  }
-  .splash-title span { color: #00D4C8; }
-  .splash-sub {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 13px; color: rgba(200,224,242,0.60);
-    letter-spacing: 0.04em; margin-bottom: 36px;
-  }
-  .splash-spinner {
-    width: 38px; height: 38px; border-radius: 50%;
-    border: 3px solid rgba(0,212,200,0.15);
-    border-top-color: #00D4C8;
-    animation: splash-spin 0.9s linear infinite;
-    margin-bottom: 20px;
-  }
-  .splash-status {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 12px; color: rgba(200,224,242,0.45);
-    letter-spacing: 0.06em; text-transform: uppercase;
-  }
-</style>
-<div id="pulse-splash">
-  <div class="splash-wave">🌊</div>
-  <div class="splash-title">Dana Point <span>PULSE</span></div>
-  <div class="splash-sub">Destination Intelligence Platform</div>
-  <div class="splash-spinner"></div>
-  <div class="splash-status">Loading intelligence</div>
-</div>
 """, unsafe_allow_html=True)
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
