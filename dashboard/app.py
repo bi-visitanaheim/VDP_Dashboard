@@ -4771,7 +4771,7 @@ def _build_visitor_econ_local_fallback(m: dict) -> str:
             lines.append(f"**HOW campaigns performed:** {int(med.get('attributable_trips',0) or 0):,} attributable trips · ${float(med.get('total_impact_usd',0) or 0):,.0f} est. impact · {med.get('roas_description','N/A')}")
     else:
         lines.append("No Datafy data loaded. Run: `python scripts/run_pipeline.py`")
-    lines.append("\n**→ Action:** Add API key for Claude to cross-analyze STR + Datafy data for hidden revenue opportunities.")
+    lines.append("\n**→ Action:** Cross-analyze STR + Datafy data to identify hidden revenue opportunities.")
     return "\n".join(lines)
 
 
@@ -4783,7 +4783,7 @@ def local_fallback(key: str, m: dict) -> str:
     )
     d = {
         "revpar": (
-            f"**RevPAR Analysis** *(local mode — connect API key for live Claude analysis)*\n\n"
+            f"**RevPAR Analysis**\n\n"
             f"• 30-day RevPAR: **${m.get('revpar_30',0):.0f}** "
             f"({m.get('revpar_delta',0):+.1f}% vs. prior period)\n"
             f"• Primary driver: ADR ({m.get('adr_delta',0):+.1f}%), "
@@ -4877,17 +4877,15 @@ def local_fallback(key: str, m: dict) -> str:
             f"2. **Shoulder season campaigns** — Shift Q4/Q1 marketing spend to build off-peak nights "
             f"before summer compression auto-fills the calendar\n"
             f"3. **Fly-market rate positioning** — Premium OOS feeder markets (SLC, Dallas, NYC) "
-            f"justify higher rate floors; current ADR is leaving revenue on the table\n\n"
-            f"*Connect an API key in the sidebar for live Claude AI analysis.*"
+            f"justify higher rate floors; current ADR is leaving revenue on the table"
         ),
     }
     return d.get(
         key,
-        f"**VDP Snapshot** *(local mode)*\n\n"
+        f"**VDP Snapshot**\n\n"
         f"• RevPAR: **${m.get('revpar_30',0):.0f}** ({m.get('revpar_delta',0):+.1f}%)\n"
         f"• ADR: **${m.get('adr_30',0):.0f}** | Occupancy: **{m.get('occ_30',0):.1f}%**\n"
-        f"• Est. TBID monthly: **${m.get('tbid_monthly',0):,.0f}**\n\n"
-        f"💡 Add your Anthropic API key in the sidebar (VDP Analyst section) for live analysis.",
+        f"• Est. TBID monthly: **${m.get('tbid_monthly',0):,.0f}**",
     )
 
 # ─── Claude streaming generator ───────────────────────────────────────────────
@@ -4922,7 +4920,7 @@ def stream_claude_response(prompt: str, api_key: str):
     except Exception as e:
         err = str(e)
         if "401" in err or "authentication" in err.lower():
-            yield "⚠️ **Invalid API key.** Check your key in the sidebar VDP Analyst section and try again."
+            yield "⚠️ **Invalid API key.** Check that ANTHROPIC_API_KEY is correctly set in your .env file."
         elif "429" in err:
             yield "⚠️ **Rate limited.** Please wait a moment and try again."
         else:
@@ -8538,7 +8536,6 @@ with tab_ov:
                 with st.chat_message("assistant", avatar="🌊"):
                     st.markdown(_ov_resp)
                 st.session_state.ai_result = _ov_resp
-                st.info("💡 Add an API key in the sidebar to activate full AI responses.")
             st.session_state.ai_needs_call = False
         elif st.session_state.get("ai_result"):
             with st.chat_message("assistant", avatar="🌊"):
@@ -9262,10 +9259,6 @@ with tab_ov:
                         with st.chat_message("assistant", avatar="🌊"):
                             st.markdown(response)
                         st.session_state.ai_result = response
-                        if not api_key_valid:
-                            st.caption(
-                                "💡 Add API keys in the sidebar (VDP Analyst) to activate AI streaming."
-                            )
                     st.session_state.ai_needs_call = False
 
                 elif st.session_state.ai_result:
@@ -16527,7 +16520,7 @@ with tab_cs:
                     )
                 del st.session_state["li_pending_prompt"]
             else:
-                st.info("💡 Add an API key in the sidebar (Anthropic, OpenAI, Google AI, or Perplexity) to activate Live Intelligence.")
+                st.warning("⚠️ AI provider unavailable. Check that API keys are set in your .env file.")
                 del st.session_state["li_pending_prompt"]
 
     # ══════════════════════════════════════════════════════════════════════════════
