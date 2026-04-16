@@ -8198,6 +8198,10 @@ def render_intel_panel(
                 del st.session_state[_ans_key]
 
 
+# ─── Page load: enforce fresh session state ───────────────────────────────────
+if "_load_fresh" not in st.session_state:
+    st.session_state["_load_fresh"] = True
+
 # ─── Sidebar toggle — always-visible button in main content ───────────────────
 _st_components.html("""
 <style>
