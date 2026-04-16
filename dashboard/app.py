@@ -21,13 +21,17 @@ import os
 import sys
 import subprocess
 import urllib.parse as _urlparse
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 import re as _re
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 def md_to_html(text: str) -> str:
-    """Convert basic markdown to HTML for use in unsafe_allow_html contexts."""
+    """Convert basic markdown (**bold**, *italic*, newlines) to HTML for unsafe_allow_html rendering."""
     if not text:
         return text
     # Bold: **text** → <strong>text</strong>
@@ -80,7 +84,7 @@ st.set_page_config(
 # MS_CLIENT_ID, MS_CLIENT_SECRET). Set LOGIN_ENABLED=false in .env to bypass for local dev.
 _LOGIN_ENABLED = False  # Login removed per owner request — admin controls at ?admin=true
 
-def _render_login_page():
+def _render_login_page() -> None:
     """Render the login page with Dana Point branding.
     GloCon Solutions LLC — access control for Dana Point PULSE."""
     # Background: actual homepage hero photo from visitdanapoint.com
@@ -3681,6 +3685,7 @@ def _init_db(conn: sqlite3.Connection) -> None:
 
 @st.cache_resource
 def get_connection() -> sqlite3.Connection:
+    """Get a cached read-only SQLite connection to analytics.sqlite."""
     """Return a persistent SQLite connection.
 
     Creates the database file and schema automatically if it does not exist
@@ -3697,6 +3702,7 @@ def get_connection() -> sqlite3.Connection:
 
 @st.cache_data(ttl=300)
 def load_str_daily() -> pd.DataFrame:
+    """Load STR daily metrics from fact_str_metrics; pivoted long→wide, occ as percentage."""
     """Pivot fact_str_metrics (source='STR', grain='daily') → one row per date."""
     conn = get_connection()
     df = pd.read_sql_query(
@@ -3729,6 +3735,7 @@ def load_str_daily() -> pd.DataFrame:
 
 @st.cache_data(ttl=300)
 def load_kpi_daily() -> pd.DataFrame:
+    """Load daily KPI summary (occ_pct, adr, revpar, and YoY deltas) from kpi_daily_summary."""
     conn = get_connection()
     df = pd.read_sql_query("SELECT * FROM kpi_daily_summary ORDER BY as_of_date", conn)
     df["as_of_date"] = pd.to_datetime(df["as_of_date"])
@@ -3737,6 +3744,7 @@ def load_kpi_daily() -> pd.DataFrame:
 
 @st.cache_data(ttl=300)
 def load_compression() -> pd.DataFrame:
+    """Load compression days (80%+ and 90%+ occupancy) by quarter from kpi_compression_quarterly."""
     conn = get_connection()
     return pd.read_sql_query(
         "SELECT * FROM kpi_compression_quarterly ORDER BY quarter", conn
@@ -3977,6 +3985,7 @@ def load_vdp_events() -> pd.DataFrame:
 
 @st.cache_data(ttl=300)
 def load_insights(audience: str | None = None) -> pd.DataFrame:
+    """Load forward-looking insights_daily, optionally filtered by audience (dmo, city, visitor, resident, cross)."""
     """Load today's (or most recent) forward-looking insights from insights_daily."""
     conn = get_connection()
     try:
@@ -4892,7 +4901,7 @@ def local_fallback(key: str, m: dict) -> str:
 
 # ─── Claude streaming generator ───────────────────────────────────────────────
 
-def stream_claude_response(prompt: str, api_key: str):
+def stream_claude_response(prompt: str, api_key: str) -> None:
     """Yields text chunks from Claude streaming API for use with st.write_stream.
 
     The SYSTEM_PROMPT is passed as a structured content block with cache_control so the
@@ -4930,7 +4939,7 @@ def stream_claude_response(prompt: str, api_key: str):
 
 # ─── Multi-Model AI Router ────────────────────────────────────────────────────
 
-def _stream_openai_compat(prompt: str, model: str, api_key_val: str, base_url: str | None = None, extra_system: str = ""):
+def _stream_openai_compat(prompt: str, model: str, api_key_val: str, base_url: str | None = None, extra_system: str = "") -> None:
     """Stream from any OpenAI-compatible API (OpenAI, Perplexity)."""
     if not OPENAI_AVAILABLE:
         yield "⚠️ `openai` package not installed. Run: `pip install openai`"
@@ -4963,7 +4972,7 @@ def _stream_openai_compat(prompt: str, model: str, api_key_val: str, base_url: s
         yield f"⚠️ API error: {str(e)[:300]}"
 
 
-def _stream_gemini(prompt: str, model: str, api_key_val: str):
+def _stream_gemini(prompt: str, model: str, api_key_val: str) -> None:
     """Stream from Google Gemini API."""
     if not GEMINI_AVAILABLE:
         yield "⚠️ `google-generativeai` not installed. Run: `pip install google-generativeai`"
@@ -4985,7 +4994,7 @@ def _stream_gemini(prompt: str, model: str, api_key_val: str):
         yield f"⚠️ Gemini error: {str(e)[:300]}"
 
 
-def stream_ai_response(prompt: str, model_key: str, keys: dict | None = None):
+def stream_ai_response(prompt: str, model_key: str, keys: dict | None = None) -> None:
     """Universal AI streaming router.
 
     Args:
@@ -6208,7 +6217,7 @@ def chart_primer(text: str) -> str:
     return f'<div class="chart-primer"><strong>What to look for:</strong> {text}</div>'
 
 
-def _safe_section(fn, section_name: str = "section"):
+def _safe_section(fn, section_name: str = "section") -> None:
     """GloCon Solutions LLC — failsafe wrapper for any dashboard section.
     Catches exceptions and renders a user-friendly error card instead of crashing.
     Usage: _safe_section(lambda: my_section_code(), 'Section Name')
@@ -6908,7 +6917,7 @@ _h_occ_str  = f"{_h_occ:.1f}%"  if _h_occ else "—"
 _h_adr_str  = f"${_h_adr:.0f}"  if _h_adr else "—"
 _h_rvp_str  = f"${_h_rvp:.0f}"  if _h_rvp else "—"
 _h_tbid_str = f"${_h_tbid/1000:.0f}K" if _h_tbid >= 1000 else (f"${_h_tbid:.0f}" if _h_tbid else "—")
-def _h_delta_html(v, fmt="pct"):
+def _h_delta_html(v, fmt: str = "pct") -> str:
     if v == 0: return ""
     cls = "hero-stat-pos" if v >= 0 else "hero-stat-neg"
     arrow = "▲" if v >= 0 else "▼"
@@ -8045,7 +8054,7 @@ def render_intel_panel(
     next_steps: list[str],
     suggested_questions: list[str],
     context_note: str = "",
-):
+) -> None:
     """Render an Action Intelligence + Ask About This Data panel.
 
     Args:
@@ -8189,7 +8198,7 @@ tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs
 # Tab header helper: refresh button + active filter badge on every tab
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _tab_controls(tab_id: str = "", show_filter_badge: bool = True):
+def _tab_controls(tab_id: str = "", show_filter_badge: bool = True) -> None:
     """Render per-tab refresh button. Share/Download buttons live inside each section."""
     _tc1, _tc_spacer = st.columns([1, 7])
     with _tc1:
@@ -8199,7 +8208,7 @@ def _tab_controls(tab_id: str = "", show_filter_badge: bool = True):
             st.rerun()
 
 
-def _str_filters(tab_id: str, show_grain: bool = True, show_metric: bool = True):
+def _str_filters(tab_id: str, show_grain: bool = True, show_metric: bool = True) -> tuple[str, str, str]:
     """Render STR-specific filter row inside tabs that use df_sel / df_active.
 
     Writes to session_state keys ss_range / ss_grain / ss_metric which are
@@ -9730,7 +9739,7 @@ with tab_ov:
                         return float(v)
                     s = str(v).replace("$","").replace("%","").replace(",","").strip()
                     try: return float(s)
-                    except: return 0.0
+                    except ValueError: return 0.0
                 _vdp_occ_n = _num(_vdp_occ)
                 _vdp_adr_n = _num(_vdp_adr)
                 _vdp_rvp_n = _num(_vdp_rvp)
@@ -15990,7 +15999,7 @@ with tab_cs:
                 _mkt_rvp_b = float(_snap.get("revpar_usd", 220.42) or 220.42)
                 def _ns(v):
                     try: return float(str(v).replace("$","").replace("%","").replace(",",""))
-                    except: return 0.0
+                    except ValueError: return 0.0
                 _vdp_occ_n = _ns(next((k["raw_value"] for k in kpis if "Occ" in k.get("label","")), _mkt_occ_b))
                 _vdp_adr_n = _ns(next((k["raw_value"] for k in kpis if "ADR" in k.get("label","")), _mkt_adr_b))
                 _vdp_rvp_n = _ns(next((k["raw_value"] for k in kpis if "RevPAR" in k.get("label","")), _mkt_rvp_b))
