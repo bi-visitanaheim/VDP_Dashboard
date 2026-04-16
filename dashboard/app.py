@@ -8198,10 +8198,6 @@ def render_intel_panel(
                 del st.session_state[_ans_key]
 
 
-# ─── Page load: enforce fresh session state ───────────────────────────────────
-if "_load_fresh" not in st.session_state:
-    st.session_state["_load_fresh"] = True
-
 # ─── Sidebar toggle — always-visible button in main content ───────────────────
 _st_components.html("""
 <style>
@@ -11896,7 +11892,7 @@ with tab_ev:
     ]
     _vdp_spots = []
     try:
-        if not df_dfy_clusters.empty:
+        if isinstance(df_dfy_clusters, pd.DataFrame) and not df_dfy_clusters.empty:
             _cl_cols_sh = [c for c in df_dfy_clusters.columns if "share" in c.lower() or "pct" in c.lower() or "visits" in c.lower()]
             _cl_cols_nm = [c for c in df_dfy_clusters.columns if "cluster" in c.lower() or "area" in c.lower() or "zone" in c.lower() or "name" in c.lower()]
             if _cl_cols_sh and _cl_cols_nm:
@@ -11906,7 +11902,7 @@ with tab_ev:
                     _cval  = float(_crow[_cl_cols_sh[0]]) if pd.notna(_crow[_cl_cols_sh[0]]) else 0
                     _vsub  = f"{_cval:.1f}% visitor share · {_desc_fallback}"
                     _vdp_spots.append((_icon, _cname, _vsub, _grad, _txt))
-    except Exception:
+    except (AttributeError, KeyError, ValueError, TypeError):
         pass
     if len(_vdp_spots) < 3:
         _vdp_spots = [
@@ -11933,52 +11929,53 @@ with tab_ev:
             )
 
     # ── Visitor Intelligence Snapshot Strip ────────────────────────────────────
-    try:
-        _vis_tt    = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
-        _vis_on    = float(df_dfy_ov.iloc[0].get("overnight_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
-        _vis_dt    = float(df_dfy_ov.iloc[0].get("day_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
-        _vis_oos   = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
-        _vis_los   = float(df_dfy_ov.iloc[0].get("avg_length_of_stay_days", 0) or 0) if not df_dfy_ov.empty else 0
-        _vis_yoy   = float(df_dfy_ov.iloc[0].get("total_trips_vs_compare_pct", 0) or 0) if not df_dfy_ov.empty else 0
-        _vis_adr   = float(m.get("adr_30", 350) if m else 350)
-        _vis_conv  = int(_vis_tt * (_vis_dt / 100) * 0.03 * _vis_los * _vis_adr / 365) if _vis_tt > 0 else 0
-        _vis_tt_fmt = f"{_vis_tt/1e6:.2f}M" if _vis_tt >= 1e6 else (f"{_vis_tt/1e3:.0f}K" if _vis_tt >= 1e3 else str(_vis_tt))
-        _vis_yoy_str = f"+{_vis_yoy:.1f}% vs. prior year" if _vis_yoy >= 0 else f"{_vis_yoy:.1f}% vs. prior year"
-        _vis_yoy_cls = "vi-pos" if _vis_yoy >= 0 else ""
-        _vis_conv_str = f"~${_vis_conv/1e6:.1f}M revenue opp at 3% conversion" if _vis_conv > 1e6 else f"~${_vis_conv:,} revenue opp at 3% conversion"
-        _vis_oos_bar = min(100, int(_vis_oos))
-        _vis_on_bar  = min(100, int(_vis_on))
-        st.markdown(
-            f'<div class="vi-snapshot">'
-            f'<div class="vi-snapshot-label">◈ Visitor Intelligence Snapshot · Datafy Annual 2025</div>'
-            f'<div class="vi-snapshot-grid">'
-            # Block 1: Total Trips
-            f'<div class="vi-stat-block">'
-            f'<div class="vi-stat-num">{_vis_tt_fmt}</div>'
-            f'<div class="vi-stat-name">Annual Visitor Trips</div>'
-            f'<div class="vi-bar-track"><div class="vi-bar" style="width:100%;background:linear-gradient(90deg,#21808D,#32B8C6);"></div></div>'
-            f'<div class="vi-stat-sub {_vis_yoy_cls}">{_vis_yoy_str}</div>'
-            f'</div>'
-            # Block 2: Overnight Rate + Conversion Opportunity
-            f'<div class="vi-stat-block">'
-            f'<div class="vi-stat-num">{_vis_on:.1f}%</div>'
-            f'<div class="vi-stat-name">Overnight Stay Rate</div>'
-            f'<div class="vi-bar-track"><div class="vi-bar" style="width:{_vis_on_bar}%;background:linear-gradient(90deg,#21808D,#00D4C8);"></div></div>'
-            f'<div class="vi-stat-sub vi-amber">{_vis_dt:.1f}% day trips · {_vis_conv_str}</div>'
-            f'</div>'
-            # Block 3: OOS Premium
-            f'<div class="vi-stat-block">'
-            f'<div class="vi-stat-num">{_vis_oos:.1f}%</div>'
-            f'<div class="vi-stat-name">Out-of-State Visitor Days</div>'
-            f'<div class="vi-bar-track"><div class="vi-bar" style="width:{_vis_oos_bar}%;background:linear-gradient(90deg,#E68161,#F5B98A);"></div></div>'
-            f'<div class="vi-stat-sub vi-teal">OOS visitors = 1.3–1.4× avg spend per trip vs. in-state</div>'
-            f'</div>'
-            f'</div>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-    except Exception:
-        pass
+    if isinstance(df_dfy_ov, pd.DataFrame) and not df_dfy_ov.empty:
+        try:
+            _vis_tt    = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0)
+            _vis_on    = float(df_dfy_ov.iloc[0].get("overnight_trips_pct", 0) or 0)
+            _vis_dt    = float(df_dfy_ov.iloc[0].get("day_trips_pct", 0) or 0)
+            _vis_oos   = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0)
+            _vis_los   = float(df_dfy_ov.iloc[0].get("avg_length_of_stay_days", 0) or 0)
+            _vis_yoy   = float(df_dfy_ov.iloc[0].get("total_trips_vs_compare_pct", 0) or 0)
+            _vis_adr   = float(m.get("adr_30", 350) if m else 350)
+            _vis_conv  = int(_vis_tt * (_vis_dt / 100) * 0.03 * _vis_los * _vis_adr / 365) if _vis_tt > 0 else 0
+            _vis_tt_fmt = f"{_vis_tt/1e6:.2f}M" if _vis_tt >= 1e6 else (f"{_vis_tt/1e3:.0f}K" if _vis_tt >= 1e3 else str(_vis_tt))
+            _vis_yoy_str = f"+{_vis_yoy:.1f}% vs. prior year" if _vis_yoy >= 0 else f"{_vis_yoy:.1f}% vs. prior year"
+            _vis_yoy_cls = "vi-pos" if _vis_yoy >= 0 else ""
+            _vis_conv_str = f"~${_vis_conv/1e6:.1f}M revenue opp at 3% conversion" if _vis_conv > 1e6 else f"~${_vis_conv:,} revenue opp at 3% conversion"
+            _vis_oos_bar = min(100, int(_vis_oos))
+            _vis_on_bar  = min(100, int(_vis_on))
+            st.markdown(
+                f'<div class="vi-snapshot">'
+                f'<div class="vi-snapshot-label">◈ Visitor Intelligence Snapshot · Datafy Annual 2025</div>'
+                f'<div class="vi-snapshot-grid">'
+                # Block 1: Total Trips
+                f'<div class="vi-stat-block">'
+                f'<div class="vi-stat-num">{_vis_tt_fmt}</div>'
+                f'<div class="vi-stat-name">Annual Visitor Trips</div>'
+                f'<div class="vi-bar-track"><div class="vi-bar" style="width:100%;background:linear-gradient(90deg,#21808D,#32B8C6);"></div></div>'
+                f'<div class="vi-stat-sub {_vis_yoy_cls}">{_vis_yoy_str}</div>'
+                f'</div>'
+                # Block 2: Overnight Rate + Conversion Opportunity
+                f'<div class="vi-stat-block">'
+                f'<div class="vi-stat-num">{_vis_on:.1f}%</div>'
+                f'<div class="vi-stat-name">Overnight Stay Rate</div>'
+                f'<div class="vi-bar-track"><div class="vi-bar" style="width:{_vis_on_bar}%;background:linear-gradient(90deg,#21808D,#00D4C8);"></div></div>'
+                f'<div class="vi-stat-sub vi-amber">{_vis_dt:.1f}% day trips · {_vis_conv_str}</div>'
+                f'</div>'
+                # Block 3: OOS Premium
+                f'<div class="vi-stat-block">'
+                f'<div class="vi-stat-num">{_vis_oos:.1f}%</div>'
+                f'<div class="vi-stat-name">Out-of-State Visitor Days</div>'
+                f'<div class="vi-bar-track"><div class="vi-bar" style="width:{_vis_oos_bar}%;background:linear-gradient(90deg,#E68161,#F5B98A);"></div></div>'
+                f'<div class="vi-stat-sub vi-teal">OOS visitors = 1.3–1.4× avg spend per trip vs. in-state</div>'
+                f'</div>'
+                f'</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        except (AttributeError, KeyError, ValueError, TypeError):
+            pass
 
 
     # ── Visitor Intelligence Sub-Tabs ──────────────────────────────────────────
