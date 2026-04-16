@@ -1947,6 +1947,68 @@ st.markdown("""
     line-height: 1.35;
   }
   .ask-chip:hover { border-color: #7C3AED; background: rgba(124,58,237,0.05); color: #7C3AED; }
+
+  /* ── Visitor Intelligence Snapshot Strip ──────────────────────────────── */
+  .vi-snapshot {
+    background: linear-gradient(135deg, rgba(15,37,64,0.95) 0%, rgba(21,50,82,0.90) 100%);
+    border: 1px solid rgba(0,212,200,0.18);
+    border-radius: 14px;
+    padding: 20px 24px 18px;
+    margin: 14px 0 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .vi-snapshot::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #00D4C8 40%, #38BDF8 70%, transparent 100%);
+  }
+  .vi-snapshot-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 9.5px; font-weight: 800; letter-spacing: .14em;
+    text-transform: uppercase; color: rgba(0,212,200,0.70);
+    margin-bottom: 14px;
+  }
+  .vi-snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .vi-stat-block {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 14px 16px 12px;
+    position: relative;
+  }
+  .vi-stat-num {
+    font-family: 'Syne', 'Outfit', sans-serif;
+    font-size: 2rem; font-weight: 800;
+    letter-spacing: -.04em; line-height: 1.0;
+    color: #FFFFFF;
+  }
+  .vi-stat-name {
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .10em;
+    color: rgba(255,255,255,0.45);
+    margin: 4px 0 10px;
+  }
+  .vi-bar-track {
+    height: 5px; background: rgba(255,255,255,0.08);
+    border-radius: 3px; margin-bottom: 8px; overflow: hidden;
+  }
+  .vi-bar {
+    height: 100%; border-radius: 3px;
+    transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+  }
+  .vi-stat-sub {
+    font-size: 11px; font-weight: 500;
+    color: rgba(255,255,255,0.45); line-height: 1.45;
+  }
+  .vi-stat-sub.vi-pos { color: #10B981; }
+  .vi-stat-sub.vi-amber { color: #FBBF24; }
+  .vi-stat-sub.vi-teal { color: #00D4C8; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -11756,6 +11818,42 @@ with tab_fo:
             st.info("KPI data not available for compression calendar.")
 
 
+# ── Module-level visitor segment image assets (used in tab_ev cluster cards) ──
+VISITOR_SEGMENT_IMAGES = {
+    "beach":     "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80",
+    "surf":      "https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=400&q=80",
+    "harbor":    "https://images.unsplash.com/photo-1564424224827-cd24b8915874?w=400&q=80",
+    "festival":  "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&q=80",
+    "family":    "https://images.unsplash.com/photo-1511895426328-dc8714191011?w=400&q=80",
+    "luxury":    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80",
+    "overnight": "https://images.unsplash.com/photo-1455587734955-081b22074882?w=400&q=80",
+    "daytrip":   "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&q=80",
+    "corporate": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80",
+}
+
+
+def segment_image_card(label: str, value: str, img_url: str, delta: str = "") -> str:
+    """Visitor cluster image card with label, value, and optional delta."""
+    _delta_html = (f'<div style="font-size:11px;color:#10B981;margin-top:2px;">{delta}</div>'
+                   if delta else "")
+    return (
+        f'<div style="background:rgba(0,0,0,0.03);border-radius:12px;overflow:hidden;'
+        f'border:1px solid rgba(0,200,224,0.14);'
+        f'box-shadow:0 4px 20px rgba(0,0,0,0.40);margin-bottom:12px;backdrop-filter:blur(8px);">'
+        f'<div style="height:100px;overflow:hidden;">'
+        f'<img src="{img_url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />'
+        f'</div>'
+        f'<div style="padding:10px 14px 12px;">'
+        f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8AAEC6;">{label}</div>'
+        f'<div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#FFFFFF,#A8D8F0);'
+        f'-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
+        f'font-family:\'Syne\',sans-serif;">{value}</div>'
+        f'{_delta_html}'
+        f'</div>'
+        f'</div>'
+    )
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — VISITOR ECONOMY (Datafy)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -11783,14 +11881,38 @@ with tab_ev:
     """, unsafe_allow_html=True)
 
     _ve_img_c1, _ve_img_c2, _ve_img_c3 = st.columns(3)
-    _vdp_spots = [
-        ("🌊", "Dana Point Harbor", "16.1% visitor share · Marina & Harbor District",
+    # Pull top 3 cluster names + shares dynamically from Datafy cluster data when available
+    _cl_base = [
+        ("🌊", "Dana Point Harbor", "Marina & Harbor District",
          "linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)", "#bae6fd"),
-        ("🏖️", "Doheny State Beach", "11.2% visitor share · Surf & Beach Recreation",
+        ("🏖️", "Doheny State Beach", "Surf & Beach Recreation",
          "linear-gradient(135deg, #f59e0b 0%, #b45309 100%)", "#fef3c7"),
-        ("🐋", "Dana Point Ocean", "Premier whale watching · Seasonal migrations",
+        ("🐋", "Dana Point Ocean", "Whale Watching & Ocean Recreation",
          "linear-gradient(135deg, #21808D 0%, #0f4c75 100%)", "#a5f3fc"),
     ]
+    _vdp_spots = []
+    try:
+        if not df_dfy_clusters.empty:
+            _cl_cols_sh = [c for c in df_dfy_clusters.columns if "share" in c.lower() or "pct" in c.lower() or "visits" in c.lower()]
+            _cl_cols_nm = [c for c in df_dfy_clusters.columns if "cluster" in c.lower() or "area" in c.lower() or "zone" in c.lower() or "name" in c.lower()]
+            if _cl_cols_sh and _cl_cols_nm:
+                _cl_top3 = df_dfy_clusters.sort_values(_cl_cols_sh[0], ascending=False).head(3)
+                for (_icon, _name_fallback, _desc_fallback, _grad, _txt), (_, _crow) in zip(_cl_base, _cl_top3.iterrows()):
+                    _cname = str(_crow[_cl_cols_nm[0]])
+                    _cval  = float(_crow[_cl_cols_sh[0]]) if pd.notna(_crow[_cl_cols_sh[0]]) else 0
+                    _vsub  = f"{_cval:.1f}% visitor share · {_desc_fallback}"
+                    _vdp_spots.append((_icon, _cname, _vsub, _grad, _txt))
+    except Exception:
+        pass
+    if len(_vdp_spots) < 3:
+        _vdp_spots = [
+            ("🌊", "Dana Point Harbor", "16.1% visitor share · Marina & Harbor District",
+             "linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)", "#bae6fd"),
+            ("🏖️", "Doheny State Beach", "11.2% visitor share · Surf & Beach Recreation",
+             "linear-gradient(135deg, #f59e0b 0%, #b45309 100%)", "#fef3c7"),
+            ("🐋", "Dana Point Ocean", "Premier whale watching · Seasonal migrations",
+             "linear-gradient(135deg, #21808D 0%, #0f4c75 100%)", "#a5f3fc"),
+        ]
     for _vic, (_icon, _vcap, _vsub, _vgrad, _vtxt) in zip([_ve_img_c1, _ve_img_c2, _ve_img_c3], _vdp_spots):
         with _vic:
             st.markdown(
@@ -11806,9 +11928,57 @@ with tab_ev:
                 unsafe_allow_html=True,
             )
 
+    # ── Visitor Intelligence Snapshot Strip ────────────────────────────────────
+    try:
+        _vis_tt    = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
+        _vis_on    = float(df_dfy_ov.iloc[0].get("overnight_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
+        _vis_dt    = float(df_dfy_ov.iloc[0].get("day_trips_pct", 0) or 0) if not df_dfy_ov.empty else 0
+        _vis_oos   = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
+        _vis_los   = float(df_dfy_ov.iloc[0].get("avg_length_of_stay_days", 0) or 0) if not df_dfy_ov.empty else 0
+        _vis_yoy   = float(df_dfy_ov.iloc[0].get("total_trips_vs_compare_pct", 0) or 0) if not df_dfy_ov.empty else 0
+        _vis_adr   = float(m.get("adr_30", 350) if m else 350)
+        _vis_conv  = int(_vis_tt * (_vis_dt / 100) * 0.03 * _vis_los * _vis_adr / 365) if _vis_tt > 0 else 0
+        _vis_tt_fmt = f"{_vis_tt/1e6:.2f}M" if _vis_tt >= 1e6 else (f"{_vis_tt/1e3:.0f}K" if _vis_tt >= 1e3 else str(_vis_tt))
+        _vis_yoy_str = f"+{_vis_yoy:.1f}% vs. prior year" if _vis_yoy >= 0 else f"{_vis_yoy:.1f}% vs. prior year"
+        _vis_yoy_cls = "vi-pos" if _vis_yoy >= 0 else ""
+        _vis_conv_str = f"~${_vis_conv/1e6:.1f}M revenue opp at 3% conversion" if _vis_conv > 1e6 else f"~${_vis_conv:,} revenue opp at 3% conversion"
+        _vis_oos_bar = min(100, int(_vis_oos))
+        _vis_on_bar  = min(100, int(_vis_on))
+        st.markdown(
+            f'<div class="vi-snapshot">'
+            f'<div class="vi-snapshot-label">◈ Visitor Intelligence Snapshot · Datafy Annual 2025</div>'
+            f'<div class="vi-snapshot-grid">'
+            # Block 1: Total Trips
+            f'<div class="vi-stat-block">'
+            f'<div class="vi-stat-num">{_vis_tt_fmt}</div>'
+            f'<div class="vi-stat-name">Annual Visitor Trips</div>'
+            f'<div class="vi-bar-track"><div class="vi-bar" style="width:100%;background:linear-gradient(90deg,#21808D,#32B8C6);"></div></div>'
+            f'<div class="vi-stat-sub {_vis_yoy_cls}">{_vis_yoy_str}</div>'
+            f'</div>'
+            # Block 2: Overnight Rate + Conversion Opportunity
+            f'<div class="vi-stat-block">'
+            f'<div class="vi-stat-num">{_vis_on:.1f}%</div>'
+            f'<div class="vi-stat-name">Overnight Stay Rate</div>'
+            f'<div class="vi-bar-track"><div class="vi-bar" style="width:{_vis_on_bar}%;background:linear-gradient(90deg,#21808D,#00D4C8);"></div></div>'
+            f'<div class="vi-stat-sub vi-amber">{_vis_dt:.1f}% day trips · {_vis_conv_str}</div>'
+            f'</div>'
+            # Block 3: OOS Premium
+            f'<div class="vi-stat-block">'
+            f'<div class="vi-stat-num">{_vis_oos:.1f}%</div>'
+            f'<div class="vi-stat-name">Out-of-State Visitor Days</div>'
+            f'<div class="vi-bar-track"><div class="vi-bar" style="width:{_vis_oos_bar}%;background:linear-gradient(90deg,#E68161,#F5B98A);"></div></div>'
+            f'<div class="vi-stat-sub vi-teal">OOS visitors = 1.3–1.4× avg spend per trip vs. in-state</div>'
+            f'</div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+    except Exception:
+        pass
+
 
     # ── Visitor Intelligence Sub-Tabs ──────────────────────────────────────────
-    _ev_t1, _ev_t2, _ev_t3 = st.tabs(["👥 Visitor Overview", "💰 Spending & DMA", "📱 Digital & Social"])
+    _ev_t1, _ev_t2, _ev_t3 = st.tabs(["👥 Visitor Overview", "💰 Spending & Attribution", "📱 Digital & Social"])
 
     # ── Visitor Overview → sub-tab 1 ────────────────────────────────────────────
     with _ev_t1:
@@ -11900,30 +12070,109 @@ with tab_ev:
             trips_vs_prior = float(ov.get("total_trips_vs_compare_pct", 0) or 0)
             oos_vs_prior = float(ov.get("out_of_state_vd_vs_compare_pct", 0) or 0)
 
-            # ── Hero KPI cards ─────────────────────────────────────────────────────
+            # ── Hero KPI cards — use kpi_card() for full design consistency ──────
+            _period_lbl = f"{ov.get('report_period_start','')[:4]} Annual" if ov.get("report_period_start") else "Annual 2025"
             ev_cols = st.columns(3)
-            _ev_kpis = [
-                (f"{total_trips/1e6:.2f}M", "Total Trips", f"{trips_vs_prior:+.2f}pp vs. prior yr", trips_vs_prior >= 0),
-                (f"{overnight_pct:.1f}%", "Overnight Trips", f"{ov.get('overnight_vs_compare_pct',0):+.1f}pp YOY", float(ov.get("overnight_vs_compare_pct",0) or 0) >= 0),
-                (f"{oos_pct:.1f}%", "Out-of-State Visitor Days", f"{oos_vs_prior:+.2f}pp YOY", oos_vs_prior >= 0),
-                (f"{avg_los:.1f}", "Avg Length of Stay (days)", f"{ov.get('avg_los_vs_compare_days',0):+.1f}d vs. prior yr", float(ov.get("avg_los_vs_compare_days",0) or 0) >= 0),
-                (f"{daytrip_pct:.1f}%", "Day Trips", f"{ov.get('day_trips_vs_compare_pct',0):+.1f}pp YOY", False),
-                (f"{repeat_pct:.1f}%", "Repeat Visitors", "of total visits", True),
+            _ev_kpi_defs = [
+                (f"{total_trips/1e6:.2f}M", "Total Trips",
+                 f"{trips_vs_prior:+.2f}pp vs. prior yr", trips_vs_prior >= 0,
+                 "visits", _period_lbl, float(total_trips),
+                 "Every visitor trip — overnight hotel guests and day visitors combined."),
+                (f"{overnight_pct:.1f}%", "Overnight Trips",
+                 f"{float(ov.get('overnight_vs_compare_pct',0) or 0):+.1f}pp YOY",
+                 float(ov.get("overnight_vs_compare_pct",0) or 0) >= 0,
+                 "occ", _period_lbl, overnight_pct,
+                 "Overnight guests spend ~3× more and generate all hotel/TBID/TOT revenue."),
+                (f"{oos_pct:.1f}%", "Out-of-State Visitor Days",
+                 f"{oos_vs_prior:+.2f}pp YOY", oos_vs_prior >= 0,
+                 "trend_up", _period_lbl, oos_pct,
+                 "Out-of-state visitors stay longer and spend more per trip — highest-value segment."),
+                (f"{avg_los:.1f}d", "Avg Length of Stay",
+                 f"{float(ov.get('avg_los_vs_compare_days',0) or 0):+.1f}d vs. prior yr",
+                 float(ov.get("avg_los_vs_compare_days",0) or 0) >= 0,
+                 "moon", _period_lbl, avg_los,
+                 "Each additional night of stay adds directly to room revenue and TBID."),
+                (f"{daytrip_pct:.1f}%", "Day Trips",
+                 f"{float(ov.get('day_trips_vs_compare_pct',0) or 0):+.1f}pp YOY", False,
+                 "eye", _period_lbl, daytrip_pct,
+                 "Day trippers concentrate in dining/retail. A 3% conversion to overnight = ~$15M incremental revenue."),
+                (f"{repeat_pct:.1f}%", "Repeat Visitors",
+                 "of total visits", True,
+                 "star", _period_lbl, repeat_pct,
+                 "Repeat visitors indicate destination loyalty and require less acquisition spend."),
             ]
-            for i, (val, lbl, delta, pos) in enumerate(_ev_kpis):
+            for i, (val, lbl, delta, pos, icon, date_lbl, raw_val, tip) in enumerate(_ev_kpi_defs):
                 with ev_cols[i % 3]:
-                    delta_cls = "kpi-delta-pos" if pos else "kpi-delta-neg"
-                    arrow = "↑" if pos else "↓"
                     st.markdown(
-                        f'<div class="kpi-card reveal-card">'
-                        f'<div class="kpi-header">'
-                        f'<span class="kpi-label">{lbl}</span>'
-                        f'</div>'
-                        f'<div class="kpi-value">{val}</div>'
-                        f'<div class="{delta_cls}">{arrow} {delta}</div>'
-                        f'</div>',
+                        kpi_card(lbl, val, delta, positive=pos, icon=icon,
+                                 date_label=date_lbl, raw_value=raw_val, tooltip=tip),
                         unsafe_allow_html=True,
                     )
+
+            st.markdown("---")
+
+            # ── Visitor Type Breakdown — overnight / day-trip / OOS split ──────────
+            st.markdown(_sh("🥧", "Visitor Type Breakdown", "teal", "DATAFY"), unsafe_allow_html=True)
+            _vt_c1, _vt_c2 = st.columns(2)
+            with _vt_c1:
+                st.markdown('<div class="chart-caption">Overnight vs. day-trip split · conversion opportunity</div>', unsafe_allow_html=True)
+                _vt_on  = overnight_pct
+                _vt_dt  = daytrip_pct
+                _vt_rem = max(0.0, 100.0 - _vt_on - _vt_dt)
+                fig_vt = go.Figure(go.Bar(
+                    x=[_vt_on, _vt_dt, _vt_rem],
+                    y=["Visitor Mix", "Visitor Mix", "Visitor Mix"],
+                    orientation="h",
+                    marker=dict(
+                        color=[TEAL, ORANGE, "rgba(255,255,255,0.10)"],
+                        cornerradius=4,
+                    ),
+                    text=[f"Overnight {_vt_on:.1f}%", f"Day Trips {_vt_dt:.1f}%", ""],
+                    textposition="inside",
+                    textfont=dict(size=12, color="#fff", family="Syne, DM Sans, sans-serif"),
+                    hovertemplate="%{text}<extra></extra>",
+                ))
+                fig_vt.update_layout(
+                    barmode="stack",
+                    showlegend=False,
+                    height=90,
+                    margin=dict(l=0, r=0, t=10, b=10),
+                    xaxis=dict(visible=False, range=[0, 100]),
+                    yaxis=dict(visible=False),
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                )
+                st.plotly_chart(style_fig(fig_vt, height=90), use_container_width=True, config=PLOTLY_CONFIG)
+                st.caption(f"💡 Converting 3% of {daytrip_pct:.1f}% day trips to overnight at current ADR adds ~$15M+ in annual room revenue.")
+            with _vt_c2:
+                st.markdown('<div class="chart-caption">In-state vs. out-of-state visitor days</div>', unsafe_allow_html=True)
+                _oos_in = oos_pct
+                _in_st  = max(0.0, 100.0 - _oos_in)
+                fig_oos = go.Figure(go.Bar(
+                    x=[_oos_in, _in_st],
+                    y=["Origin Mix", "Origin Mix"],
+                    orientation="h",
+                    marker=dict(
+                        color=[ORANGE, TEAL_LIGHT],
+                        cornerradius=4,
+                    ),
+                    text=[f"Out-of-State {_oos_in:.1f}%", f"In-State {_in_st:.1f}%"],
+                    textposition="inside",
+                    textfont=dict(size=12, color="#fff", family="Syne, DM Sans, sans-serif"),
+                    hovertemplate="%{text}<extra></extra>",
+                ))
+                fig_oos.update_layout(
+                    barmode="stack",
+                    showlegend=False,
+                    height=90,
+                    margin=dict(l=0, r=0, t=10, b=10),
+                    xaxis=dict(visible=False, range=[0, 100]),
+                    yaxis=dict(visible=False),
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                )
+                st.plotly_chart(style_fig(fig_oos, height=90), use_container_width=True, config=PLOTLY_CONFIG)
+                st.caption(f"💡 OOS visitors (orange) generate 1.3–1.4× more revenue per trip. Target fly markets to grow this share.")
 
             st.markdown("---")
 
@@ -12266,8 +12515,7 @@ with tab_ev:
                     "Day trippers concentrate in dining — capturing even 5% as overnight stays = significant room revenue."
                 )
 
-    # ── Website Attribution Deep-Dive ─────────────────────────────────────────
-    # ── Spending & DMA → sub-tab 2 ────────────────────────────────────────────
+    # ── Spending & Attribution → sub-tab 2 ───────────────────────────────────
     with _ev_t2:
         st.markdown(_sh("🌐", "Website Attribution — Acquisition Channels & Top Markets", "teal", "DATAFY"), unsafe_allow_html=True)
         st.caption("Source: Datafy Attribution Website · Q3 2025 · visitdanapoint.com")
@@ -12359,39 +12607,6 @@ with tab_ev:
                             plot_bgcolor="rgba(0,0,0,0)",
                         )
                         st.plotly_chart(style_fig(fig_cmp, height=300), use_container_width=True, config=PLOTLY_CONFIG)
-
-        # ── Visitor Segment Images ─────────────────────────────────────────────────
-        VISITOR_SEGMENT_IMAGES = {
-            "beach":     "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&q=80",
-            "surf":      "https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=400&q=80",
-            "harbor":    "https://images.unsplash.com/photo-1564424224827-cd24b8915874?w=400&q=80",
-            "festival":  "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&q=80",
-            "family":    "https://images.unsplash.com/photo-1511895426328-dc8714191011?w=400&q=80",
-            "luxury":    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80",
-            "overnight": "https://images.unsplash.com/photo-1455587734955-081b22074882?w=400&q=80",
-            "daytrip":   "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&q=80",
-            "corporate": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80",
-        }
-
-        def segment_image_card(label: str, value: str, img_url: str, delta: str = "") -> str:
-            _delta_html = (f'<div style="font-size:11px;color:#10B981;margin-top:2px;">{delta}</div>'
-                           if delta else "")
-            return (
-                f'<div style="background:rgba(0,0,0,0.03);border-radius:12px;overflow:hidden;'
-                f'border:1px solid rgba(0,200,224,0.14);'
-                f'box-shadow:0 4px 20px rgba(0,0,0,0.40);margin-bottom:12px;backdrop-filter:blur(8px);">'
-                f'<div style="height:100px;overflow:hidden;">'
-                f'<img src="{img_url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />'
-                f'</div>'
-                f'<div style="padding:10px 14px 12px;">'
-                f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8AAEC6;">{label}</div>'
-                f'<div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#FFFFFF,#A8D8F0);'
-                f'-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
-                f'font-family:\'Syne\',sans-serif;">{value}</div>'
-                f'{_delta_html}'
-                f'</div>'
-                f'</div>'
-            )
 
         # ── Visitor Cluster Visitation ─────────────────────────────────────────────
         if not df_dfy_clusters.empty:
@@ -12579,8 +12794,8 @@ with tab_ev:
                 fig_tk = go.Figure(go.Scatter(
                     x=_tk_p["data_date"], y=_tk_p["followers"],
                     mode="lines", fill="tozeroy",
-                    line=dict(color="#010101", width=2.5, shape="spline", smoothing=0.8),
-                    fillcolor="rgba(1,1,1,0.10)",
+                    line=dict(color="#69C9D0", width=2.5, shape="spline", smoothing=0.8),
+                    fillcolor="rgba(105,201,208,0.12)",
                     hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
                 ))
                 fig_tk.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
@@ -12644,7 +12859,7 @@ with tab_ev:
                 if not _tkv_clean.empty:
                     fig_tkv = go.Figure(go.Bar(
                         x=_tkv_clean["data_date"], y=_tkv_clean["video_views"],
-                        marker=dict(color="#010101", opacity=0.75, cornerradius=3),
+                        marker=dict(color="#69C9D0", opacity=0.80, cornerradius=3),
                         hovertemplate="<b>%{x}</b><br>Video Views: %{y:,}<extra></extra>",
                     ))
                     fig_tkv.update_layout(height=200, margin=dict(l=0,r=0,t=4,b=20),
