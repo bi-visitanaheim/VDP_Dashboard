@@ -8508,7 +8508,7 @@ with tab_ov:
         # Build banner HTML — dark mode
         def _exec_kpi(label, value, sub="", color="#00D4C8"):
             return (
-                f'<div style="flex:1;min-width:140px;padding:14px 18px;'
+                f'<div style="flex:1;min-width:140px;max-width:220px;padding:14px 18px;'
                 f'background:rgba(255,255,255,0.05);'
                 f'border-radius:12px;border:1px solid rgba(255,255,255,0.10);'
                 f'border-top:3px solid {color};'
