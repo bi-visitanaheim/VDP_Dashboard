@@ -1,8 +1,10 @@
 """
 VDP Analytics — Interactive Visual Components
-Narrative boxes, blob loaders, shader wallpapers, iridescent data cards
+Narrative boxes, blob loaders, shader wallpapers, iridescent data cards,
+fun facts sprite, monthly highlights, topic animations.
 """
 
+import json
 import streamlit as st
 import streamlit.components.v1 as components
 
@@ -382,3 +384,316 @@ document.querySelectorAll('.mono-card').forEach(card => {{
 """
 
     components.html(html, height=height + 40)
+
+
+def render_fun_facts_sprite(facts: list, height: int = 480) -> None:
+    """
+    Canvas sprite animation — circles of various sizes orbit with fun facts.
+    facts: list of {"text": str, "value": str} dicts from real DB data.
+    Monochromatic VDP palette, Helvetica-style font.
+    """
+    facts_json = json.dumps(facts)
+
+    html = """
+<canvas id="vdp-sprite-sf" style="width:100%;height:%%HEIGHT%%px;border-radius:12px;background:#060d14;display:block;"></canvas>
+<script>
+(function(){
+  const canvas = document.getElementById('vdp-sprite-sf');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const DPR = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.clientWidth || 800;
+  const H = %%HEIGHT%%;
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(DPR, DPR);
+
+  const FACTS = %%FACTS_JSON%%;
+  const PAL   = ['#00D4C8','#21808D','#0567C8','#4A9EAD','#E2E8F0','#64748B','#32B8C6'];
+
+  const bubbles = FACTS.map((f, i) => {
+    const r = 34 + Math.random() * 52;
+    return {
+      x: r + Math.random() * (W - 2*r),
+      y: r + Math.random() * (H - 2*r),
+      r,
+      vx: (Math.random()-.5)*0.55,
+      vy: (Math.random()-.5)*0.55,
+      col: PAL[i % PAL.length],
+      fact: f,
+      alpha: 0,
+      phase: Math.random() * Math.PI * 2,
+      born: performance.now() + i * 220,
+    };
+  });
+
+  const ambient = Array.from({length: 18}, () => ({
+    x: Math.random()*W, y: Math.random()*H,
+    r: 3 + Math.random()*12,
+    vx:(Math.random()-.5)*.3, vy:(Math.random()-.5)*.3,
+    col: PAL[Math.floor(Math.random()*PAL.length)],
+    a: 0.06 + Math.random()*0.12,
+  }));
+
+  function wrapText(ctx, text, x, y, maxW, lineH) {
+    const words = text.split(' ');
+    let line = '';
+    const lines = [];
+    for(const w of words){
+      const test = line ? line+' '+w : w;
+      if(ctx.measureText(test).width > maxW && line){ lines.push(line); line=w; }
+      else line = test;
+    }
+    lines.push(line);
+    const top = y - (lines.length*lineH)/2;
+    lines.forEach((l,i)=> ctx.fillText(l, x, top + i*lineH + lineH/2));
+  }
+
+  function drawBubble(b, now) {
+    if(now < b.born){ b.alpha = 0; return; }
+    b.alpha = Math.min(1, (now - b.born)/800);
+    b.x += b.vx; b.y += b.vy;
+    if(b.x < b.r || b.x > W-b.r) b.vx *= -1;
+    if(b.y < b.r || b.y > H-b.r) b.vy *= -1;
+    const pulse = 1 + 0.04*Math.sin(now/900 + b.phase);
+    const r = b.r * pulse;
+    ctx.save();
+    ctx.globalAlpha = b.alpha * 0.92;
+    const grd = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, r*1.6);
+    grd.addColorStop(0, b.col+'33');
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(b.x, b.y, r*1.6, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, Math.PI*2);
+    ctx.strokeStyle = b.col+'88'; ctx.lineWidth = 1.5;
+    ctx.fillStyle = '#0a1520ee';
+    ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = b.alpha;
+    ctx.fillStyle = b.col;
+    ctx.font = `700 ${Math.round(r*0.38)}px 'Helvetica Neue',Helvetica,sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if(b.fact.value) ctx.fillText(b.fact.value, b.x, b.y - r*0.16);
+    ctx.fillStyle = '#CBD5E1';
+    const fs = Math.max(9, Math.round(r*0.19));
+    ctx.font = `500 ${fs}px 'Helvetica Neue',Helvetica,sans-serif`;
+    wrapText(ctx, b.fact.text, b.x, b.y + r*0.28, r*1.7, fs*1.25);
+    ctx.restore();
+  }
+
+  function frame(now) {
+    ctx.clearRect(0,0,W,H);
+    for(const a of ambient){
+      a.x+=a.vx; a.y+=a.vy;
+      if(a.x<0||a.x>W) a.vx*=-1;
+      if(a.y<0||a.y>H) a.vy*=-1;
+      ctx.globalAlpha=a.a;
+      ctx.fillStyle=a.col;
+      ctx.beginPath(); ctx.arc(a.x,a.y,a.r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+    for(const b of bubbles) drawBubble(b, now);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+""".replace("%%HEIGHT%%", str(height)).replace("%%FACTS_JSON%%", facts_json)
+
+    components.html(html, height=height + 8)
+
+
+def render_monthly_highlights(insights: list, height: int = 260) -> None:
+    """
+    Display top monthly insights from insights_daily with animated entrance cards.
+    insights: list of dicts with keys headline, body, category, audience.
+    """
+    if not insights:
+        return
+
+    icon_map = {
+        "demand_trend": "📈", "tbid_projection": "💰", "compression_outlook": "🔴",
+        "event_roi": "🎉", "tot_revenue": "🏛️", "feeder_market": "🗺️",
+        "visitor_profile": "👥", "economic_impact": "💹", "best_value": "⭐",
+        "rate_outlook": "🏷️", "upcoming_events": "📅", "peak_alert": "⚠️",
+        "feeder_value_gap": "🔍", "daytrip_conversion": "🚗", "oos_adr_premium": "✈️",
+        "compression_daytrip": "🏖️",
+    }
+
+    cards_html = ""
+    for i, ins in enumerate(insights[:3]):
+        icon  = icon_map.get(ins.get("category", ""), "◈")
+        aud   = str(ins.get("audience", "")).upper()
+        hl    = ins.get("headline", "")
+        body  = ins.get("body", "")
+        body_short = body[:160] + ("…" if len(body) > 160 else "")
+        delay = i * 120
+
+        cards_html += f"""
+<div style="flex:1;min-width:220px;
+  background:linear-gradient(135deg,#0d1f2d 0%,#091623 100%);
+  border:1px solid rgba(0,212,200,0.18);border-radius:14px;padding:18px 16px;
+  animation:hl-slide-in 0.5s {delay}ms both;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-18px;right:-18px;font-size:64px;opacity:.06;line-height:1;">{icon}</div>
+  <div style="font-size:9px;font-weight:800;letter-spacing:.12em;color:#00D4C8;
+              text-transform:uppercase;margin-bottom:6px;">{aud} · {ins.get("category","").replace("_"," ").title()}</div>
+  <div style="font-size:14px;font-weight:700;color:#E2E8F0;line-height:1.35;margin-bottom:8px;">{icon} {hl}</div>
+  <div style="font-size:12px;color:#94A3B8;line-height:1.5;">{body_short}</div>
+</div>"""
+
+    html = f"""
+<style>
+@keyframes hl-slide-in {{
+  from {{ opacity:0; transform: translateY(14px); }}
+  to   {{ opacity:1; transform: translateY(0); }}
+}}
+</style>
+<div style="display:flex;gap:12px;flex-wrap:wrap;padding:4px 0;">
+{cards_html}
+</div>
+"""
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def render_topic_animation(topic: str, data_points: list, height: int = 420) -> None:
+    """
+    Canvas-based animated data video for a chosen topic.
+    topic: display string, data_points: list of {"label":str,"value":str} dicts.
+    Loops through slides with smooth transitions. VDP monochromatic palette.
+    """
+    dp_json  = json.dumps(data_points)
+    topic_js = json.dumps(topic)
+
+    html = """
+<div style="position:relative;border-radius:16px;overflow:hidden;background:#040c14;">
+  <canvas id="vdp-topic-tv"
+    style="display:block;width:100%;height:%%HEIGHT%%px;"></canvas>
+  <div style="position:absolute;bottom:10px;right:14px;display:flex;gap:8px;z-index:10;">
+    <button id="btn-play-tv"
+      style="background:#00D4C888;border:0;border-radius:6px;color:#fff;
+             font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;">
+      ⏸ Pause
+    </button>
+    <button id="btn-export-tv"
+      style="background:#0567C888;border:0;border-radius:6px;color:#fff;
+             font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;">
+      ↗ Share
+    </button>
+  </div>
+</div>
+<script>
+(function(){
+  const canvas  = document.getElementById('vdp-topic-tv');
+  const btnPlay = document.getElementById('btn-play-tv');
+  const btnExp  = document.getElementById('btn-export-tv');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const DPR = window.devicePixelRatio || 1;
+  const W   = canvas.parentElement.clientWidth || 820;
+  const H   = %%HEIGHT%%;
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(DPR, DPR);
+
+  const TOPIC  = %%TOPIC_JS%%;
+  const POINTS = %%DP_JSON%%;
+  const PAL    = ['#00D4C8','#21808D','#32B8C6','#0567C8','#4A9EAD'];
+  let playing  = true;
+  let slideIdx = 0;
+  let slideT   = 0;
+  const SLIDE_DUR = 2800;
+
+  const particles = Array.from({length:28},()=>({
+    x: Math.random()*W, y: Math.random()*H,
+    r: 4 + Math.random()*22,
+    vx:(Math.random()-.5)*.4, vy:(Math.random()-.5)*.4,
+    col: PAL[Math.floor(Math.random()*PAL.length)],
+    a: 0.04+Math.random()*0.08,
+  }));
+
+  function ease(t){ return t<.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+  function drawBg(t){
+    const grd = ctx.createLinearGradient(0,0,W,H);
+    grd.addColorStop(0,'#04101a'); grd.addColorStop(1,'#061622');
+    ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+    for(const p of particles){
+      if(playing){ p.x+=p.vx; p.y+=p.vy; }
+      if(p.x<0||p.x>W) p.vx*=-1;
+      if(p.y<0||p.y>H) p.vy*=-1;
+      ctx.globalAlpha=p.a; ctx.fillStyle=p.col;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+    const sl = (t/1200) % H;
+    const slG = ctx.createLinearGradient(0,sl-4,0,sl+4);
+    slG.addColorStop(0,'transparent');
+    slG.addColorStop(.5,'rgba(0,212,200,0.06)');
+    slG.addColorStop(1,'transparent');
+    ctx.fillStyle=slG; ctx.fillRect(0,sl-4,W,8);
+  }
+
+  function drawSlide(pt, progress){
+    const alpha = ease(Math.min(progress*2,1)) * ease(Math.min((1-progress)*2,1));
+    const yOff  = (1 - ease(Math.min(progress*3,1))) * 28;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(0, yOff);
+    ctx.font='600 11px "Helvetica Neue",Helvetica,sans-serif';
+    ctx.fillStyle='#00D4C8'; ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(TOPIC.toUpperCase(), 28, 28);
+    ctx.strokeStyle='#00D4C844'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(28,46); ctx.lineTo(W-28,46); ctx.stroke();
+    const valSize = Math.min(64, W/9);
+    ctx.font=`800 ${valSize}px "Helvetica Neue",Helvetica,sans-serif`;
+    ctx.fillStyle='#E2E8F0'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(pt.value, W/2, H/2 - 12);
+    ctx.font='500 16px "Helvetica Neue",Helvetica,sans-serif';
+    ctx.fillStyle='#64748B';
+    ctx.fillText(pt.label, W/2, H/2 + valSize*0.58);
+    const cx=W/2, cy=H-52, rinR=18;
+    ctx.strokeStyle='#1E293B'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(cx,cy,rinR,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='#00D4C8'; ctx.lineWidth=3;
+    ctx.beginPath();
+    ctx.arc(cx,cy,rinR,-Math.PI/2,-Math.PI/2+progress*Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawBar(overall){
+    ctx.fillStyle='#0d1f2d'; ctx.fillRect(0,H-6,W,6);
+    ctx.fillStyle='#00D4C8'; ctx.fillRect(0,H-6,W*overall,6);
+  }
+
+  let last=0;
+  function frame(now){
+    const dt=Math.min(now-last,80); last=now;
+    if(playing) slideT+=dt;
+    if(slideT>=SLIDE_DUR){ slideT-=SLIDE_DUR; slideIdx=(slideIdx+1)%Math.max(1,POINTS.length); }
+    drawBg(now);
+    if(POINTS.length){
+      drawSlide(POINTS[slideIdx], slideT/SLIDE_DUR);
+      drawBar((slideIdx + slideT/SLIDE_DUR)/POINTS.length);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  btnPlay.addEventListener('click',()=>{
+    playing=!playing;
+    btnPlay.textContent=playing?'⏸ Pause':'▶ Play';
+  });
+  btnExp.addEventListener('click',()=>{
+    const a=document.createElement('a');
+    a.href=canvas.toDataURL('image/png');
+    a.download='vdp-'+TOPIC.replace(/\\s+/g,'-')+'.png';
+    a.click();
+  });
+})();
+</script>
+""".replace("%%HEIGHT%%", str(height)).replace("%%TOPIC_JS%%", topic_js).replace("%%DP_JSON%%", dp_json)
+
+    components.html(html, height=height + 52)
