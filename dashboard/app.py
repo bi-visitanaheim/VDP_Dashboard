@@ -859,14 +859,17 @@ st.markdown("""
     overflow-y: auto;
     overflow-x: hidden;
   }
-  /* Override insight-card hover lift while inside a flip card (avoid jitter) */
-  .dp-flip-card .insight-card {
+  /* Override hover lift inside flip cards (insight + kpi) */
+  .dp-flip-card .insight-card,
+  .dp-flip-card .kpi-card {
     margin-bottom: 0;
     height: 100%;
     box-sizing: border-box;
   }
-  .dp-flip-card .insight-card:hover {
+  .dp-flip-card .insight-card:hover,
+  .dp-flip-card .kpi-card:hover {
     transform: none;
+    box-shadow: none;
   }
   .dp-flip-back {
     transform: rotateY(180deg);
@@ -5431,7 +5434,8 @@ def event_icon_svg(icon_key: str) -> str:
 
 def kpi_card(label, value, delta, positive=True, neutral=False,
              icon: str = "", date_label: str = "", raw_value: float = 0.0,
-             sparkline_values: list = None, tooltip: str = "") -> str:
+             sparkline_values: list = None, tooltip: str = "",
+             back_html: str = "") -> str:
     css      = "kpi-delta-neutral" if neutral else ("kpi-delta-pos" if positive else "kpi-delta-neg")
     if neutral:
         arrow = "— "
@@ -5446,17 +5450,73 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
     svg        = kpi_metric_svg(label, positive, raw_value, sparkline_values)
     spark_html = sparkline_svg(sparkline_values, positive) if sparkline_values else ""
     title_attr = f' title="{tooltip}"' if tooltip else ""
+
+    # ── Comparison value (e.g. "66.3% / 76.4%") — split with distinct colors ──
+    val_str = str(value)
+    is_comparison = " / " in val_str
+    if is_comparison:
+        parts    = val_str.split(" / ", 1)
+        lbl_up   = label.upper()
+        vs_idx   = lbl_up.find(" VS. ")
+        if vs_idx != -1:
+            _la = label[:vs_idx].split(":")[-1].strip()
+            _lb = label[vs_idx + 5:].strip()
+        else:
+            _la, _lb = "A", "B"
+        front_value_html = (
+            f'<div style="display:flex;align-items:flex-end;gap:10px;margin:4px 0 2px;">'
+            f'<div>'
+            f'<div style="font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;'
+            f'color:#00D4C8;margin-bottom:2px;">{_la}</div>'
+            f'<div class="kpi-value" style="color:#00D4C8;line-height:1;">{parts[0]}</div>'
+            f'</div>'
+            f'<div style="font-size:18px;color:#334155;font-weight:300;padding-bottom:4px;">/</div>'
+            f'<div>'
+            f'<div style="font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;'
+            f'color:#64748B;margin-bottom:2px;">{_lb}</div>'
+            f'<div class="kpi-value" style="color:#94A3B8;line-height:1;">{parts[1]}</div>'
+            f'</div>'
+            f'</div>'
+        )
+    else:
+        front_value_html = f'<div class="kpi-value">{value}</div>'
+
+    # ── Auto-generate back face if not supplied ──────────────────────────────
+    if not back_html:
+        _trend_word  = "up" if (positive and not neutral) else ("down" if (not positive and not neutral) else "stable")
+        _trend_color = "#10B981" if positive and not neutral else ("#EF4444" if not positive and not neutral else "#94A3B8")
+        back_html = (
+            f'<div style="font-size:10px;font-weight:800;color:#00D4C8;text-transform:uppercase;'
+            f'letter-spacing:.08em;margin-bottom:10px;">{label}</div>'
+            f'<div style="font-size:22px;font-weight:800;color:#E2E8F0;margin-bottom:6px;">{value}</div>'
+            f'<div style="font-size:12px;color:{_trend_color};font-weight:700;margin-bottom:8px;">'
+            f'{trend_icon} Trending {_trend_word}: {delta}</div>'
+            + (f'<div style="font-size:11px;color:#64748B;">{date_label}</div>' if date_label else '')
+            + (f'<div style="font-size:11px;color:#94A3B8;margin-top:6px;">{tooltip}</div>' if tooltip else '')
+        )
+
+    # ── Flip card wrapper ─────────────────────────────────────────────────────
     return (
-        f'<div class="kpi-card"{title_attr}>'
+        f'<div class="dp-flip-card">'
+        f'<div class="dp-flip-inner">'
+        # Front face
+        f'<div class="dp-flip-front kpi-card"{title_attr}>'
         f'<div class="kpi-header">'
         f'<div class="kpi-label">{label}</div>'
         f'<div class="kpi-icon-svg">{svg}</div>'
         f'</div>'
-        f'<div class="kpi-value">{value}</div>'
+        f'{front_value_html}'
         f'<div class="{css}">{trend_icon}{arrow}{delta}</div>'
-        f'{date_html}'
-        f'{spark_html}'
+        f'{date_html}{spark_html}'
+        f'<span class="dp-flip-hint">↩ flip for detail</span>'
         f'</div>'
+        # Back face
+        f'<div class="dp-flip-back kpi-card" style="display:flex;flex-direction:column;">'
+        f'{back_html}'
+        f'<span class="dp-flip-hint">↩ flip back</span>'
+        f'</div>'
+        f'</div>'   # dp-flip-inner
+        f'</div>'   # dp-flip-card
     )
 
 
@@ -8599,7 +8659,10 @@ with tab_ov:
     st.markdown("---")
 
     # ── Overview Sub-Tabs ──────────────────────────────────────────────────────
-    _ov_t1, _ov_t2, _ov_t3, _ov_t4 = st.tabs(["📊 Performance Metrics", "📋 Board Report", "🧠 More Analysis", "🎯 Strategy Goals"])
+    _ov_t1, _ov_t5, _ov_t2, _ov_t4, _ov_t3 = st.tabs([
+        "📊 Performance", "🎬 Stories & Discovery",
+        "📋 Board Report", "🎯 Strategy Goals", "🧠 AI Analysis",
+    ])
 
     # ── Board Report → sub-tab 2 ──────────────────────────────────────────────
     with _ov_t2:
@@ -9231,108 +9294,19 @@ with tab_ov:
         except Exception:
             pass
 
-        # ── KPI Blob Loaders & Mono Cards ──────────────────────────────────────────
-        st.markdown("### Interactive Performance Indicators", unsafe_allow_html=True)
-        st.markdown("*Visual loading indicators showing real-time data availability*", unsafe_allow_html=True)
-        render_kpi_blob_loaders(height=300)
-
+        # ── Executive Narrative (end of Performance tab) ─────────────────────────
         st.divider()
-
-        # Mono cards showing key 30-day KPIs
-        if m:
-            _card_data = [
-                {"label": "Occupancy", "value": f"{m.get('occ_30', 0):.1f}%", "unit": "30-day avg"},
-                {"label": "ADR", "value": f"${m.get('adr_30', 0):,.0f}", "unit": "avg daily rate"},
-                {"label": "RevPAR", "value": f"${m.get('revpar_30', 0):,.0f}", "unit": "30-day avg"},
-                {"label": "Occ Trend", "value": f"{m.get('occ_delta', 0):+.1f}%", "unit": "YOY change"},
-            ]
-            render_mono_cards(_card_data, "ov", height=200)
-
-        st.divider()
-
-        # ── Fun Facts Sprite ─────────────────────────────────────────────────────
-        st.markdown("### Traveler & Market Fun Facts", unsafe_allow_html=True)
-        try:
-            _ff_facts = []
-            # Layer 1: STR KPIs
-            if m:
-                _ff_facts += [
-                    {"text": "Occupancy Rate",    "value": f"{m.get('occ_30',0):.1f}%"},
-                    {"text": "Avg Daily Rate",    "value": f"${m.get('adr_30',0):,.0f}"},
-                    {"text": "RevPAR",            "value": f"${m.get('revpar_30',0):,.0f}"},
-                ]
-            # Layer 1: Datafy visitor economy
-            if not df_dfy_ov.empty:
-                _dv = df_dfy_ov.iloc[0]
-                _tt = int(_dv.get("total_trips", 0) or 0)
-                _ff_facts += [
-                    {"text": "Total Annual Trips", "value": f"{_tt/1e6:.1f}M" if _tt >= 1e6 else f"{_tt:,}"},
-                    {"text": "Out-of-State Visitors", "value": f"{float(_dv.get('out_of_state_vd_pct', 0) or 0):.0f}%"},
-                    {"text": "Avg Length of Stay", "value": f"{float(_dv.get('avg_los', 0) or 0):.1f} days"},
-                    {"text": "Overnight Stays", "value": f"{float(_dv.get('overnight_pct', 0) or 0):.0f}%"},
-                ]
-            # Layer 1: Top feeder market
-            if not df_dfy_dma.empty:
-                _top_dma = str(df_dfy_dma.iloc[0].get("dma", "—"))
-                _top_dma_pct = float(df_dfy_dma.iloc[0].get("visitor_days_share_pct", 0) or 0)
-                _ff_facts.append({"text": f"Top Market: {_top_dma}", "value": f"{_top_dma_pct:.1f}%"})
-            # Ohana Fest fixed reference (Layer 1 truth from CLAUDE.md)
-            _ff_facts += [
-                {"text": "Ohana Fest Destination Spend", "value": "$18.4M"},
-                {"text": "Ohana Fest OOS Visitors",      "value": "68%"},
-                {"text": "Event ADR Lift",               "value": "+$139"},
-                {"text": "Avg Accommodation Spend/Trip", "value": "$1,219"},
-            ]
-            if _ff_facts:
-                render_fun_facts_sprite(_ff_facts, height=440)
-        except Exception:
-            pass
-
-        st.divider()
-
-        # ── Topic Animation ──────────────────────────────────────────────────────
-        st.markdown("### 🎬 Data Story — Choose a Topic", unsafe_allow_html=True)
-        _topic_options = {
-            "Occupancy":       None,
-            "Revenue":         None,
-            "Events":          None,
-            "Markets":         None,
-            "Visitor Economy": None,
-        }
-        _sel_topic = st.selectbox(
-            "Topic", list(_topic_options.keys()), label_visibility="collapsed", key="ov_topic_sel"
+        st.markdown("### 📝 Executive Narrative", unsafe_allow_html=True)
+        st.caption("Edit below — trigger particle effects by typing: fire · smoke · metal · wind")
+        _narrative_ov = (
+            "This fire of structural market leadership is driven by metal-hard positioning "
+            "across key segments. Wind from competitive pressures in the Bay Area continues "
+            "to shape demand patterns. Smoke signals suggest summer bookings will remain "
+            "strong, with June compression reaching 82% occupancy and ADR holding steady. "
+            "Event-driven demand — particularly Ohana Fest ($18.4M destination spend) — "
+            "reinforces our destination value. RevPAR tracking YOY +12.3%, supply stable, demand firm."
         )
-        try:
-            _dp: list = []
-            if _sel_topic == "Occupancy" and not df_kpi.empty:
-                _dk = df_kpi.tail(8)
-                _dp = [{"label": str(r["as_of_date"])[:10], "value": f"{r['occ_pct']:.1f}%"}
-                       for _, r in _dk.iterrows() if pd.notna(r.get("occ_pct"))]
-            elif _sel_topic == "Revenue" and not df_monthly.empty:
-                _dm = df_monthly.tail(8)
-                _dp = [{"label": str(r["as_of_date"])[:7], "value": f"${r['revenue']/1e6:.2f}M"}
-                       for _, r in _dm.iterrows() if pd.notna(r.get("revenue"))]
-            elif _sel_topic == "Events" and not df_vdp_events.empty:
-                _de = df_vdp_events.head(8)
-                _dp = [{"label": str(r.get("event_name",""))[:28], "value": str(r.get("event_date",""))[:10]}
-                       for _, r in _de.iterrows()]
-            elif _sel_topic == "Markets" and not df_dfy_dma.empty:
-                _ddma = df_dfy_dma.head(8)
-                _dp = [{"label": str(r.get("dma",""))[:24], "value": f"{float(r.get('visitor_days_share_pct',0) or 0):.1f}%"}
-                       for _, r in _ddma.iterrows()]
-            elif _sel_topic == "Visitor Economy" and not df_dfy_ov.empty:
-                _dov = df_dfy_ov.iloc[0]
-                _dp = [
-                    {"label": "Total Trips",         "value": f"{int(_dov.get('total_trips',0) or 0)/1e6:.1f}M"},
-                    {"label": "Overnight %",          "value": f"{float(_dov.get('overnight_pct',0) or 0):.0f}%"},
-                    {"label": "Out-of-State",         "value": f"{float(_dov.get('out_of_state_vd_pct',0) or 0):.0f}%"},
-                    {"label": "Avg Length of Stay",   "value": f"{float(_dov.get('avg_los',0) or 0):.1f}d"},
-                ]
-            if not _dp:
-                _dp = [{"label": "No data loaded", "value": "—"}]
-            render_topic_animation(_sel_topic, _dp, height=380)
-        except Exception:
-            pass
+        render_narrative_box("ov", _narrative_ov, height=240)
 
     # ── VDP Analyst Panel ──────────────────────────────────────────────────────
     # ── AI Analysis → sub-tab 3 ─────────────────────────────────────────────────
@@ -10230,6 +10204,103 @@ with tab_ov:
         except Exception:
             pass
 
+    # ── 🎬 Stories & Discovery Sub-Tab ───────────────────────────────────────────
+    with _ov_t5:
+        st.markdown(sec_div("🎬 Stories & Discovery"), unsafe_allow_html=True)
+
+        # ── Topic Animation ──────────────────────────────────────────────────────
+        st.markdown("#### Choose a Data Story", unsafe_allow_html=True)
+        st.caption("Select a topic — the animated story updates with live data from the brain.")
+        _story_topics = ["Occupancy", "Revenue", "Events", "Markets", "Visitor Economy"]
+        _sel_story = st.selectbox(
+            "Story Topic", _story_topics, label_visibility="collapsed", key="ov_story_sel"
+        )
+        try:
+            _sdp: list = []
+            if _sel_story == "Occupancy" and not df_kpi.empty:
+                _sdp = [{"label": str(r["as_of_date"])[:10], "value": f"{r['occ_pct']:.1f}%"}
+                        for _, r in df_kpi.tail(8).iterrows() if pd.notna(r.get("occ_pct"))]
+            elif _sel_story == "Revenue" and not df_monthly.empty:
+                _sdp = [{"label": str(r["as_of_date"])[:7], "value": f"${r['revenue']/1e6:.2f}M"}
+                        for _, r in df_monthly.tail(8).iterrows() if pd.notna(r.get("revenue"))]
+            elif _sel_story == "Events" and not df_vdp_events.empty:
+                _sdp = [{"label": str(r.get("event_name", ""))[:28], "value": str(r.get("event_date", ""))[:10]}
+                        for _, r in df_vdp_events.head(8).iterrows()]
+            elif _sel_story == "Markets" and not df_dfy_dma.empty:
+                _sdp = [{"label": str(r.get("dma", ""))[:24],
+                         "value": f"{float(r.get('visitor_days_share_pct', 0) or 0):.1f}%"}
+                        for _, r in df_dfy_dma.head(8).iterrows()]
+            elif _sel_story == "Visitor Economy" and not df_dfy_ov.empty:
+                _dov2 = df_dfy_ov.iloc[0]
+                _sdp = [
+                    {"label": "Total Trips",       "value": f"{int(_dov2.get('total_trips', 0) or 0)/1e6:.1f}M"},
+                    {"label": "Overnight %",        "value": f"{float(_dov2.get('overnight_pct', 0) or 0):.0f}%"},
+                    {"label": "Out-of-State",       "value": f"{float(_dov2.get('out_of_state_vd_pct', 0) or 0):.0f}%"},
+                    {"label": "Avg Length of Stay", "value": f"{float(_dov2.get('avg_los', 0) or 0):.1f}d"},
+                ]
+            if not _sdp:
+                _sdp = [{"label": "No data loaded", "value": "—"}]
+            render_topic_animation(_sel_story, _sdp, height=380)
+        except Exception:
+            pass
+
+        st.divider()
+
+        # ── Traveler & Market Fun Facts ──────────────────────────────────────────
+        st.markdown("#### Traveler & Market Fun Facts", unsafe_allow_html=True)
+        st.caption("Live data bubbles — each circle carries a real number from the brain.")
+        try:
+            _ff2: list = []
+            if m:
+                _ff2 += [
+                    {"text": "Occupancy Rate",   "value": f"{m.get('occ_30', 0):.1f}%"},
+                    {"text": "Avg Daily Rate",   "value": f"${m.get('adr_30', 0):,.0f}"},
+                    {"text": "RevPAR",           "value": f"${m.get('revpar_30', 0):,.0f}"},
+                ]
+            if not df_dfy_ov.empty:
+                _dv2 = df_dfy_ov.iloc[0]
+                _tt2 = int(_dv2.get("total_trips", 0) or 0)
+                _ff2 += [
+                    {"text": "Total Annual Trips",   "value": f"{_tt2/1e6:.1f}M" if _tt2 >= 1e6 else f"{_tt2:,}"},
+                    {"text": "Out-of-State Visitors","value": f"{float(_dv2.get('out_of_state_vd_pct', 0) or 0):.0f}%"},
+                    {"text": "Avg Length of Stay",   "value": f"{float(_dv2.get('avg_los', 0) or 0):.1f} days"},
+                    {"text": "Overnight Stays",      "value": f"{float(_dv2.get('overnight_pct', 0) or 0):.0f}%"},
+                ]
+            if not df_dfy_dma.empty:
+                _top2 = str(df_dfy_dma.iloc[0].get("dma", "—"))
+                _top2_pct = float(df_dfy_dma.iloc[0].get("visitor_days_share_pct", 0) or 0)
+                _ff2.append({"text": f"Top Market: {_top2}", "value": f"{_top2_pct:.1f}%"})
+            _ff2 += [
+                {"text": "Ohana Fest Destination Spend", "value": "$18.4M"},
+                {"text": "Ohana Fest OOS Visitors",      "value": "68%"},
+                {"text": "Event ADR Lift",               "value": "+$139"},
+                {"text": "Avg Accommodation Spend/Trip", "value": "$1,219"},
+            ]
+            if _ff2:
+                render_fun_facts_sprite(_ff2, height=440)
+        except Exception:
+            pass
+
+        st.divider()
+
+        # ── Live Data Pulse (blob loaders) ───────────────────────────────────────
+        st.markdown("#### Live Data Pulse", unsafe_allow_html=True)
+        st.caption("50 destination data signals — each blob represents an active pipeline metric.")
+        render_kpi_blob_loaders(height=300)
+
+        st.divider()
+
+        # ── Iridescent KPI Cards ─────────────────────────────────────────────────
+        st.markdown("#### Key Metrics — Interactive View", unsafe_allow_html=True)
+        if m:
+            _story_cards = [
+                {"label": "Occupancy",  "value": f"{m.get('occ_30', 0):.1f}%",  "unit": "30-day avg"},
+                {"label": "ADR",        "value": f"${m.get('adr_30', 0):,.0f}",  "unit": "avg daily rate"},
+                {"label": "RevPAR",     "value": f"${m.get('revpar_30', 0):,.0f}","unit": "30-day avg"},
+                {"label": "Occ Trend",  "value": f"{m.get('occ_delta', 0):+.1f}%","unit": "YOY change"},
+            ]
+            render_mono_cards(_story_cards, "ov5", height=200)
+
     # ── Strategy Goals Sub-Tab ─────────────────────────────────────────────────
     with _ov_t4:
         st.markdown(sec_div("🎯 Strategy Goals Tracker"), unsafe_allow_html=True)
@@ -10451,10 +10522,6 @@ with tab_ov:
                         else:
                             st.warning("Title and target value are required.")
 
-        # ── Narrative Insights Box ────────────────────────────────────────────────
-        st.markdown("### Executive Narrative", unsafe_allow_html=True)
-        narrative_ov = """This fire of structural market leadership is driven by our metal-hard positioning across key segments. Wind from competitive pressures in the Bay Area continues to shape demand patterns. Smoke signals suggest summer bookings will remain strong, with June compression reaching 82% occupancy and ADR holding steady at $189. Event-driven demand, particularly Ohana Fest impact ($18.4M destination spend), reinforces our destination value. The next 30 days show strong fundamentals: RevPAR tracking YoY +12.3%, with supply stable and demand firm."""
-        render_narrative_box("ov", narrative_ov, height=280)
 
     # ══════════════════════════════════════════════════════════════════════════════
     # TAB 2 — TRENDS

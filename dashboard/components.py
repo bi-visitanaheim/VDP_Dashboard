@@ -156,55 +156,57 @@ def render_kpi_blob_loaders(height: int = 560) -> None:
       grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
       gap: 16px;
       padding: 16px;
-      background: linear-gradient(135deg, rgba(0,212,200,0.05) 0%, rgba(167,139,250,0.05) 100%);
+      background: linear-gradient(135deg, rgba(0,212,200,0.04) 0%, rgba(5,103,200,0.04) 100%);
       border-radius: 8px;
     }}
+    /* base — no animation shorthand here to avoid override conflicts */
     .blob {{
       width: 64px;
       height: 64px;
-      border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-      animation: blob-anim 3s infinite;
       position: relative;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+      animation-fill-mode: both;
     }}
     @keyframes blob-breathe {{
-      0%, 100% {{ border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }}
-      50% {{ border-radius: 30% 60% 70% 40% / 40% 60% 30% 70%; }}
+      0%, 100% {{ border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }}
+      50%       {{ border-radius: 30% 60% 70% 40% / 40% 60% 30% 70%; transform: scale(1.05); }}
     }}
     @keyframes blob-morph {{
-      0%, 100% {{ border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }}
-      25% {{ border-radius: 40% 60% 70% 30% / 70% 60% 40% 30%; }}
-      50% {{ border-radius: 70% 30% 60% 40% / 30% 70% 60% 40%; }}
-      75% {{ border-radius: 40% 70% 40% 60% / 60% 40% 70% 30%; }}
+      0%   {{ border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }}
+      25%  {{ border-radius: 40% 60% 70% 30% / 70% 60% 40% 30%; }}
+      50%  {{ border-radius: 70% 30% 60% 40% / 30% 70% 60% 40%; }}
+      75%  {{ border-radius: 40% 70% 40% 60% / 60% 40% 70% 30%; }}
+      100% {{ border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }}
     }}
     @keyframes blob-pulse {{
-      0%, 100% {{ transform: scale(1); }}
-      50% {{ transform: scale(1.1); }}
+      0%, 100% {{ transform: scale(0.95); border-radius: 50%; }}
+      50%       {{ transform: scale(1.10); border-radius: 40% 60% 60% 40% / 40% 40% 60% 60%; }}
     }}
     @keyframes blob-squish {{
-      0%, 100% {{ transform: scaleY(1); }}
-      50% {{ transform: scaleY(1.2) scaleX(0.9); }}
+      0%, 100% {{ transform: scaleY(1)   scaleX(1);   border-radius: 60% 40% 40% 60% / 60% 60% 40% 40%; }}
+      50%       {{ transform: scaleY(1.2) scaleX(0.85); border-radius: 40% 60% 60% 40% / 70% 30% 70% 30%; }}
     }}
-    @keyframes blob-spin {{
-      0% {{ transform: rotate(0deg); }}
-      100% {{ transform: rotate(360deg); }}
+    @keyframes blob-drift {{
+      0%   {{ border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translateY(0px); }}
+      33%  {{ border-radius: 30% 60% 70% 40% / 50% 70% 30% 50%; transform: translateY(-6px); }}
+      66%  {{ border-radius: 70% 30% 40% 60% / 40% 60% 50% 50%; transform: translateY(4px); }}
+      100% {{ border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translateY(0px); }}
     }}
-    .blob1 {{ background: #00D4C8; animation-name: blob-breathe; animation-duration: 4s; }}
-    .blob2 {{ background: #0567C8; animation-name: blob-morph; animation-duration: 5s; }}
-    .blob3 {{ background: #21808D; animation-name: blob-pulse; animation-duration: 3s; }}
-    .blob4 {{ background: #10B981; animation-name: blob-squish; animation-duration: 3.5s; }}
-    .blob5 {{ background: #FF8C42; animation-name: blob-spin; animation-duration: 6s; }}
-    .blob6 {{ background: #00D4C8; animation-name: blob-morph; animation-duration: 4.5s; }}
-    .blob7 {{ background: #0567C8; animation-name: blob-breathe; animation-duration: 3.8s; }}
-    .blob8 {{ background: #21808D; animation-name: blob-squish; animation-duration: 4.2s; }}
-    .blob9 {{ background: #10B981; animation-name: blob-pulse; animation-duration: 3.2s; }}
-    .blob10 {{ background: #FF8C42; animation-name: blob-morph; animation-duration: 5.5s; }}
-    .blob-set2 {{ opacity: 0.8; }}
-    .blob-set3 {{ opacity: 0.6; }}
-    .blob-set4 {{ opacity: 0.7; }}
-    .blob-set5 {{ opacity: 0.9; }}
+    /* each variant: full animation shorthand — name, duration only needed */
+    .blob1  {{ background:#00D4C8; border-radius:60% 40% 30% 70%/60% 30% 70% 40%; animation-name:blob-breathe; animation-duration:3.8s; }}
+    .blob2  {{ background:#0567C8; border-radius:40% 60% 70% 30%/70% 60% 40% 30%; animation-name:blob-morph;   animation-duration:5.2s; }}
+    .blob3  {{ background:#21808D; border-radius:50% 50% 40% 60%/60% 40% 50% 50%; animation-name:blob-pulse;   animation-duration:2.9s; }}
+    .blob4  {{ background:#10B981; border-radius:60% 40% 60% 40%/40% 60% 40% 60%; animation-name:blob-squish;  animation-duration:3.4s; }}
+    .blob5  {{ background:#FF8C42; border-radius:70% 30% 50% 50%/50% 50% 70% 30%; animation-name:blob-drift;   animation-duration:4.6s; }}
+    .blob6  {{ background:#32B8C6; border-radius:30% 70% 40% 60%/60% 40% 60% 40%; animation-name:blob-morph;   animation-duration:4.1s; }}
+    .blob7  {{ background:#0A3D54; border-radius:50% 50% 60% 40%/40% 60% 50% 50%; animation-name:blob-breathe; animation-duration:5.5s; }}
+    .blob8  {{ background:#21808D; border-radius:40% 60% 30% 70%/70% 30% 60% 40%; animation-name:blob-squish;  animation-duration:4.8s; }}
+    .blob9  {{ background:#10B981; border-radius:60% 40% 70% 30%/30% 70% 40% 60%; animation-name:blob-pulse;   animation-duration:3.1s; }}
+    .blob10 {{ background:#FF8C42; border-radius:50% 50% 40% 60%/60% 40% 70% 30%; animation-name:blob-drift;   animation-duration:6.0s; }}
   </style>
   <div class="blob-grid">
-    {"".join(f'<div class="blob blob{(i%10)+1}" style="animation-delay: {i*0.1}s;"></div>' for i in range(50))}
+    {"".join(f'<div class="blob blob{(i%10)+1}" style="animation-delay:{i*0.12:.2f}s;"></div>' for i in range(50))}
   </div>
 </div>
 """
