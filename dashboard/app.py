@@ -4934,34 +4934,60 @@ def stream_claude_response(prompt: str, api_key: str):
     Anthropic API caches it for 5 minutes (ephemeral TTL). Repeated queries within that
     window pay cache-read rates (~10% of base input token price) instead of full input rates.
     The dynamic user message (live metrics via _base / build_prompt) is never cached.
+
+    Timeout: 120 s read / 10 s connect via httpx.Timeout to prevent stream idle errors
+    when the large SYSTEM_PROMPT causes a slow first-token delay.
+    One automatic retry on timeout or connection errors.
     """
     if not ANTHROPIC_AVAILABLE:
         yield "⚠️ `anthropic` package not installed. Run: `pip install anthropic` in your venv."
         return
+
+    # httpx is bundled with anthropic — safe to import
     try:
-        client = anthropic.Anthropic(api_key=api_key)
-        with client.messages.stream(
-            model=CLAUDE_MODEL,
-            max_tokens=1024,
-            system=[
-                {
-                    "type": "text",
-                    "text": SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            messages=[{"role": "user", "content": prompt}],
-        ) as stream:
-            for text in stream.text_stream:
-                yield text
-    except Exception as e:
-        err = str(e)
-        if "401" in err or "authentication" in err.lower():
-            yield "⚠️ **Invalid API key.** Check your key in the sidebar VDP Analyst section and try again."
-        elif "429" in err:
-            yield "⚠️ **Rate limited.** Please wait a moment and try again."
-        else:
-            yield f"⚠️ **API Error:** {err[:200]}"
+        import httpx as _httpx
+        _timeout = _httpx.Timeout(120.0, connect=10.0)
+    except ImportError:
+        _timeout = None
+
+    _last_err = ""
+    for _attempt in range(2):
+        try:
+            _ck = {"api_key": api_key, "max_retries": 0}
+            if _timeout is not None:
+                _ck["timeout"] = _timeout
+            client = anthropic.Anthropic(**_ck)
+            with client.messages.stream(
+                model=CLAUDE_MODEL,
+                max_tokens=1024,
+                system=[
+                    {
+                        "type": "text",
+                        "text": SYSTEM_PROMPT,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+                messages=[{"role": "user", "content": prompt}],
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
+            return  # success
+        except Exception as e:
+            _last_err = str(e)
+            _el = _last_err.lower()
+            if _attempt == 0 and ("timeout" in _el or "idle" in _el or "connection" in _el):
+                continue  # silent retry once on transient network errors
+            break
+
+    err = _last_err
+    if "401" in err or "authentication" in err.lower():
+        yield "⚠️ **Invalid API key.** Check your key in the sidebar VDP Analyst section and try again."
+    elif "429" in err:
+        yield "⚠️ **Rate limited.** Please wait a moment and try again."
+    elif "timeout" in err.lower() or "idle" in err.lower():
+        yield "⚠️ **Request timed out.** The AI took too long to respond — please try again."
+    else:
+        yield f"⚠️ **API Error:** {err[:200]}"
 
 # ─── Multi-Model AI Router ────────────────────────────────────────────────────
 
@@ -4976,26 +5002,47 @@ def _stream_openai_compat(prompt: str, model: str, api_key_val: str, base_url: s
         yield f"⚠️ {provider} API key not configured. Add `{key_name}` to your `.env` file."
         return
     try:
-        kwargs = {"api_key": api_key_val}
-        if base_url:
-            kwargs["base_url"] = base_url
-        client = _openai_sdk.OpenAI(**kwargs)
-        sys_content = SYSTEM_PROMPT + ("\n\n" + extra_system if extra_system else "")
-        with client.chat.completions.create(
-            model=model,
-            max_tokens=1500,
-            stream=True,
-            messages=[
-                {"role": "system", "content": sys_content},
-                {"role": "user",   "content": prompt},
-            ],
-        ) as stream:
-            for chunk in stream:
-                delta = chunk.choices[0].delta.content
-                if delta:
-                    yield delta
-    except Exception as e:
-        yield f"⚠️ API error: {str(e)[:300]}"
+        import httpx as _httpx
+        _oai_timeout = _httpx.Timeout(120.0, connect=10.0)
+    except ImportError:
+        _oai_timeout = None
+
+    _last_oai_err = ""
+    for _attempt in range(2):
+        try:
+            kwargs = {"api_key": api_key_val}
+            if base_url:
+                kwargs["base_url"] = base_url
+            if _oai_timeout is not None:
+                kwargs["timeout"] = _oai_timeout
+            client = _openai_sdk.OpenAI(**kwargs)
+            sys_content = SYSTEM_PROMPT + ("\n\n" + extra_system if extra_system else "")
+            with client.chat.completions.create(
+                model=model,
+                max_tokens=1500,
+                stream=True,
+                messages=[
+                    {"role": "system", "content": sys_content},
+                    {"role": "user",   "content": prompt},
+                ],
+            ) as stream:
+                for chunk in stream:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        yield delta
+            return
+        except Exception as e:
+            _last_oai_err = str(e)
+            _el = _last_oai_err.lower()
+            if _attempt == 0 and ("timeout" in _el or "idle" in _el or "connection" in _el):
+                continue
+            break
+
+    err = _last_oai_err
+    if "timeout" in err.lower() or "idle" in err.lower():
+        yield "⚠️ **Request timed out.** Please try again."
+    else:
+        yield f"⚠️ API error: {err[:300]}"
 
 
 def _stream_gemini(prompt: str, model: str, api_key_val: str):
