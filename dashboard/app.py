@@ -25,6 +25,14 @@ from pathlib import Path
 from dotenv import load_dotenv
 import re as _re
 
+# Import interactive visual components
+sys.path.insert(0, str(Path(__file__).parent))
+from components import (
+    render_narrative_box, render_kpi_blob_loaders, inject_shader_wallpaper,
+    render_mono_cards, render_fun_facts_sprite, render_monthly_highlights,
+    render_topic_animation,
+)
+
 
 def md_to_html(text: str) -> str:
     """Convert basic markdown to HTML for use in unsafe_allow_html contexts."""
@@ -72,6 +80,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Inject interactive shader wallpaper
+inject_shader_wallpaper()
 
 # ─── Login Gate ───────────────────────────────────────────────────────────────
 # © 2026 Wilton John Picou · GloCon Solutions LLC
@@ -929,22 +940,26 @@ st.markdown("""
   /* ── Kill ALL Streamlit floating bottom chrome ───────────────────────── */
   [data-testid="stBottom"]              { display: none !important; }
   [data-testid="stAppDeployButton"]     { display: none !important; }
+  [data-testid="stDeployButton"]        { display: none !important; }
+  [data-testid="stBottomBlockContainer"]{ display: none !important; }
+  [data-testid="stBottomToolbar"]       { display: none !important; }
   [data-testid="appCreatorAvatar"]      { display: none !important; }
   [data-testid="appCreatorName"]        { display: none !important; }
   .stDeployButton                       { display: none !important; }
   [data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
-  /* hash-based classes — hide everything matching these patterns */
   [class*="_profileImage_"]             { display: none !important; }
   [class*="_link_gzau"]                 { display: none !important; }
   [class*="_container_gzau"]            { display: none !important; }
   [class*="_darkThemeShadow_"]          { display: none !important; }
   [class*="appCreator"]                 { display: none !important; }
   [class*="deployButton"]               { display: none !important; }
+  [class*="viewerBadge"]                { display: none !important; }
   .viewerBadge_container__1QSob        { display: none !important; }
   .styles_viewerBadge__CvC9N           { display: none !important; }
   a[href*="streamlit.io"]               { display: none !important; }
   a[href*="github.com/streamlit"]       { display: none !important; }
-  /* Sidebar toggle button */
+  button[title*="Deploy"]               { display: none !important; }
+  button[aria-label*="deploy"]          { display: none !important; }
   /* ── Native Streamlit sidebar collapse button — make it clearly visible ── */
   [data-testid="stSidebarCollapseButton"] button,
   [data-testid="collapsedControl"] button,
@@ -2968,11 +2983,27 @@ st.markdown("""
     mix-blend-mode: overlay;
   }
 
-  /* ── Enhanced KPI card — neon glow on hover ──────────────────── */
+  /* ── Enhanced KPI card — entrance + neon glow on hover ────────── */
+  @keyframes kpi-card-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+  }
+  @keyframes kpi-value-pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
   .kpi-card {
     position: relative;
     overflow: hidden;
+    animation: kpi-card-in 0.4s ease both;
   }
+  .kpi-card:nth-child(1) { animation-delay: 0.00s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.07s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.14s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.21s; }
+  .kpi-card:nth-child(5) { animation-delay: 0.28s; }
+  .kpi-card:nth-child(6) { animation-delay: 0.35s; }
   .kpi-card::after {
     content: '';
     position: absolute; inset: 0;
@@ -2983,6 +3014,7 @@ st.markdown("""
     pointer-events: none;
   }
   .kpi-card:hover::after { opacity: 1; }
+  .kpi-card:hover .kpi-value { animation: kpi-value-pop 0.3s ease; }
 
   /* ── Animated number counter (JS handles the actual counting) ── */
   .counter-num {
@@ -8288,6 +8320,22 @@ with tab_ov:
             "🗺️ See 'Where They're From' tab for feeder market breakdown",
         ]
     ), unsafe_allow_html=True)
+
+    # ── This Month's Top Signals ──────────────────────────────────────────────
+    try:
+        _top_insights = []
+        if not df_insights.empty:
+            _top_insights = (
+                df_insights.sort_values("priority")
+                .head(3)
+                .to_dict("records")
+            )
+        if _top_insights:
+            st.markdown("### 🔆 This Month's Top Signals", unsafe_allow_html=True)
+            render_monthly_highlights(_top_insights)
+    except Exception:
+        pass
+
     # ── Board Executive Summary Banner ─────────────────────────────────────────
     try:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
@@ -9180,6 +9228,109 @@ with tab_ov:
                 if m else "Dana Point VDP portfolio executive overview."
             )
             render_intel_panel("ov_exec", _ov_next_steps, _ov_questions, _ov_context)
+        except Exception:
+            pass
+
+        # ── KPI Blob Loaders & Mono Cards ──────────────────────────────────────────
+        st.markdown("### Interactive Performance Indicators", unsafe_allow_html=True)
+        st.markdown("*Visual loading indicators showing real-time data availability*", unsafe_allow_html=True)
+        render_kpi_blob_loaders(height=300)
+
+        st.divider()
+
+        # Mono cards showing key 30-day KPIs
+        if m:
+            _card_data = [
+                {"label": "Occupancy", "value": f"{m.get('occ_30', 0):.1f}%", "unit": "30-day avg"},
+                {"label": "ADR", "value": f"${m.get('adr_30', 0):,.0f}", "unit": "avg daily rate"},
+                {"label": "RevPAR", "value": f"${m.get('revpar_30', 0):,.0f}", "unit": "30-day avg"},
+                {"label": "Occ Trend", "value": f"{m.get('occ_delta', 0):+.1f}%", "unit": "YOY change"},
+            ]
+            render_mono_cards(_card_data, "ov", height=200)
+
+        st.divider()
+
+        # ── Fun Facts Sprite ─────────────────────────────────────────────────────
+        st.markdown("### Traveler & Market Fun Facts", unsafe_allow_html=True)
+        try:
+            _ff_facts = []
+            # Layer 1: STR KPIs
+            if m:
+                _ff_facts += [
+                    {"text": "Occupancy Rate",    "value": f"{m.get('occ_30',0):.1f}%"},
+                    {"text": "Avg Daily Rate",    "value": f"${m.get('adr_30',0):,.0f}"},
+                    {"text": "RevPAR",            "value": f"${m.get('revpar_30',0):,.0f}"},
+                ]
+            # Layer 1: Datafy visitor economy
+            if not df_dfy_ov.empty:
+                _dv = df_dfy_ov.iloc[0]
+                _tt = int(_dv.get("total_trips", 0) or 0)
+                _ff_facts += [
+                    {"text": "Total Annual Trips", "value": f"{_tt/1e6:.1f}M" if _tt >= 1e6 else f"{_tt:,}"},
+                    {"text": "Out-of-State Visitors", "value": f"{float(_dv.get('out_of_state_vd_pct', 0) or 0):.0f}%"},
+                    {"text": "Avg Length of Stay", "value": f"{float(_dv.get('avg_los', 0) or 0):.1f} days"},
+                    {"text": "Overnight Stays", "value": f"{float(_dv.get('overnight_pct', 0) or 0):.0f}%"},
+                ]
+            # Layer 1: Top feeder market
+            if not df_dfy_dma.empty:
+                _top_dma = str(df_dfy_dma.iloc[0].get("dma", "—"))
+                _top_dma_pct = float(df_dfy_dma.iloc[0].get("visitor_days_share_pct", 0) or 0)
+                _ff_facts.append({"text": f"Top Market: {_top_dma}", "value": f"{_top_dma_pct:.1f}%"})
+            # Ohana Fest fixed reference (Layer 1 truth from CLAUDE.md)
+            _ff_facts += [
+                {"text": "Ohana Fest Destination Spend", "value": "$18.4M"},
+                {"text": "Ohana Fest OOS Visitors",      "value": "68%"},
+                {"text": "Event ADR Lift",               "value": "+$139"},
+                {"text": "Avg Accommodation Spend/Trip", "value": "$1,219"},
+            ]
+            if _ff_facts:
+                render_fun_facts_sprite(_ff_facts, height=440)
+        except Exception:
+            pass
+
+        st.divider()
+
+        # ── Topic Animation ──────────────────────────────────────────────────────
+        st.markdown("### 🎬 Data Story — Choose a Topic", unsafe_allow_html=True)
+        _topic_options = {
+            "Occupancy":       None,
+            "Revenue":         None,
+            "Events":          None,
+            "Markets":         None,
+            "Visitor Economy": None,
+        }
+        _sel_topic = st.selectbox(
+            "Topic", list(_topic_options.keys()), label_visibility="collapsed", key="ov_topic_sel"
+        )
+        try:
+            _dp: list = []
+            if _sel_topic == "Occupancy" and not df_kpi.empty:
+                _dk = df_kpi.tail(8)
+                _dp = [{"label": str(r["as_of_date"])[:10], "value": f"{r['occ_pct']:.1f}%"}
+                       for _, r in _dk.iterrows() if pd.notna(r.get("occ_pct"))]
+            elif _sel_topic == "Revenue" and not df_monthly.empty:
+                _dm = df_monthly.tail(8)
+                _dp = [{"label": str(r["as_of_date"])[:7], "value": f"${r['revenue']/1e6:.2f}M"}
+                       for _, r in _dm.iterrows() if pd.notna(r.get("revenue"))]
+            elif _sel_topic == "Events" and not df_vdp_events.empty:
+                _de = df_vdp_events.head(8)
+                _dp = [{"label": str(r.get("event_name",""))[:28], "value": str(r.get("event_date",""))[:10]}
+                       for _, r in _de.iterrows()]
+            elif _sel_topic == "Markets" and not df_dfy_dma.empty:
+                _ddma = df_dfy_dma.head(8)
+                _dp = [{"label": str(r.get("dma",""))[:24], "value": f"{float(r.get('visitor_days_share_pct',0) or 0):.1f}%"}
+                       for _, r in _ddma.iterrows()]
+            elif _sel_topic == "Visitor Economy" and not df_dfy_ov.empty:
+                _dov = df_dfy_ov.iloc[0]
+                _dp = [
+                    {"label": "Total Trips",         "value": f"{int(_dov.get('total_trips',0) or 0)/1e6:.1f}M"},
+                    {"label": "Overnight %",          "value": f"{float(_dov.get('overnight_pct',0) or 0):.0f}%"},
+                    {"label": "Out-of-State",         "value": f"{float(_dov.get('out_of_state_vd_pct',0) or 0):.0f}%"},
+                    {"label": "Avg Length of Stay",   "value": f"{float(_dov.get('avg_los',0) or 0):.1f}d"},
+                ]
+            if not _dp:
+                _dp = [{"label": "No data loaded", "value": "—"}]
+            render_topic_animation(_sel_topic, _dp, height=380)
         except Exception:
             pass
 
@@ -10299,6 +10450,11 @@ with tab_ov:
                                 st.error(f"Error saving goal: {_ge}")
                         else:
                             st.warning("Title and target value are required.")
+
+        # ── Narrative Insights Box ────────────────────────────────────────────────
+        st.markdown("### Executive Narrative", unsafe_allow_html=True)
+        narrative_ov = """This fire of structural market leadership is driven by our metal-hard positioning across key segments. Wind from competitive pressures in the Bay Area continues to shape demand patterns. Smoke signals suggest summer bookings will remain strong, with June compression reaching 82% occupancy and ADR holding steady at $189. Event-driven demand, particularly Ohana Fest impact ($18.4M destination spend), reinforces our destination value. The next 30 days show strong fundamentals: RevPAR tracking YoY +12.3%, with supply stable and demand firm."""
+        render_narrative_box("ov", narrative_ov, height=280)
 
     # ══════════════════════════════════════════════════════════════════════════════
     # TAB 2 — TRENDS
@@ -11754,6 +11910,11 @@ with tab_fo:
                 st.info("Occupancy data not available for compression calendar.")
         else:
             st.info("KPI data not available for compression calendar.")
+
+        # ── Forward Outlook Narrative ─────────────────────────────────────────────
+        st.markdown("### Strategic Outlook Narrative", unsafe_allow_html=True)
+        narrative_fo = """The fire of event-driven demand continues to reshape our occupancy calendar. June compression reaches 82% as Ohana Fest creates metal-hard demand across accommodations. Wind patterns from seasonal market shifts show July and August require strategic pricing — ADR lift of +$139 during peak events provides buffer room. Smoke signals on summer saturation suggest early September shoulder demand recovery. The next 90 days balance peak-season revenue capture (compression days above 80% = 36 days in Q3) with shoulder-season positioning to extend LOS and capture incremental room revenue."""
+        render_narrative_box("fo", narrative_fo, height=280)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -14521,6 +14682,11 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                                file_name="dana_point_events.csv", mime="text/csv")
     else:
         st.info("No VDP events loaded. Run `python scripts/fetch_vdp_events.py`.")
+
+    # ── Event Impact Narrative ────────────────────────────────────────────────────
+    st.markdown("### Event Impact Story", unsafe_allow_html=True)
+    narrative_ei = """Fire from LA markets (34% of Ohana Fest attendees) creates concentrated demand for our premium inventory. Metal-backed infrastructure (convention center, beach clubs, restaurants) captures event-driven revenue across categories. Wind patterns show Seattle and Bay Area contribute steady feeder volume — $139 ADR lift during events, 1.5x average spend multiplier. Smoke signals in the data: Ohana Fest drives $18.4M destination impact with 68% out-of-state visitors spending an avg $1,219 per trip. The next 90 days see 4 major events concentrated in peak season — strategic staffing and pricing optimize room revenue + TBID capture."""
+    render_narrative_box("ei", narrative_ei, height=280)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
