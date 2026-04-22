@@ -32,8 +32,9 @@ Pipeline steps:
   17. fetch_tsa_data.py           — TSA checkpoint throughput   → tsa_checkpoint_daily (skip-safe)
   18. fetch_noaa_marine.py        — NOAA ocean buoy data        → noaa_marine_monthly (skip-safe)
   19. fetch_census_acs.py         — US Census ACS demographics  → census_demographics (skip-safe)
-  20. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
-  21. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
+  20. load_vdp_intelligence_context.py — VDP Intelligence Assistant context → 6 vdp_* tables (skip-safe)
+  21. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
+  22. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
 
 Steps 1, 2, 3, 6 are FAIL-FAST (abort on failure). All others are skip-safe.
 Each step is logged to logs/pipeline.log:
@@ -93,6 +94,8 @@ STEPS = [
     ("fetch_census_acs",  os.path.join(BASE_DIR, "fetch_census_acs.py"),         False),
     # Strategy goal progress — refresh current_value for all active goals from live data
     ("strategy_progress", os.path.join(BASE_DIR, "compute_strategy_progress.py"), False),
+    # VDP Intelligence context — seeds 6 reference tables for the AI Assistant panel
+    ("load_vdp_intel",    os.path.join(BASE_DIR, "load_vdp_intelligence_context.py"), False),
     # Design inspiration — no DB writes; saves to data/design/godly_inspiration.json
     ("fetch_godly_design", os.path.join(BASE_DIR, "fetch_godly_design.py"),      False),
     # ALWAYS LAST — rebuilds all table relationships after every pipeline run

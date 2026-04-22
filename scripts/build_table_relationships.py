@@ -566,6 +566,46 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("strategy_goals",           "insights_daily",               "enriches",      "as_of_date",
      "Strategy goal progress informs and contextualizes daily AI insights for all audiences"),
+
+    # ── VDP Intelligence Context ───────────────────────────────────────────────
+    ("vdp_org_facts",             "kpi_daily_summary",            "context",       "as_of_year",
+     "Org facts (TBID budget, rates) provide financial context for interpreting STR KPIs"),
+
+    ("vdp_org_facts",             "fact_str_metrics",             "context",       "as_of_year",
+     "TBID rate facts (1.25% blended) used to compute TBID revenue projections from room revenue"),
+
+    ("vdp_org_facts",             "datafy_overview_kpis",         "context",       "as_of_year",
+     "Destination facts (OC spending, event attendance) provide macro context for Datafy visitor KPIs"),
+
+    ("vdp_strategic_concerns",    "insights_daily",               "enriches",      "concern_slug",
+     "Strategic concern areas (TBID, harbor, STR, community) shape the framing of AI-generated insights"),
+
+    ("vdp_strategic_concerns",    "vdp_org_facts",                "enriches",      "concern_slug",
+     "Each strategic concern maps to supporting org facts (budget, metrics, attendance data)"),
+
+    ("vdp_city_strategic_metrics","kpi_daily_summary",            "cross_ref",     "fiscal_period",
+     "City FY26 metrics (STR enforcement, trolley, events) cross-reference hotel KPI performance periods"),
+
+    ("vdp_city_strategic_metrics","fact_str_metrics",             "cross_ref",     "fiscal_period",
+     "City STR enforcement counts (58 unpermitted) cross-reference STR supply/demand fact table"),
+
+    ("vdp_city_strategic_metrics","vdp_events",                   "cross_ref",     "fiscal_period",
+     "City event attendance metrics (Ohana, Boat Parade, Turkey Trot) cross-reference vdp_events calendar"),
+
+    ("vdp_city_strategic_metrics","vdp_strategic_concerns",       "enriches",      "goal_number",
+     "City strategic plan goal KPIs provide quantitative evidence for each VDP strategic concern area"),
+
+    ("vdp_ai_skills",             "insights_daily",               "enriches",      "audience",
+     "AI skills catalog defines response behaviors for each audience type produced by insights_daily"),
+
+    ("vdp_ai_starter_questions",  "insights_daily",               "cross_ref",     "category",
+     "Starter questions surface the same topic categories as insights_daily (tbid, analytics, harbor, etc.)"),
+
+    ("vdp_mcp_integrations",      "vdp_ai_skills",                "enriches",      "server_name",
+     "MCP server integrations enable real-time data access for skill execution (Sheets, Drive, SQLite)"),
+
+    ("vdp_org_facts",             "vdp_city_strategic_metrics",   "cross_ref",     "as_of_year",
+     "Org facts and city strategic metrics share the same FY26 reporting period and source documents"),
 ]
 
 
