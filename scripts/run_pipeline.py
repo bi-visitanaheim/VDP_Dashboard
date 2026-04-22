@@ -52,6 +52,7 @@ Run:
     python3 scripts/run_pipeline.py
 """
 
+import json
 import os
 import subprocess
 import sys
@@ -63,7 +64,8 @@ from datetime import datetime
 
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
-LOG_PATH     = os.path.join(PROJECT_ROOT, "logs", "pipeline.log")
+LOG_PATH      = os.path.join(PROJECT_ROOT, "logs", "pipeline.log")
+LOG_JSON_PATH = os.path.join(PROJECT_ROOT, "logs", "pipeline.jsonl")
 
 # Steps: (step_name, script_path, fail_fast)
 # fail_fast=True  → pipeline aborts if step fails (core STR/KPI/Insights steps)
@@ -110,12 +112,17 @@ def _now() -> str:
 
 
 def log(step: str, status: str, message: str) -> None:
-    """Append one line to logs/pipeline.log and echo it to stdout."""
-    line = f"{_now()} | {step:<22} | {status:<4} | {message}"
+    """Append one human-readable line to pipeline.log and one JSON line to pipeline.jsonl."""
+    ts = _now()
+    line = f"{ts} | {step:<22} | {status:<4} | {message}"
     print(line)
     os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
     with open(LOG_PATH, "a") as fh:
         fh.write(line + "\n")
+    # Machine-readable JSON Lines format for dashboards and alerting
+    record = {"ts": ts, "step": step, "status": status.strip(), "message": message}
+    with open(LOG_JSON_PATH, "a") as fh:
+        fh.write(json.dumps(record) + "\n")
 
 
 # ---------------------------------------------------------------------------

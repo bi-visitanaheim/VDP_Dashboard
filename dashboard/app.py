@@ -3866,50 +3866,22 @@ def load_costar_monthly() -> pd.DataFrame:
 
 @st.cache_data(ttl=300)
 def load_costar_snapshot() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM costar_market_snapshot ORDER BY report_period DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM costar_market_snapshot ORDER BY report_period DESC", "load_costar_snapshot")
 
 
 @st.cache_data(ttl=300)
 def load_costar_pipeline() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM costar_supply_pipeline ORDER BY status, rooms DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM costar_supply_pipeline ORDER BY status, rooms DESC", "load_costar_pipeline")
 
 
 @st.cache_data(ttl=300)
 def load_costar_chain() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM costar_chain_scale_breakdown ORDER BY year DESC, revpar_usd DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM costar_chain_scale_breakdown ORDER BY year DESC, revpar_usd DESC", "load_costar_chain")
 
 
 @st.cache_data(ttl=300)
 def load_costar_compset() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM costar_competitive_set ORDER BY revpar_usd DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM costar_competitive_set ORDER BY revpar_usd DESC", "load_costar_compset")
 
 
 
@@ -3926,36 +3898,15 @@ def load_vca_travel_forecast() -> pd.DataFrame:
 
 @st.cache_data(ttl=3600)
 def load_vca_lodging_forecast() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM visit_ca_lodging_forecast ORDER BY year, region", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM visit_ca_lodging_forecast ORDER BY year, region", "load_vca_lodging_forecast")
 
 @st.cache_data(ttl=3600)
 def load_vca_airport_traffic() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM visit_ca_airport_traffic ORDER BY airport, month", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM visit_ca_airport_traffic ORDER BY airport, month", "load_vca_airport_traffic")
 
 @st.cache_data(ttl=3600)
 def load_vca_intl_arrivals() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM visit_ca_intl_arrivals ORDER BY year, month", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM visit_ca_intl_arrivals ORDER BY year, month", "load_vca_intl_arrivals")
 
 
 # ── Zartico historical data loaders ──────────────────────────────────────────
@@ -4185,108 +4136,45 @@ def load_datafy_media_markets() -> pd.DataFrame:
 
 @st.cache_data(ttl=300)
 def load_datafy_website_dma() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM datafy_attribution_website_dma ORDER BY report_period_start DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM datafy_attribution_website_dma ORDER BY report_period_start DESC", "load_datafy_website_dma")
 
 
 @st.cache_data(ttl=300)
 def load_datafy_website_channels() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM datafy_attribution_website_channels ORDER BY report_period_start DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM datafy_attribution_website_channels ORDER BY report_period_start DESC", "load_datafy_website_channels")
 
 
 @st.cache_data(ttl=300)
 def load_datafy_website_top_markets() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM datafy_attribution_website_top_markets ORDER BY report_period_start DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM datafy_attribution_website_top_markets ORDER BY report_period_start DESC", "load_datafy_website_top_markets")
 
 
 @st.cache_data(ttl=300)
 def load_datafy_social_traffic() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM datafy_social_traffic_sources ORDER BY sessions DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM datafy_social_traffic_sources ORDER BY sessions DESC", "load_datafy_social_traffic")
 
 
 @st.cache_data(ttl=300)
 def load_datafy_social_top_pages() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM datafy_social_top_pages ORDER BY page_views DESC LIMIT 20", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM datafy_social_top_pages ORDER BY page_views DESC LIMIT 20", "load_datafy_social_top_pages")
 
 
 @st.cache_data(ttl=300)
 def load_datafy_social_audience() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM datafy_social_audience_overview ORDER BY report_period_start DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM datafy_social_audience_overview ORDER BY report_period_start DESC", "load_datafy_social_audience")
 
 
 @st.cache_data(ttl=1800)
 def load_later_ig_profile() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM later_ig_profile_growth ORDER BY data_date DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM later_ig_profile_growth ORDER BY data_date DESC", "load_later_ig_profile")
 
 @st.cache_data(ttl=1800)
 def load_later_ig_posts() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM later_ig_posts ORDER BY posted_at DESC LIMIT 200", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM later_ig_posts ORDER BY posted_at DESC LIMIT 200", "load_later_ig_posts")
 
 @st.cache_data(ttl=1800)
 def load_later_ig_reels() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM later_ig_reels ORDER BY posted_at DESC LIMIT 200", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM later_ig_reels ORDER BY posted_at DESC LIMIT 200", "load_later_ig_reels")
 
 @st.cache_data(ttl=1800)
 def load_later_ig_demographics() -> pd.DataFrame:
@@ -4299,36 +4187,15 @@ def load_later_ig_demographics() -> pd.DataFrame:
 
 @st.cache_data(ttl=1800)
 def load_later_fb_profile() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM later_fb_profile_growth ORDER BY data_date DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM later_fb_profile_growth ORDER BY data_date DESC", "load_later_fb_profile")
 
 @st.cache_data(ttl=1800)
 def load_later_fb_posts() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM later_fb_posts ORDER BY posted_at DESC LIMIT 200", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM later_fb_posts ORDER BY posted_at DESC LIMIT 200", "load_later_fb_posts")
 
 @st.cache_data(ttl=1800)
 def load_later_tk_profile() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM later_tk_profile_growth ORDER BY data_date DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM later_tk_profile_growth ORDER BY data_date DESC", "load_later_tk_profile")
 
 @st.cache_data(ttl=1800)
 def load_later_tk_demographics() -> pd.DataFrame:
@@ -4341,63 +4208,28 @@ def load_later_tk_demographics() -> pd.DataFrame:
 
 @st.cache_data(ttl=1800)
 def load_later_ig_stories() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM later_ig_stories ORDER BY posted_at DESC LIMIT 200", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM later_ig_stories ORDER BY posted_at DESC LIMIT 200", "load_later_ig_stories")
 
 @st.cache_data(ttl=1800)
 def load_later_tk_interactions() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM later_tk_interactions ORDER BY data_date DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM later_tk_interactions ORDER BY data_date DESC", "load_later_tk_interactions")
 
 
 @st.cache_data(ttl=300)
 def load_datafy_clusters() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM datafy_overview_cluster_visitation ORDER BY report_period_start DESC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM datafy_overview_cluster_visitation ORDER BY report_period_start DESC", "load_datafy_clusters")
 
 
 # ─── New External Data Loaders ────────────────────────────────────────────────
 
 @st.cache_data(ttl=300)
 def load_fred_indicators() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM fred_economic_indicators ORDER BY data_date ASC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM fred_economic_indicators ORDER BY data_date ASC", "load_fred_indicators")
 
 
 @st.cache_data(ttl=300)
 def load_google_trends() -> pd.DataFrame:
-    conn = get_connection()
-    try:
-        return pd.read_sql_query(
-            "SELECT * FROM google_trends_weekly ORDER BY week_date ASC", conn
-        )
-    except Exception as _e:
-        _logger.debug("loader error: %s", _e)
-        return pd.DataFrame()
+    return _sql("SELECT * FROM google_trends_weekly ORDER BY week_date ASC", "load_google_trends")
 
 
 @st.cache_data(ttl=300)

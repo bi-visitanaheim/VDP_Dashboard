@@ -96,8 +96,10 @@ def normalize_str_monthly(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def safe_float(v):
+    """Convert v to float; return None for NaN, None, or non-numeric values."""
     try:
-        return float(v)
+        result = float(v)
+        return None if result != result else result  # NaN != NaN is True
     except (TypeError, ValueError):
         return None
 
