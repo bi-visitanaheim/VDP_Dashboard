@@ -108,15 +108,27 @@ CREATE TABLE IF NOT EXISTS fred_economic_indicators (
 
 
 def _fetch_observations(series_id: str, start: str = "2019-01-01") -> list[dict]:
+    import time
     params = {
         "series_id":         series_id,
         "observation_start": start,
         "api_key":           FRED_API_KEY,
         "file_type":         "json",
     }
-    r = requests.get(FRED_BASE, params=params, timeout=20)
-    r.raise_for_status()
-    return r.json().get("observations", [])
+    last_exc = None
+    for attempt in range(3):
+        try:
+            r = requests.get(FRED_BASE, params=params, timeout=20)
+            r.raise_for_status()
+            return r.json().get("observations", [])
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            last_exc = exc
+            wait = 2 ** attempt
+            print(f"  WARN: FRED request attempt {attempt + 1} failed ({exc}); retrying in {wait}s")
+            time.sleep(wait)
+        except requests.RequestException:
+            raise
+    raise last_exc
 
 
 def main() -> int:

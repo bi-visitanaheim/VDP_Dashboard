@@ -12,12 +12,15 @@ MONTHLY_FILE = os.path.join(STR_DIR, "str_monthly.xlsx")
 
 
 def get_connection() -> sqlite3.Connection:
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(DB_PATH, timeout=10)
 
 
 def normalize_str_monthly(df: pd.DataFrame) -> pd.DataFrame:
     """
     Normalize STR monthly export (downloads/str_monthly.xlsx) into fact_str_metrics long format.
+
+    NOTE: Occupancy stored as decimal in fact_str_metrics (0.688 = 68.8%).
+    kpi_daily_summary multiplies by 100 to get occ_pct for display.
     """
     date_col = "Period"
 
@@ -26,8 +29,8 @@ def normalize_str_monthly(df: pd.DataFrame) -> pd.DataFrame:
         "Supply": ("supply", "rooms"),
         "Demand": ("demand", "rooms"),
         "Revenue": ("revenue", "USD"),
-        "Occ": ("occ", "percent"),
-        "Occ %": ("occ", "percent"),
+        "Occ": ("occ", "decimal"),   # stored as 0.0–1.0 decimal
+        "Occ %": ("occ", "decimal"),
         "ADR": ("adr", "USD"),
         "RevPAR": ("revpar", "USD"),
     }
@@ -37,8 +40,13 @@ def normalize_str_monthly(df: pd.DataFrame) -> pd.DataFrame:
 
     df = df.copy()
 
-    # Parse Period to YYYY-MM-DD
-    df[date_col] = pd.to_datetime(df[date_col], errors="coerce").dt.strftime("%Y-%m-%d")
+    # Parse Period to YYYY-MM-DD; coerce bad dates to NaT and warn
+    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+    nat_count = df[date_col].isna().sum()
+    if nat_count:
+        print(f"  WARNING: {nat_count} rows have unparseable dates and will be dropped")
+        df = df.dropna(subset=[date_col])
+    df[date_col] = df[date_col].dt.strftime("%Y-%m-%d")
 
     # Clean metrics: trim, treat "-" as missing, coerce to numeric
     for col_name in metric_columns.keys():
@@ -104,53 +112,62 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
     norm_df = normalize_str_monthly(df)
 
     cur = conn.cursor()
-    rows_inserted = 0
 
-    for _, row in norm_df.iterrows():
-        # Dedup key includes grain so daily/monthly never collide
+    # Bulk dedup: load all monthly keys in one query instead of N queries
+    existing = set(
         cur.execute(
-            """
-            SELECT COUNT(*) FROM fact_str_metrics
-            WHERE source = ?
-              AND grain = ?
-              AND property_name = ?
-              AND market = ?
-              AND as_of_date = ?
-              AND metric_name = ?
-            """,
-            (
-                row["source"],
-                row["grain"],
-                row["property_name"],
-                row["market"],
-                row["as_of_date"],
-                row["metric_name"],
-            ),
+            "SELECT source, grain, property_name, market, as_of_date, metric_name "
+            "FROM fact_str_metrics WHERE grain = 'monthly'"
+        ).fetchall()
+    )
+
+    rows_to_insert = []
+    for _, row in norm_df.iterrows():
+        key = (
+            row["source"],
+            row["grain"],
+            row["property_name"],
+            row["market"],
+            row["as_of_date"],
+            row["metric_name"],
         )
-        if cur.fetchone()[0]:
+        if key in existing:
             continue
 
-        cur.execute(
+        val = safe_float(row["metric_value"])
+        # Preserve NULL for missing values; do not floor negative values to 0
+        # (negative revenue/demand indicates data quality issue — log, don't mask)
+        if val is not None and val < 0:
+            print(
+                f"  WARNING: Negative {row['metric_name']} value ({val}) "
+                f"on {row['as_of_date']} — storing as NULL"
+            )
+            val = None
+
+        rows_to_insert.append((
+            row["source"],
+            row["grain"],
+            row["property_name"],
+            row["market"],
+            row["submarket"],
+            row["as_of_date"],
+            row["metric_name"],
+            val,
+            row["unit"],
+        ))
+
+    if rows_to_insert:
+        cur.executemany(
             """
             INSERT INTO fact_str_metrics (
                 source, grain, property_name, market, submarket,
                 as_of_date, metric_name, metric_value, unit
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (
-                row["source"],
-                row["grain"],
-                row["property_name"],
-                row["market"],
-                row["submarket"],
-                row["as_of_date"],
-                row["metric_name"],
-                max(safe_float(row["metric_value"]) or 0.0, 0.0),
-                row["unit"],
-            ),
+            rows_to_insert,
         )
-        rows_inserted += 1
 
+    rows_inserted = len(rows_to_insert)
     conn.commit()
 
     cur.execute(
@@ -174,4 +191,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -512,6 +512,14 @@ def render_monthly_highlights(insights: list, height: int = 260) -> None:
     insights: list of dicts with keys headline, body, category, audience.
     """
     if not insights:
+        st.markdown(
+            "<div style='padding:24px;text-align:center;color:#5A7A95;"
+            "font-size:13px;border:1px dashed rgba(0,212,200,0.2);"
+            "border-radius:12px;margin:8px 0;'>"
+            "◈ No insights available — run the pipeline to generate forward-looking analysis."
+            "</div>",
+            unsafe_allow_html=True,
+        )
         return
 
     icon_map = {

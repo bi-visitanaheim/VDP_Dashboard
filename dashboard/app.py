@@ -16,6 +16,7 @@ import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
+import logging
 
 import os
 import sys
@@ -24,6 +25,8 @@ import urllib.parse as _urlparse
 from pathlib import Path
 from dotenv import load_dotenv
 import re as _re
+
+_logger = logging.getLogger("vdp_dashboard")
 
 # Import interactive visual components
 sys.path.insert(0, str(Path(__file__).parent))
@@ -258,6 +261,11 @@ BLUE       = "#0567C8"    # primary accent — TSA/wave/fly-market
 PURPLE     = "#7C3AED"    # CoStar / pipeline
 GOLD       = "#D97706"    # amber / warning
 NAVY       = "#1A3756"    # dark header bg
+
+# ─── Occupancy compression thresholds (business rules) ────────────────────────
+OCC_HIGH_THRESHOLD  = 0.90   # "compression night" — 90%+ occupancy
+OCC_MED_THRESHOLD   = 0.80   # "strong demand night" — 80%+ occupancy
+OCC_SHOULDER_TARGET = 0.65   # shoulder season goal
 
 # ─── AI constants ─────────────────────────────────────────────────────────────
 CLAUDE_MODEL = "claude-sonnet-4-6"
@@ -3723,12 +3731,23 @@ def get_connection() -> sqlite3.Connection:
     Dashboard code never writes data — all writes go through ETL scripts.
     """
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=10)
     conn.row_factory = sqlite3.Row
     _init_db(conn)
     return conn
 
-# ─── Data loaders (5-minute cache) ───────────────────────────────────────────
+# ─── Data loaders ────────────────────────────────────────────────────────────
+# TTL guide: real-time KPIs = 300s, social/campaign = 1800s, historical = 3600s
+
+def _sql(query: str, ttl_hint: str = "") -> pd.DataFrame:
+    """Execute a SQL query against the read-only dashboard connection.
+    Returns an empty DataFrame on any error; logs the reason for debugging.
+    """
+    try:
+        return pd.read_sql_query(query, get_connection())
+    except Exception as _e:
+        _logger.debug("SQL loader error (%s): %s", ttl_hint or query[:60], _e)
+        return pd.DataFrame()
 
 @st.cache_data(ttl=300)
 def load_str_daily() -> pd.DataFrame:
@@ -3840,7 +3859,8 @@ def load_costar_monthly() -> pd.DataFrame:
         )
         df["as_of_date"] = pd.to_datetime(df["as_of_date"])
         return df
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -3851,7 +3871,8 @@ def load_costar_snapshot() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM costar_market_snapshot ORDER BY report_period DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -3862,7 +3883,8 @@ def load_costar_pipeline() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM costar_supply_pipeline ORDER BY status, rooms DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -3873,7 +3895,8 @@ def load_costar_chain() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM costar_chain_scale_breakdown ORDER BY year DESC, revpar_usd DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -3884,116 +3907,129 @@ def load_costar_compset() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM costar_competitive_set ORDER BY revpar_usd DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
 
 # ── Visit California state context loaders ───────────────────────────────────
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_vca_travel_forecast() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM visit_ca_travel_forecast ORDER BY year", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_vca_lodging_forecast() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM visit_ca_lodging_forecast ORDER BY year, region", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_vca_airport_traffic() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM visit_ca_airport_traffic ORDER BY airport, month", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_vca_intl_arrivals() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM visit_ca_intl_arrivals ORDER BY year, month", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
 # ── Zartico historical data loaders ──────────────────────────────────────────
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_zartico_kpis() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM zartico_kpis ORDER BY report_date DESC", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_zartico_markets() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM zartico_markets ORDER BY report_date DESC, rank ASC", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_zartico_spending() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM zartico_spending_monthly ORDER BY month_str", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_zartico_lodging() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM zartico_lodging_kpis ORDER BY report_date DESC", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_zartico_overnight() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM zartico_overnight_trend ORDER BY month_str", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_zartico_events() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM zartico_event_impact ORDER BY event_start", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_zartico_movement() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM zartico_movement_monthly ORDER BY month_str", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3600)
 def load_zartico_future_events() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM zartico_future_events_summary ORDER BY report_date DESC LIMIT 1", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 @st.cache_data(ttl=300)
@@ -4006,7 +4042,8 @@ def load_vdp_events() -> pd.DataFrame:
         if not df.empty:
             df["event_date"] = pd.to_datetime(df["event_date"], errors="coerce")
         return df
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4037,7 +4074,8 @@ def load_insights(audience: str | None = None) -> pd.DataFrame:
             df = df.sort_values("as_of_date", ascending=False)
             df = df.drop_duplicates(subset=["audience", "category"], keep="first")
         return df
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4049,7 +4087,8 @@ def load_datafy_overview() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_overview_kpis ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4061,7 +4100,8 @@ def load_datafy_dma() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_overview_dma ORDER BY report_period_start DESC, visitor_days_share_pct DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4073,7 +4113,8 @@ def load_datafy_spending() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_overview_category_spending ORDER BY report_period_start DESC, spend_share_pct DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4085,7 +4126,8 @@ def load_datafy_demographics() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_overview_demographics ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4097,7 +4139,8 @@ def load_datafy_airports() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_overview_airports ORDER BY report_period_start DESC, passengers_share_pct DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4109,7 +4152,8 @@ def load_datafy_media_kpis() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_attribution_media_kpis ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4121,7 +4165,8 @@ def load_datafy_website_kpis() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_attribution_website_kpis ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4133,7 +4178,8 @@ def load_datafy_media_markets() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_attribution_media_top_markets ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4144,7 +4190,8 @@ def load_datafy_website_dma() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_attribution_website_dma ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4155,7 +4202,8 @@ def load_datafy_website_channels() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_attribution_website_channels ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4166,7 +4214,8 @@ def load_datafy_website_top_markets() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_attribution_website_top_markets ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4177,7 +4226,8 @@ def load_datafy_social_traffic() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_social_traffic_sources ORDER BY sessions DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4188,7 +4238,8 @@ def load_datafy_social_top_pages() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_social_top_pages ORDER BY page_views DESC LIMIT 20", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4199,104 +4250,115 @@ def load_datafy_social_audience() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_social_audience_overview ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_ig_profile() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM later_ig_profile_growth ORDER BY data_date DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_ig_posts() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM later_ig_posts ORDER BY posted_at DESC LIMIT 200", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_ig_reels() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM later_ig_reels ORDER BY posted_at DESC LIMIT 200", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_ig_demographics() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM later_ig_audience_demographics", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_fb_profile() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM later_fb_profile_growth ORDER BY data_date DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_fb_posts() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM later_fb_posts ORDER BY posted_at DESC LIMIT 200", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_tk_profile() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM later_tk_profile_growth ORDER BY data_date DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_tk_demographics() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query("SELECT * FROM later_tk_audience_demographics", conn)
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_ig_stories() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM later_ig_stories ORDER BY posted_at DESC LIMIT 200", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=1800)
 def load_later_tk_interactions() -> pd.DataFrame:
     conn = get_connection()
     try:
         return pd.read_sql_query(
             "SELECT * FROM later_tk_interactions ORDER BY data_date DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4307,7 +4369,8 @@ def load_datafy_clusters() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM datafy_overview_cluster_visitation ORDER BY report_period_start DESC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4320,7 +4383,8 @@ def load_fred_indicators() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM fred_economic_indicators ORDER BY data_date ASC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4331,7 +4395,8 @@ def load_google_trends() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM google_trends_weekly ORDER BY week_date ASC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4347,7 +4412,8 @@ def load_weather_monthly() -> pd.DataFrame:
                 df["year"].astype(str) + "-" + df["month"].astype(str).str.zfill(2) + "-01"
             )
         return df
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4363,7 +4429,8 @@ def load_bls_employment() -> pd.DataFrame:
                 df["year"].astype(str) + "-" + df["month"].astype(str).str.zfill(2) + "-01"
             )
         return df
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4380,7 +4447,8 @@ def load_noaa_marine() -> pd.DataFrame:
                 df["year"].astype(str) + "-" + df["month"].astype(str).str.zfill(2) + "-01"
             )
         return df
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4392,7 +4460,8 @@ def load_census_demo() -> pd.DataFrame:
         return pd.read_sql_query(
             "SELECT * FROM census_demographics ORDER BY year ASC, geography ASC", conn
         )
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4407,7 +4476,8 @@ def load_eia_gas() -> pd.DataFrame:
         if not df.empty:
             df["date"] = pd.to_datetime(df["week_end_date"], errors="coerce")
         return df
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4422,7 +4492,8 @@ def load_tsa_checkpoint() -> pd.DataFrame:
         if not df.empty:
             df["date"] = pd.to_datetime(df["travel_date"], errors="coerce")
         return df
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 
@@ -4528,7 +4599,8 @@ def load_strategy_goals(status_filter: str | None = None) -> pd.DataFrame:
         query += " ORDER BY priority ASC, target_date ASC"
         df = pd.read_sql_query(query, conn)
         return df
-    except Exception:
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
 
 # ─── Metric context builder ───────────────────────────────────────────────────
@@ -6668,6 +6740,10 @@ with st.sidebar:
                 key="model_selector", help="Select AI model for all analyst panels",
             )
             selected_model = _model_opts[_model_labels.index(_sel_label)]
+            # Show strengths of the selected model so admins know what to use it for
+            _sel_info = _avail_models.get(selected_model, {})
+            if _sel_info.get("strengths"):
+                st.caption(f"Best for: {_sel_info['strengths']}")
         else:
             selected_model = _model_opts[0]
         _provider_status = [
@@ -10015,7 +10091,7 @@ with tab_ov:
                             "<i>Investigate demand drivers</i><extra></extra>"
                         ),
                     ))
-                fig.update_layout(yaxis_tickprefix="$")
+                fig.update_layout(yaxis_title="RevPAR (USD)", yaxis_tickprefix="$")
                 st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
 
             with c2:

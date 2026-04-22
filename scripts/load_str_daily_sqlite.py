@@ -1,5 +1,6 @@
 import os
 import sqlite3
+
 import pandas as pd
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -12,7 +13,7 @@ DAILY_FILE = os.path.join(STR_DIR, "str_daily.xlsx")
 
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(DB_PATH, timeout=10)
 
 
 def normalize_str_daily(df):
@@ -22,6 +23,9 @@ def normalize_str_daily(df):
      'Demand Chg (YOY)', 'Revenue', 'Revenue Chg (YOY)', 'Occupancy',
      'Occupancy Chg (YOY)', 'ADR', 'ADR Chg (YOY)', 'RevPAR',
      'RevPAR Chg (YOY)', ...]
+
+    NOTE: Occupancy stored as decimal in fact_str_metrics (0.688 = 68.8%).
+    kpi_daily_summary multiplies by 100 to get occ_pct for display.
     """
     date_col = "Period"
 
@@ -29,7 +33,7 @@ def normalize_str_daily(df):
         "Supply": ("supply", "rooms"),
         "Demand": ("demand", "rooms"),
         "Revenue": ("revenue", "USD"),
-        "Occupancy": ("occ", "percent"),
+        "Occupancy": ("occ", "decimal"),  # stored as 0.0–1.0 decimal
         "ADR": ("adr", "USD"),
         "RevPAR": ("revpar", "USD"),
     }
@@ -40,7 +44,14 @@ def normalize_str_daily(df):
         raise ValueError(f"Missing expected STR columns: {missing}")
 
     df = df.copy()
-    df[date_col] = pd.to_datetime(df[date_col]).dt.strftime("%Y-%m-%d")
+
+    # Parse dates with coerce so malformed values become NaT instead of crashing
+    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+    nat_count = df[date_col].isna().sum()
+    if nat_count:
+        print(f"  WARNING: {nat_count} rows have unparseable dates and will be dropped")
+        df = df.dropna(subset=[date_col])
+    df[date_col] = df[date_col].dt.strftime("%Y-%m-%d")
 
     long_frames = []
     for col_name, (metric_name, unit) in metric_columns.items():
@@ -88,55 +99,56 @@ def load_str_daily(conn):
     norm_df = normalize_str_daily(df)
 
     cursor = conn.cursor()
-    rows_inserted = 0
 
+    # Bulk dedup: load existing composite keys in one query instead of N queries
+    existing = set(
+        cursor.execute(
+            "SELECT source, grain, property_name, market, as_of_date, metric_name "
+            "FROM fact_str_metrics WHERE grain = 'daily'"
+        ).fetchall()
+    )
+
+    rows_to_insert = []
     for _, row in norm_df.iterrows():
-        cursor.execute(
-            """
-            SELECT COUNT(*) FROM fact_str_metrics
-            WHERE source = ?
-              AND grain = ?
-              AND property_name = ?
-              AND market = ?
-              AND as_of_date = ?
-              AND metric_name = ?
-            """,
-            (
-                row["source"],
-                row["grain"],
-                row["property_name"],
-                row["market"],
-                row["as_of_date"],
-                row["metric_name"],
-            ),
+        key = (
+            row["source"],
+            row["grain"],
+            row["property_name"],
+            row["market"],
+            row["as_of_date"],
+            row["metric_name"],
         )
-        exists = cursor.fetchone()[0] > 0
-        if exists:
+        if key in existing:
             continue
+        val = row["metric_value"]
+        try:
+            val = float(val) if pd.notna(val) else None
+        except (TypeError, ValueError):
+            val = None
+        rows_to_insert.append((
+            row["source"],
+            row["grain"],
+            row["property_name"],
+            row["market"],
+            row["submarket"],
+            row["as_of_date"],
+            row["metric_name"],
+            val,
+            row["unit"],
+        ))
 
-        cursor.execute(
+    if rows_to_insert:
+        cursor.executemany(
             """
             INSERT INTO fact_str_metrics
             (source, grain, property_name, market, submarket,
              as_of_date, metric_name, metric_value, unit)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (
-                row["source"],
-                row["grain"],
-                row["property_name"],
-                row["market"],
-                row["submarket"],
-                row["as_of_date"],
-                row["metric_name"],
-                float(row["metric_value"])
-                if row["metric_value"] is not None
-                else None,
-                row["unit"],
-            ),
+            rows_to_insert,
         )
-        rows_inserted += 1
 
+    rows_inserted = len(rows_to_insert)
     conn.commit()
 
     cursor.execute(
@@ -163,4 +175,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -86,6 +86,7 @@ _DEMO_ROWS = [
 
 def _fetch_series(series_id: str, start: str = "2019-01-01") -> list[dict]:
     """Fetch weekly observations for one EIA series via v2 API."""
+    import time
     params = {
         "api_key":     EIA_API_KEY,
         "frequency":   "weekly",
@@ -98,10 +99,21 @@ def _fetch_series(series_id: str, start: str = "2019-01-01") -> list[dict]:
         "offset":      0,
         "length":      5000,
     }
-    r = requests.get(EIA_BASE, params=params, timeout=30)
-    r.raise_for_status()
-    resp = r.json()
-    return resp.get("response", {}).get("data", [])
+    last_exc = None
+    for attempt in range(3):
+        try:
+            r = requests.get(EIA_BASE, params=params, timeout=30)
+            r.raise_for_status()
+            resp = r.json()
+            return resp.get("response", {}).get("data", [])
+        except (requests.ConnectionError, requests.Timeout) as exc:
+            last_exc = exc
+            wait = 2 ** attempt
+            print(f"  WARN: EIA request attempt {attempt + 1} failed ({exc}); retrying in {wait}s")
+            time.sleep(wait)
+        except requests.RequestException:
+            raise
+    raise last_exc
 
 
 def _compute_yoy(rows: list[dict]) -> dict[str, float]:

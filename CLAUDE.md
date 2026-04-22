@@ -339,6 +339,13 @@ After every session or error correction:
 - `table_relationships.created_at` is the correct column name (not `updated_at`) — check schema with `PRAGMA table_info(table_relationships)` before writing UPSERT SQL.
 - Multi-model AI: `stream_ai_response(prompt, model_key, _ai_keys)` routes to Anthropic/OpenAI/Google/Perplexity. `_ai_keys` is computed in the sidebar; `selected_model` is stored in session_state. Both have module-level defaults before sidebar renders to prevent NameError.
 - NEVER use the Write tool on `.env` — it overwrites the file and destroys live API keys. Always Read first; if the file exists, use Edit to add/change only specific lines.
+- STR loaders use bulk `executemany()` + a single upfront `SELECT` of all existing keys — never row-by-row `SELECT COUNT` + `INSERT` (2N round-trips). Keep this pattern for all new loaders.
+- Negative metric values in STR data are stored as `NULL`, not floored to `0.0`. Flooring silently masks data quality issues and corrupts downstream TBID/TOT projections.
+- Dashboard `_logger = logging.getLogger("vdp_dashboard")` is the standard logger. Use `_logger.debug()` in except blocks so silent failures are diagnosable without crashing the UI.
+- Cache TTLs are tiered: real-time KPIs = 300s, social/campaign = 1800s, historical (Zartico/VCA) = 3600s. Don't use 300s for everything.
+- `OCC_HIGH_THRESHOLD`, `OCC_MED_THRESHOLD`, `OCC_SHOULDER_TARGET` are named constants at the top of app.py — use these instead of hardcoded 0.90/0.80/0.65 magic numbers.
+- `requirements.txt` uses upper-bound pins (e.g., `pandas>=2.0.0,<3.0.0`) to prevent breaking changes on fresh installs. Update upper bounds only with deliberate testing.
+- `data/str/*.xlsx` is gitignored — raw STR Excel exports are NOT committed; only `data/analytics.sqlite` is the committed truth.
 
 ---
 
@@ -373,6 +380,7 @@ After every session or error correction:
 | 2026-03-17 | Zartico integration (8 tables, historical reference); VDP Events table (10 seeded events); CoStar filter fix; Data & Downloads dynamic row counts; Zartico section in Visitor Economy tab; 6-point Board Report; pipeline steps 7+8 added | Claude + John Picou |
 | 2026-03-17 | Rebrand to Dana Point PULSE; 9-tab layout (+ Feeder Markets, Event Impact, Supply & Pipeline); Visit California ⚫ bug fix; admin mode (?admin=true); PULSE Score widget; footer with GloCon branding + glossary; direct-to-main commit workflow | Claude + John Picou |
 | 2026-03-25 | Later.com social media integration (IG/FB/TikTok → 12 tables); Pipeline step 10; Pipeline Status dot; Data & Downloads card; Datafy GA4 summary in Board Report; Performance Command Center card+chart pairs; PULSE Score whitespace fix + scale readability; STR chart animations; Key Forward Metrics date references | Claude + John Picou |
+| 2026-04-22 | Full /enhance audit: 53 bare except blocks → logged; SQLite timeout=10; bulk executemany() in STR loaders (2N→1 round-trip); tiered cache TTLs (300/1800/3600s); negative value preservation; NaT date validation; retry logic in FRED/EIA fetch scripts; model selector shows strengths; empty-state card for insights; RevPAR axis label; requirements.txt version pinned; .gitignore xlsx; OCC threshold constants; 8 new lessons learned | Claude + John Picou |
 | 2026-03-30 | EIA gas prices + TSA checkpoint data sources (pipeline steps 16+17); intel panels added to tab_sp and tab_dl; gas price correlation section in Market Intelligence; EIA/TSA source health cards in Data Vault; updated DB inventory; EIA/TSA sidebar status dots | Claude + John Picou |
 | 2026-03-31 | Multi-model AI engine (Claude + GPT-4o + Gemini + Perplexity Sonar — 8 models); universal stream_ai_response() router; sidebar model selector; Live Market Intelligence panel; all charts downloadable (scale=3, 1600×800); 7 new CSV download buttons; style_fig v4 | Claude + John Picou |
 | 2026-03-31 | Data organization standard: all raw data in data/<source>/ canonical dirs; STR files moved to data/str/; build_table_relationships.py (step 20, always-last); 120 relationships (from 37); FRED_API_KEY placeholder; Standard Process section in CLAUDE.md | Claude + John Picou |
