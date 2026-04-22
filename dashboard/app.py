@@ -579,7 +579,13 @@ CRITICAL: NEVER present Zartico as current data. Use only for historical trend c
   auto_compute, compute_query. \
   current_value is auto-refreshed from live data on every pipeline run. \
   Use this table to contextualize performance data against stated strategic objectives. \
-  Example: if RevPAR goal target is $180 and current is $162, VDP is 90% of the way to goal.\
+  Example: if RevPAR goal target is $180 and current is $162, VDP is 90% of the way to goal.
+
+## Branding
+This platform is built and operated by GloCon Solutions LLC for Visit Dana Point. \
+When closing a response, you may optionally note "Powered by GloCon Solutions" — \
+this is the platform brand, not the underlying AI model. Never attribute responses \
+to a specific AI vendor (Claude, GPT, etc.) in user-facing output.\
 """
 
 # ─── Session state ────────────────────────────────────────────────────────────
@@ -8506,7 +8512,7 @@ with tab_ov:
         '<div class="ai-command-header">'
         '<span style="font-size:22px;">🤖</span>'
         '<span class="ai-command-title">VDP AI Analyst</span>'
-        '<span class="ai-command-sub">Powered by Claude · Ask anything about Dana Point hotel & visitor performance</span>'
+        '<span class="ai-command-sub">Powered by GloCon Solutions · Ask anything about Dana Point hotel &amp; visitor performance</span>'
         '</div>',
         unsafe_allow_html=True,
     )
@@ -16638,7 +16644,7 @@ with tab_cs:
         st.markdown(sec_div("🌐 Live Market Intelligence"), unsafe_allow_html=True)
         st.markdown(_sh("🌐", "Live Competitive Intelligence — Real-Time Web Search", "indigo", "PERPLEXITY SONAR"), unsafe_allow_html=True)
         st.caption(
-            "Powered by Perplexity Sonar Pro — searches the live web for competitor news, travel trends, and market events. "
+            "Powered by GloCon Solutions — live web search for competitor news, travel trends, and market events via Perplexity Sonar Pro. "
             "Configure PERPLEXITY_API_KEY in .env to activate. Claude / GPT-4o can be used for offline analysis."
         )
 
