@@ -65,6 +65,67 @@ def format_exec_kpi_banner(label: str, value: str, sub: str = "", color: str = "
     )
 
 
+def format_section_header(icon: str, title: str, subtitle: str = "") -> str:
+    """
+    Premium section header formatter with consistent styling across all tabs.
+
+    Args:
+        icon: Emoji icon (e.g., "📊")
+        title: Section title
+        subtitle: Optional subtitle/description
+
+    Returns:
+        HTML string for section header
+    """
+    subtitle_html = f'<p style="font-size:13px;color:#8EC4DC;margin:6px 0 0 0;font-weight:500;">{subtitle}</p>' if subtitle else ''
+
+    return f"""<div style="margin-bottom:28px;margin-top:0;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;">
+    <span style="font-size:24px;">{icon}</span>
+    <h2 style="
+    font-family:'Outfit',sans-serif;
+    font-size:24px;
+    font-weight:800;
+    letter-spacing:-0.01em;
+    color:#F4FAFF;
+    margin:0;
+    ">{title}</h2>
+    </div>
+    {subtitle_html}
+    </div>"""
+
+
+def format_metric_card(label: str, value: str, icon: str = "", context: str = "") -> str:
+    """
+    Consistent metric card for use throughout dashboard tabs.
+
+    Args:
+        label: Metric label
+        value: Metric value
+        icon: Optional icon/emoji
+        context: Optional context text
+
+    Returns:
+        HTML string for metric card
+    """
+    icon_html = f'<div style="font-size:22px;margin-bottom:8px;opacity:0.8;">{icon}</div>' if icon else ''
+    context_html = f'<div style="font-size:11px;color:#8EC4DC;margin-top:8px;font-weight:500;">{context}</div>' if context else ''
+
+    return f"""<div style="
+    background:linear-gradient(135deg,rgba(0,212,200,0.08) 0%,rgba(56,189,248,0.04) 100%);
+    border:1px solid rgba(0,212,200,0.25);
+    border-top:3px solid #00D4C8;
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 2px 12px rgba(0,0,0,0.12);
+    ">
+    {icon_html}
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#8EC4DC;margin-bottom:6px;">{label}</div>
+    <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;letter-spacing:-0.03em;color:#F4FAFF;line-height:1;">{value}</div>
+    {context_html}
+    </div>"""
+
+
 def safe_sql_query(conn, query: str, params: tuple = ()) -> pd.DataFrame:
     """
     Execute SQL query with error logging (no silent failures).
@@ -167,3 +228,4 @@ def format_metric_delta(value: float, decimals: int = 1, as_percentage: bool = T
     formatted = f"{arrow} {abs(value):.{decimals}f}{'%' if as_percentage else ''}"
     css_class = "up" if value >= 0 else "down"
     return formatted, css_class
+

@@ -616,47 +616,46 @@ st.markdown("""
   /* ── Google Fonts ────────────────────────────────────────────────────── */
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  /* ── Design Tokens — Deep Coastal Dark ─────────────────────────────── */
+  /* ── Design Tokens — Modern Light Theme ─────────────────────────────── */
   :root {
-    --dp-bg:            #0E1B2A;
-    --dp-bg2:           #122133;
-    --dp-surface:       #192D42;
-    --dp-card:          #1E3550;
-    --dp-card-solid:    #1E3550;
-    --dp-card-hover:    #243D5C;
-    --dp-border:        rgba(255,255,255,0.18);
-    --dp-border-accent: rgba(0,212,200,0.50);
-    --dp-teal:          #00D4C8;
-    --dp-teal-dim:      rgba(0,212,200,0.18);
-    --dp-teal-glow:     rgba(0,212,200,0.32);
-    --dp-blue:          #38BDF8;
-    --dp-green:         #10B981;
-    --dp-amber:         #F5B940;
-    --dp-red:           #EF4444;
-    --dp-purple:        #A78BFA;
-    --dp-orange:        #FB923C;
-    --dp-text-1:        #F4FAFF;
-    --dp-text-2:        #C8E0F2;
-    --dp-text-3:        #8EC4DC;
-    --dp-text-4:        #5A8AAA;
-    --dp-radius:        12px;
-    --dp-radius-lg:     16px;
-    --dp-shadow:        0 1px 4px rgba(0,0,0,0.22), 0 4px 20px rgba(0,0,0,0.16);
-    --dp-shadow-hover:  0 8px 32px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,212,200,0.22);
-    --dp-shadow-deep:   0 16px 48px rgba(0,0,0,0.36);
+    --dp-bg:            #FFFFFF;
+    --dp-bg2:           #F8FAFC;
+    --dp-surface:       #F1F5F9;
+    --dp-card:          #FFFFFF;
+    --dp-card-solid:    #FFFFFF;
+    --dp-card-hover:    #F8FAFC;
+    --dp-border:        #E2E8F0;
+    --dp-border-accent: #0EA5E9;
+    --dp-teal:          #0891B2;
+    --dp-teal-dim:      rgba(8, 145, 178, 0.10);
+    --dp-teal-glow:     rgba(8, 145, 178, 0.20);
+    --dp-blue:          #0284C7;
+    --dp-green:         #059669;
+    --dp-amber:         #D97706;
+    --dp-red:           #DC2626;
+    --dp-purple:        #7C3AED;
+    --dp-orange:        #EA580C;
+    --dp-text-1:        #0F172A;
+    --dp-text-2:        #334155;
+    --dp-text-3:        #64748B;
+    --dp-text-4:        #94A3B8;
+    --dp-radius:        8px;
+    --dp-radius-lg:     12px;
+    --dp-shadow:        0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
+    --dp-shadow-hover:  0 4px 12px rgba(15,23,42,0.15), 0 2px 4px rgba(15,23,42,0.10);
+    --dp-shadow-deep:   0 10px 25px rgba(15,23,42,0.15);
   }
 
   html, body, [class*="css"] {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background-color: var(--dp-bg) !important;
     color: var(--dp-text-1) !important;
-    font-size: 15px !important;
+    font-size: 14px !important;
   }
-  /* ── Global font scale-up — all text bumped ~15% larger ──────────────── */
   p, li, span, label, div { font-size: inherit; }
   [data-testid="stMarkdownContainer"] p,
-  [data-testid="stMarkdownContainer"] li { font-size: 15px; line-height: 1.7; }
-  [data-testid="stText"] { font-size: 15px !important; }
+  [data-testid="stMarkdownContainer"] li { font-size: 14px; line-height: 1.6; }
+  [data-testid="stText"] { font-size: 14px !important; }
   [data-testid="stMetricValue"] { font-size: 2.2rem !important; }
   [data-testid="stMetricLabel"] { font-size: 14px !important; }
   [data-testid="stMetricDelta"]  { font-size: 13px !important; }
@@ -691,10 +690,10 @@ st.markdown("""
     background-color: transparent !important;
   }
 
-  /* ── Global dark overrides — all white surfaces → dark glass ─────────── */
+  /* ── Sidebar light theme ───────────────────────────────────────────────── */
   [data-testid="stSidebar"] > div:first-child {
-    background: linear-gradient(180deg, #192D42 0%, #0E1B2A 100%) !important;
-    border-right: 1px solid rgba(0,212,200,0.14) !important;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%) !important;
+    border-right: 1px solid var(--dp-border) !important;
   }
   [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
   [data-testid="stSidebar"] label,
@@ -706,53 +705,51 @@ st.markdown("""
   [data-testid="stSidebar"] [data-testid="stMultiSelect"] > div > div,
   [data-testid="stSidebar"] input,
   [data-testid="stSidebar"] select {
-    background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(255,255,255,0.10) !important;
+    background: var(--dp-surface) !important;
+    border-color: var(--dp-border) !important;
     color: var(--dp-text-1) !important;
   }
-  /* Streamlit metric dark */
+  /* Streamlit components light */
   [data-testid="stMetric"] {
     background: var(--dp-card) !important;
     border: 1px solid var(--dp-border) !important;
-    border-radius: var(--dp-radius) !important;
-    padding: 14px 16px !important;
+    border-radius: var(--dp-radius-lg) !important;
+    padding: 16px !important;
+    box-shadow: var(--dp-shadow) !important;
   }
-  [data-testid="stMetricValue"] { color: var(--dp-text-1) !important; }
-  [data-testid="stMetricLabel"] { color: var(--dp-text-3) !important; }
-  [data-testid="stMetricDelta"]  { font-size: 11px !important; }
-  /* Streamlit expander dark */
+  [data-testid="stMetricValue"] { color: var(--dp-text-1) !important; font-size: 1.8rem !important; }
+  [data-testid="stMetricLabel"] { color: var(--dp-text-3) !important; font-size: 12px !important; }
+  [data-testid="stMetricDelta"]  { font-size: 12px !important; }
   [data-testid="stExpander"] {
     background: var(--dp-card) !important;
     border: 1px solid var(--dp-border) !important;
-    border-radius: var(--dp-radius) !important;
+    border-radius: var(--dp-radius-lg) !important;
   }
-  [data-testid="stExpander"] summary { color: var(--dp-text-2) !important; }
-  /* Streamlit dataframe dark */
+  [data-testid="stExpander"] summary { color: var(--dp-text-1) !important; font-weight: 600 !important; }
   [data-testid="stDataFrame"] { background: var(--dp-card) !important; }
-  /* Select/input dark */
   [data-baseweb="select"] > div,
   [data-baseweb="input"] > div,
   div[data-testid="stSelectbox"] > div > div {
-    background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(255,255,255,0.10) !important;
+    background: var(--dp-surface) !important;
+    border-color: var(--dp-border) !important;
     color: var(--dp-text-1) !important;
   }
   [data-baseweb="menu"],
-  [data-baseweb="popover"] { background: #192D42 !important; }
-  [data-baseweb="option"]:hover { background: rgba(0,212,200,0.10) !important; }
-  /* Tab bar dark */
+  [data-baseweb="popover"] { background: var(--dp-card) !important; border: 1px solid var(--dp-border) !important; }
+  [data-baseweb="option"]:hover { background: var(--dp-surface) !important; }
   [data-testid="stTabs"] [role="tablist"] {
-    background: rgba(255,255,255,0.03) !important;
-    border-bottom: 1px solid var(--dp-border) !important;
-    border-radius: 10px 10px 0 0;
+    background: transparent !important;
+    border-bottom: 2px solid var(--dp-border) !important;
+    border-radius: 0;
   }
   button[data-baseweb="tab"] {
     color: var(--dp-text-3) !important;
     background: transparent !important;
+    border-bottom: 2px solid transparent !important;
   }
   button[data-baseweb="tab"][aria-selected="true"] {
-    color: var(--dp-teal) !important;
-    border-bottom-color: var(--dp-teal) !important;
+    color: var(--dp-blue) !important;
+    border-bottom-color: var(--dp-blue) !important;
   }
 
   /* ── KPI Cards ───────────────────────────────────────────────────────── */
@@ -981,20 +978,20 @@ st.markdown("""
   a[href*="github.com/streamlit"]       { display: none !important; }
   button[title*="Deploy"]               { display: none !important; }
   button[aria-label*="deploy"]          { display: none !important; }
-  /* ── Native Streamlit sidebar collapse button — make it clearly visible ── */
+  /* ── Sidebar collapse button light theme ──────────────────────────────── */
   [data-testid="stSidebarCollapseButton"] button,
   [data-testid="collapsedControl"] button,
   [data-testid="collapsedControl"] {
     width: 40px !important; height: 40px !important;
-    background: rgba(0,212,200,0.15) !important;
-    border: 1px solid rgba(0,212,200,0.40) !important;
-    border-radius: 10px !important;
-    color: #00D4C8 !important;
-    box-shadow: 0 2px 10px rgba(0,212,200,0.20) !important;
+    background: var(--dp-surface) !important;
+    border: 1px solid var(--dp-border) !important;
+    border-radius: 8px !important;
+    color: var(--dp-blue) !important;
+    box-shadow: var(--dp-shadow) !important;
   }
   [data-testid="stSidebarCollapseButton"] svg,
   [data-testid="collapsedControl"] svg {
-    color: #00D4C8 !important; fill: #00D4C8 !important; width: 18px !important; height: 18px !important;
+    color: var(--dp-blue) !important; fill: var(--dp-blue) !important; width: 18px !important; height: 18px !important;
   }
 
   /* ── Inner containers: must NOT clip so sticky tabs can work ────────── */
