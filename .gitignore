@@ -9,6 +9,7 @@ data/str/*.xls
 logs/*.png
 logs/*.log
 logs/*.json
+logs/*.jsonl
 
 # Python
 __pycache__/
