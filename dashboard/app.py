@@ -8340,11 +8340,12 @@ with tab_ov:
     # EXECUTIVE SUMMARY — Clean, high-impact main tab (2-minute scan)
     # ══════════════════════════════════════════════════════════════════════════════
 
-    # ── Headline Insight ──────────────────────────────────────────────────────────
+    # ── HERO SECTION: Compelling Headline + Date Context ────────────────────────
     try:
         _headline = "On Track"
         _headline_color = "🟢"
         _headline_detail = "Market performing as expected"
+        _headline_emoji = "✨"
 
         # Determine headline based on top insight
         if not df_insights.empty:
@@ -8353,18 +8354,56 @@ with tab_ov:
             _headline_detail = (_top.get("body", "") or _headline)
             _headline_color = "🟢"
 
+        # Get current date context
+        _today = datetime.now().strftime("%A, %B %d")
+        _report_month = datetime.now().strftime("%B %Y").upper()
+
         st.markdown(
-            f"""<div class="headline-insight">
-            <div class="headline-insight-icon">{_headline_color}</div>
-            <p class="headline-insight-text">{_headline}</p>
-            <p class="headline-insight-sub">{_headline_detail}</p>
+            f"""<div style="
+            margin-bottom: 40px;
+            padding: 0;
+            ">
+            <div style="
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 8px;
+            ">
+            <span style="font-size: 28px; line-height: 1;">{_headline_color}</span>
+            <h1 style="
+            font-family: 'Outfit', sans-serif;
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            margin: 0;
+            color: #F4FAFF;
+            line-height: 1.1;
+            ">{_headline}</h1>
+            </div>
+            <p style="
+            font-size: 16px;
+            color: #C8E0F2;
+            margin: 12px 0 6px 0;
+            line-height: 1.6;
+            font-weight: 400;
+            ">{_headline_detail}</p>
+            <p style="
+            font-size: 13px;
+            color: #8EC4DC;
+            margin: 0;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            ">{_today} &nbsp;·&nbsp; {_report_month}</p>
             </div>""",
             unsafe_allow_html=True,
         )
     except Exception as e:
         _logger.debug(f"Failed to render headline insight: {str(e)}")
 
-    # ── Hero Metrics (4-column) ───────────────────────────────────────────────────
+    # ── HERO METRICS: Large, Spaced, High-Impact KPI Cards ──────────────────────
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+
     try:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
         _exec_adr   = m.get("adr_30", 0.0) if m else 0.0
@@ -8374,72 +8413,145 @@ with tab_ov:
         _exec_adr_d = m.get("adr_delta", 0.0) if m else 0.0
         _exec_occ_d = m.get("occ_delta", 0.0) if m else 0.0
 
-        from utils import format_hero_kpi_card, format_metric_delta
+        from utils import format_metric_delta
 
         # Format deltas
         _rvp_delta_str, _rvp_delta_cls = format_metric_delta(_exec_rvp_d)
         _adr_delta_str, _adr_delta_cls = format_metric_delta(_exec_adr_d)
         _occ_delta_str, _occ_delta_cls = format_metric_delta(_exec_occ_d, as_percentage=False)
 
-        _h1, _h2, _h3, _h4 = st.columns(4)
+        # Create 2x2 grid for better spacing
+        _h_row1_1, _h_row1_2 = st.columns(2, gap="large")
+        _h_row2_1, _h_row2_2 = st.columns(2, gap="large")
 
-        with _h1:
-            st.markdown(
-                format_hero_kpi_card("RevPAR (30d)", f"${_exec_rvp:.0f}", _rvp_delta_str, _rvp_delta_cls, "#38BDF8"),
-                unsafe_allow_html=True,
-            )
-        with _h2:
-            st.markdown(
-                format_hero_kpi_card("ADR (30d)", f"${_exec_adr:.0f}", _adr_delta_str, _adr_delta_cls, "#818CF8"),
-                unsafe_allow_html=True,
-            )
-        with _h3:
-            st.markdown(
-                format_hero_kpi_card("Occupancy (30d)", f"{_exec_occ:.1f}%", _occ_delta_str, _occ_delta_cls, "#34D399"),
-                unsafe_allow_html=True,
-            )
-        with _h4:
-            st.markdown(
-                format_hero_kpi_card("TBID Monthly", f"${_exec_tbid:,.0f}", "Blended 1.25%", "neutral", "#A78BFA"),
-                unsafe_allow_html=True,
-            )
-    except Exception as e:
-        _logger.debug(f"Failed to render hero metrics: {str(e)}")
-
-    st.markdown("---")
-
-    # ── Exploration Cards (5-column grid linking to other tabs) ──────────────────
-    st.markdown(
-        '<div style="margin-bottom:20px;"><span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8AAEC6;">Explore by Topic</span></div>',
-        unsafe_allow_html=True,
-    )
-
-    try:
-        _e1, _e2, _e3, _e4, _e5 = st.columns(5)
-
-        # Helper to render exploration card
-        def _render_explore_card(col, emoji, title, desc, tab_idx):
+        def _render_hero_metric(col, icon, label, value, delta, delta_cls, color):
             with col:
                 st.markdown(
-                    f"""<div class="explore-card" style="cursor:pointer;" onclick="document.querySelectorAll('[role=tab]')[{tab_idx}].click();">
-                    <div class="explore-icon">{emoji}</div>
-                    <div class="explore-title">{title}</div>
-                    <div class="explore-desc">{desc}</div>
+                    f"""<div style="
+                    background: linear-gradient(135deg, rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.08) 0%, rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.04) 100%);
+                    border: 1px solid {color}33;
+                    border-top: 3px solid {color};
+                    border-radius: 16px;
+                    padding: 32px 28px;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+                    transition: all 0.3s cubic-bezier(0.28, 0, 0.49, 1);
+                    position: relative;
+                    overflow: hidden;
+                    ">
+                    <div style="position: relative; z-index: 1;">
+                    <div style="
+                    font-size: 28px;
+                    margin-bottom: 14px;
+                    opacity: 0.75;
+                    ">{icon}</div>
+                    <div style="
+                    font-size: 13px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.1em;
+                    color: #8EC4DC;
+                    margin-bottom: 12px;
+                    ">{label}</div>
+                    <div style="
+                    font-family: 'Outfit', sans-serif;
+                    font-size: 48px;
+                    font-weight: 900;
+                    letter-spacing: -0.04em;
+                    color: #F4FAFF;
+                    line-height: 1;
+                    margin-bottom: 14px;
+                    ">{value}</div>
+                    <div style="
+                    font-size: 13px;
+                    font-weight: 700;
+                    color: {'#10B981' if delta_cls == 'up' else '#EF4444' if delta_cls == 'down' else '#8EC4DC'};
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    ">{delta}</div>
+                    </div>
                     </div>""",
                     unsafe_allow_html=True,
                 )
 
-        _render_explore_card(_e1, "🏨", "Hotel Trends", "30-day & YTD performance", 1)
-        _render_explore_card(_e2, "👥", "Our Visitors", "Trip volumes & origins", 3)
-        _render_explore_card(_e3, "🎉", "Event Impact", "Major events & lift", 4)
-        _render_explore_card(_e4, "📈", "Market Intel", "Competitive positioning", 7)
-        _render_explore_card(_e5, "🗄️", "Data Health", "ETL pipeline & coverage", 8)
+        _render_hero_metric(_h_row1_1, "💰", "RevPAR (30d)", f"${_exec_rvp:.0f}", _rvp_delta_str, _rvp_delta_cls, "#38BDF8")
+        _render_hero_metric(_h_row1_2, "🏨", "ADR (30d)", f"${_exec_adr:.0f}", _adr_delta_str, _adr_delta_cls, "#818CF8")
+        _render_hero_metric(_h_row2_1, "📊", "Occupancy (30d)", f"{_exec_occ:.1f}%", _occ_delta_str, _occ_delta_cls, "#34D399")
+        _render_hero_metric(_h_row2_2, "💳", "TBID Monthly", f"${_exec_tbid:,.0f}", "Blended 1.25%", "neutral", "#A78BFA")
+
+    except Exception as e:
+        _logger.debug(f"Failed to render hero metrics: {str(e)}")
+
+    st.markdown("<div style='height: 32px;'></div>", unsafe_allow_html=True)
+
+    # ── EXPLORE SECTION: Large Exploration Cards with Better Spacing ──────────────
+    st.markdown(
+        '<div style="margin-bottom: 28px; margin-top: 16px;"><span style="font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8EC4DC;">📍 Explore by Topic</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        # 3 cards on first row, 2 on second row for better breathing room
+        _e_row1_1, _e_row1_2, _e_row1_3 = st.columns(3, gap="large")
+        _e_row2_1, _e_row2_2, _e_spacer = st.columns([1, 1, 1], gap="large")
+
+        # Helper to render exploration card with enhanced design
+        def _render_explore_card(col, emoji, title, desc, tab_idx, accent_color):
+            with col:
+                st.markdown(
+                    f"""<div style="
+                    background: linear-gradient(135deg, rgba(0, 212, 200, 0.08) 0%, rgba(56, 189, 248, 0.04) 100%);
+                    border: 1px solid rgba(0, 212, 200, 0.25);
+                    border-top: 3px solid {accent_color};
+                    border-radius: 16px;
+                    padding: 28px 24px;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.28, 0, 0.49, 1);
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+                    position: relative;
+                    overflow: hidden;
+                    "
+                    onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 8px 32px rgba(0, 212, 200, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08)';"
+                    onclick="document.querySelectorAll('[role=tab]')[{tab_idx}].click();">
+                    <div style="position: relative; z-index: 1;">
+                    <div style="
+                    font-size: 42px;
+                    margin-bottom: 16px;
+                    display: inline-block;
+                    ">{emoji}</div>
+                    <h3 style="
+                    font-family: 'Outfit', sans-serif;
+                    font-size: 18px;
+                    font-weight: 800;
+                    letter-spacing: -0.01em;
+                    color: #F4FAFF;
+                    margin: 0 0 10px 0;
+                    ">{title}</h3>
+                    <p style="
+                    font-size: 13px;
+                    color: #C8E0F2;
+                    line-height: 1.6;
+                    margin: 0;
+                    ">{desc}</p>
+                    </div>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+
+        _render_explore_card(_e_row1_1, "🏨", "Hotel Trends", "30-day & annual performance, rate trends", 1, "#38BDF8")
+        _render_explore_card(_e_row1_2, "👥", "Our Visitors", "Visitor volumes, origins, spending patterns", 3, "#34D399")
+        _render_explore_card(_e_row1_3, "🎉", "Event Impact", "Major events, occupancy lift analysis", 4, "#F5B940")
+        _render_explore_card(_e_row2_1, "📈", "Market Intel", "Competitive benchmarking & positioning", 7, "#818CF8")
+        _render_explore_card(_e_row2_2, "🗄️", "Data Health", "ETL status, source coverage, freshness", 8, "#A78BFA")
+
     except Exception as e:
         _logger.debug(f"Failed to render exploration cards: {str(e)}")
 
-    st.markdown("---")
+    st.markdown("<div style='height: 40px;'></div>", unsafe_allow_html=True)
 
-    # ── Summary Stats (optional callout) ───────────────────────────────────────────
+    # ── INSIGHT CALLOUT: Context Banner ──────────────────────────────────────────
     try:
         _trips_fmt = "—"
         _oos_pct = 0
@@ -8451,21 +8563,39 @@ with tab_ov:
 
         if _trips_fmt != "—":
             st.markdown(
-                callout(
-                    "👥",
-                    "Visitor Economy Context",
-                    f"<strong>{_trips_fmt}</strong> annual visitor trips · <strong>{_oos_pct:.0f}%</strong> out-of-state visitors. "
-                    "See 'Our Visitors' tab for market breakdown and feeder analysis.",
-                    "info",
-                ),
+                f"""<div style="
+                background: linear-gradient(135deg, rgba(34, 211, 238, 0.08) 0%, rgba(56, 189, 248, 0.04) 100%);
+                border: 1px solid rgba(34, 211, 238, 0.25);
+                border-left: 4px solid #22D3EE;
+                border-radius: 12px;
+                padding: 24px 28px;
+                margin-bottom: 40px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                ">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                <span style="font-size: 22px;">👥</span>
+                <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #F4FAFF; margin: 0;">Visitor Economy Context</h3>
+                </div>
+                <p style="color: #C8E0F2; font-size: 14px; line-height: 1.6; margin: 0;">
+                <strong style="color: #22D3EE;">{_trips_fmt}</strong> annual visitor trips with <strong style="color: #22D3EE;">{_oos_pct:.0f}%</strong> out-of-state visitors driving higher spending per trip.
+                Explore feeder markets and visitor demographics in the <strong>Our Visitors</strong> tab.
+                </p>
+                </div>""",
                 unsafe_allow_html=True,
             )
     except Exception as e:
         _logger.debug(f"Failed to render visitor context: {str(e)}")
 
-    st.markdown("---")
+    st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
+    st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 0;'>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 32px;'></div>", unsafe_allow_html=True)
 
-    # ── Overview Sub-Tabs (Scorecard, Board Report, Goals, AI Assistant) ──────────
+    # ── DEEP DIVES: Sub-Tabs for Detailed Analysis ────────────────────────────────
+    st.markdown(
+        '<div style="margin-bottom: 20px;"><span style="font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8EC4DC;">📑 Deep Dives</span></div>',
+        unsafe_allow_html=True,
+    )
+
     _ov_t1, _ov_t2, _ov_t3, _ov_t4 = st.tabs([
         "📊 Scorecard",
         "📋 Board Report",
