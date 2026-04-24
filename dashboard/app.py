@@ -834,7 +834,7 @@ st.markdown("""
   .insight-positive::before { background: linear-gradient(180deg, #10B981, #059669); }
   .insight-warning::before  { background: linear-gradient(180deg, #F5B940, #D97706); }
   .insight-negative::before { background: linear-gradient(180deg, #EF4444, #DC2626); }
-  .insight-info::before     { background: linear-gradient(180deg, #00D4C8, #38BDF8); }
+  .insight-info::before     { background: linear-gradient(180deg, #0891B2, #38BDF8); }
   .insight-title {
     font-family: 'Outfit', sans-serif;
     font-size: 15.5px; font-weight: 800;
@@ -1110,7 +1110,7 @@ st.markdown("""
     content: '';
     position: absolute; top: 0; left: 0; right: 0;
     height: 2px;
-    background: linear-gradient(90deg, transparent 0%, #00D4C8 20%, #38BDF8 50%, #00D4C8 80%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, #0891B2 20%, #38BDF8 50%, #0891B2 80%, transparent 100%);
     animation: hero-line-in 0.9s cubic-bezier(0.37,0,0.22,1) both;
     opacity: 1;
   }
@@ -1130,8 +1130,8 @@ st.markdown("""
     text-shadow: 0 1px 8px rgba(0,0,0,0.30);
   }
   .hero-title span {
-    color: #00D4C8 !important; /* fallback */
-    background: linear-gradient(110deg, #00D4C8 0%, #38BDF8 40%, #6EE7FF 75%, #00D4C8 100%);
+    color: #0891B2 !important; /* fallback */
+    background: linear-gradient(110deg, #0891B2 0%, #38BDF8 40%, #6EE7FF 75%, #0891B2 100%);
     background-size: 200% auto;
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
@@ -1139,7 +1139,7 @@ st.markdown("""
     animation: shimmer 4s linear infinite;
   }
   @supports not (-webkit-background-clip: text) {
-    .hero-title span { color: #00D4C8 !important; background: none !important; -webkit-text-fill-color: #00D4C8 !important; }
+    .hero-title span { color: #0891B2 !important; background: none !important; -webkit-text-fill-color: #0891B2 !important; }
   }
   @keyframes shimmer {
     0%   { background-position: 0% center; }
@@ -1201,26 +1201,26 @@ st.markdown("""
 
   /* ── Section Divider ─────────────────────────────────────────────────── */
   .section-divider {
-    display: flex; align-items: center; gap: 14px; margin: 32px 0 18px 0;
+    display: flex; align-items: center; gap: 14px; margin: 48px 0 24px 0;
   }
   .section-divider-line {
     flex: 1; height: 1px;
-    background: linear-gradient(90deg, rgba(0,212,200,0.40), rgba(255,255,255,0.06));
+    background: linear-gradient(90deg, #E2E8F0 0%, transparent 100%);
   }
   .section-divider-title {
     font-family: 'DM Sans', 'Outfit', sans-serif;
     font-size: 10.5px; font-weight: 800; text-transform: uppercase;
     letter-spacing: .14em;
-    color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+    color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
     white-space: nowrap; padding: 6px 18px;
-    background: rgba(0,212,200,0.22);
-    border: 1px solid rgba(0,212,200,0.50);
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
     border-radius: 20px;
-    box-shadow: 0 2px 12px rgba(0,212,200,0.18);
+    box-shadow: 0 1px 3px rgba(15,23,42,0.12);
   }
   .section-divider-line-r {
     flex: 1; height: 1px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.06), transparent);
+    background: linear-gradient(90deg, transparent, #E2E8F0 100%);
   }
 
   /* ── Tab Summary Card ─────────────────────────────────────────────────── */
@@ -1251,84 +1251,84 @@ st.markdown("""
 
   /* ── Callout / Key Takeaway ──────────────────────────────────────────── */
   .dp-callout {
-    background: rgba(0,212,200,0.08);
-    border: 1px solid rgba(0,212,200,0.25);
-    border-left: 4px solid #00D4C8;
+    background: #F0F9FF;
+    border: 1px solid #BAE6FD;
+    border-left: 4px solid #0284C7;
     border-radius: 10px; padding: 14px 18px; margin: 16px 0;
   }
   .dp-callout-amber {
-    background: rgba(245,158,11,0.08);
-    border: 1px solid rgba(245,158,11,0.25);
-    border-left: 4px solid #FBBF24;
+    background: #FFFBEB;
+    border: 1px solid #FED7AA;
+    border-left: 4px solid #D97706;
     border-radius: 10px; padding: 14px 18px; margin: 16px 0;
   }
   .dp-callout-purple {
-    background: rgba(139,92,246,0.08);
-    border: 1px solid rgba(139,92,246,0.25);
-    border-left: 4px solid #A78BFA;
+    background: #F3E8FF;
+    border: 1px solid #E9D5FF;
+    border-left: 4px solid #7C3AED;
     border-radius: 10px; padding: 14px 18px; margin: 16px 0;
   }
   .dp-callout-green {
-    background: rgba(16,185,129,0.08);
-    border: 1px solid rgba(16,185,129,0.25);
-    border-left: 4px solid #34D399;
+    background: #ECFDF5;
+    border: 1px solid #A7F3D0;
+    border-left: 4px solid #059669;
     border-radius: 10px; padding: 14px 18px; margin: 16px 0;
   }
   .dp-callout .dp-callout-head {
     font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 800;
-    letter-spacing: .06em; text-transform: uppercase; color: #00D4C8;
+    letter-spacing: .06em; text-transform: uppercase; color: #0284C7;
     margin-bottom: 5px; display: flex; align-items: center; gap: 7px;
   }
-  .dp-callout-amber .dp-callout-head { color: #FBBF24; }
-  .dp-callout-purple .dp-callout-head { color: #A78BFA; }
-  .dp-callout-green  .dp-callout-head { color: #34D399; }
+  .dp-callout-amber .dp-callout-head { color: #D97706; }
+  .dp-callout-purple .dp-callout-head { color: #7C3AED; }
+  .dp-callout-green  .dp-callout-head { color: #059669; }
   .dp-callout p, .dp-callout-amber p, .dp-callout-purple p, .dp-callout-green p {
-    font-size: 13px; color: #C8E0F2; line-height: 1.65; margin: 0;
-    -webkit-text-fill-color: #C8E0F2;
+    font-size: 13px; color: #334155; line-height: 1.65; margin: 0;
+    -webkit-text-fill-color: #334155;
   }
   .dp-callout strong, .dp-callout-amber strong, .dp-callout-purple strong, .dp-callout-green strong {
-    color: #F4FAFF; -webkit-text-fill-color: #F4FAFF; font-weight: 700;
+    color: #0F172A; -webkit-text-fill-color: #0F172A; font-weight: 700;
   }
 
   /* ── Nav Guide chips in sidebar ────────────────────────────────────────── */
   .nav-guide-item {
     display: flex; align-items: flex-start; gap: 10px;
     padding: 9px 12px; border-radius: 8px; margin-bottom: 4px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
     transition: background 0.18s ease;
   }
-  .nav-guide-item:hover { background: rgba(0,212,200,0.08); }
+  .nav-guide-item:hover { background: #F0F9FF; }
   .nav-guide-icon { font-size: 16px; flex-shrink: 0; line-height: 1.3; }
   .nav-guide-text { flex: 1; }
   .nav-guide-name {
     font-family: 'Syne', sans-serif; font-size: 11.5px; font-weight: 700;
-    color: #F4FAFF; -webkit-text-fill-color: #F4FAFF; line-height: 1.2;
+    color: #0F172A; -webkit-text-fill-color: #0F172A; line-height: 1.2;
     margin-bottom: 2px;
   }
   .nav-guide-desc {
-    font-size: 10.5px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6; line-height: 1.3;
+    font-size: 10.5px; color: #64748B; -webkit-text-fill-color: #64748B; line-height: 1.3;
   }
 
   /* ── Plain-language metric label ───────────────────────────────────────── */
   .metric-plain {
-    font-size: 10px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6;
+    font-size: 10px; color: #64748B; -webkit-text-fill-color: #64748B;
     margin-top: 2px; line-height: 1.3;
   }
 
   /* ── "What to look for" chart primer ──────────────────────────────────── */
   .chart-primer {
-    font-size: 12px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6;
-    padding: 7px 14px; background: rgba(255,255,255,0.03);
+    font-size: 12px; color: #64748B; -webkit-text-fill-color: #64748B;
+    padding: 7px 14px; background: #F1F5F9;
     border-radius: 6px; margin-bottom: 6px; line-height: 1.5;
-    border-left: 3px solid rgba(0,212,200,0.30);
+    border-left: 3px solid #0284C7;
   }
-  .chart-primer strong { color: #C8E0F2; -webkit-text-fill-color: #C8E0F2; }
+  .chart-primer strong { color: #0F172A; -webkit-text-fill-color: #0F172A; }
 
   /* ── Howto welcome strip ────────────────────────────────────────────── */
   .dp-howto {
-    background: linear-gradient(135deg, rgba(0,212,200,0.10) 0%, rgba(56,189,248,0.06) 100%);
-    border: 1px solid rgba(0,212,200,0.22); border-radius: 12px;
+    background: linear-gradient(135deg, #F0F9FF 0%, #F8FAFC 100%);
+    border: 1px solid #BAE6FD; border-radius: 12px;
     padding: 16px 20px; margin: 0 0 18px 0;
     display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;
   }
@@ -1336,42 +1336,42 @@ st.markdown("""
     flex: 1; min-width: 160px; display: flex; gap: 10px; align-items: flex-start;
   }
   .dp-howto-num {
-    width: 26px; height: 26px; border-radius: 50%; background: rgba(0,212,200,0.20);
-    border: 1px solid rgba(0,212,200,0.40); color: #00D4C8; -webkit-text-fill-color: #00D4C8;
+    width: 26px; height: 26px; border-radius: 50%; background: #E0F2FE;
+    border: 1px solid #BAE6FD; color: #0284C7; -webkit-text-fill-color: #0284C7;
     font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
   .dp-howto-body { flex: 1; }
   .dp-howto-title {
-    font-size: 11px; font-weight: 700; color: #F4FAFF; -webkit-text-fill-color: #F4FAFF;
+    font-size: 11px; font-weight: 700; color: #0F172A; -webkit-text-fill-color: #0F172A;
     margin-bottom: 2px;
   }
   .dp-howto-text {
-    font-size: 10.5px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6; line-height: 1.4;
+    font-size: 10.5px; color: #64748B; -webkit-text-fill-color: #64748B; line-height: 1.4;
   }
 
   /* ── VDP Status Bar ────────────────────────────────────────────────── */
   .vdp-status-bar {
     display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
-    background: rgba(0,0,0,0.22); border-radius: 10px;
+    background: #F1F5F9; border-radius: 10px;
     padding: 10px 18px; margin: 0 0 18px 0;
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid #E2E8F0;
   }
   .vdp-status-date {
-    font-size: 11px; font-weight: 700; color: #8AAEC6;
-    -webkit-text-fill-color: #8AAEC6; letter-spacing: .04em;
+    font-size: 11px; font-weight: 700; color: #64748B;
+    -webkit-text-fill-color: #64748B; letter-spacing: .04em;
     white-space: nowrap;
   }
-  .vdp-status-sep { color: rgba(255,255,255,0.20); }
+  .vdp-status-sep { color: #E2E8F0; }
   .vdp-status-chip {
     display: inline-flex; align-items: center; gap: 5px;
     padding: 3px 11px; border-radius: 99px; font-size: 11px;
     font-weight: 700; white-space: nowrap; letter-spacing: .02em;
   }
-  .vdp-status-chip.green  { background: rgba(16,185,129,0.15); color: #34D399; -webkit-text-fill-color: #34D399; border: 1px solid rgba(16,185,129,0.35); }
-  .vdp-status-chip.yellow { background: rgba(245,158,11,0.15);  color: #FBBF24; -webkit-text-fill-color: #FBBF24; border: 1px solid rgba(245,158,11,0.35); }
-  .vdp-status-chip.red    { background: rgba(239,68,68,0.15);   color: #FCA5A5; -webkit-text-fill-color: #FCA5A5; border: 1px solid rgba(239,68,68,0.35); }
-  .vdp-status-chip.blue   { background: rgba(56,189,248,0.15);  color: #93C5FD; -webkit-text-fill-color: #93C5FD; border: 1px solid rgba(56,189,248,0.35); }
+  .vdp-status-chip.green  { background: #ECFDF5; color: #059669; -webkit-text-fill-color: #059669; border: 1px solid #D1FAE5; }
+  .vdp-status-chip.yellow { background: #FFFBEB; color: #D97706; -webkit-text-fill-color: #D97706; border: 1px solid #FED7AA; }
+  .vdp-status-chip.red    { background: #FEE2E2; color: #DC2626; -webkit-text-fill-color: #DC2626; border: 1px solid #FECACA; }
+  .vdp-status-chip.blue   { background: #F0F9FF; color: #0284C7; -webkit-text-fill-color: #0284C7; border: 1px solid #BAE6FD; }
 
   /* ── VDP Quick Actions Row ──────────────────────────────────────────── */
   .vdp-quick-actions {
@@ -1381,19 +1381,19 @@ st.markdown("""
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 16px; border-radius: 8px; font-size: 12px;
     font-weight: 700; cursor: pointer; white-space: nowrap;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.14);
-    color: #F4FAFF; -webkit-text-fill-color: #F4FAFF;
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
+    color: #0F172A; -webkit-text-fill-color: #0F172A;
     transition: background 0.18s, border-color 0.18s, transform 0.12s;
     text-decoration: none;
   }
-  .vdp-qa-btn:hover { background: rgba(0,212,200,0.12); border-color: rgba(0,212,200,0.35); transform: translateY(-1px); }
-  .vdp-qa-btn.primary { background: rgba(0,212,200,0.18); border-color: rgba(0,212,200,0.50); color: #00D4C8; -webkit-text-fill-color: #00D4C8; }
+  .vdp-qa-btn:hover { background: #F0F9FF; border-color: #BAE6FD; transform: translateY(-1px); }
+  .vdp-qa-btn.primary { background: #E0F2FE; border-color: #BAE6FD; color: #0284C7; -webkit-text-fill-color: #0284C7; }
 
   /* ── AI Command Panel ───────────────────────────────────────────────── */
   .ai-command-panel {
-    background: linear-gradient(135deg, rgba(0,212,200,0.06) 0%, rgba(56,189,248,0.04) 100%);
-    border: 1px solid rgba(0,212,200,0.22); border-radius: 14px;
+    background: linear-gradient(135deg, #F0F9FF 0%, #F8FAFC 100%);
+    border: 1px solid #BAE6FD; border-radius: 14px;
     padding: 20px 22px; margin: 0 0 20px 0;
   }
   .ai-command-header {
@@ -1401,10 +1401,10 @@ st.markdown("""
   }
   .ai-command-title {
     font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800;
-    color: #F4FAFF; -webkit-text-fill-color: #F4FAFF; letter-spacing: -.01em;
+    color: #0F172A; -webkit-text-fill-color: #0F172A; letter-spacing: -.01em;
   }
   .ai-command-sub {
-    font-size: 11px; color: #8AAEC6; -webkit-text-fill-color: #8AAEC6;
+    font-size: 11px; color: #64748B; -webkit-text-fill-color: #64748B;
     margin-left: auto;
   }
   .ai-prompt-grid {
@@ -1415,7 +1415,7 @@ st.markdown("""
     padding: 5px 13px; border-radius: 99px; font-size: 11.5px;
     font-weight: 600; cursor: pointer;
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
-    color: #C8E0F2; -webkit-text-fill-color: #C8E0F2;
+    color: #334155; -webkit-text-fill-color: #334155;
     transition: background 0.15s, border-color 0.15s;
   }
   .ai-prompt-chip:hover { background: rgba(0,212,200,0.12); border-color: rgba(0,212,200,0.35); }
@@ -1427,11 +1427,11 @@ st.markdown("""
     border-radius: 8px; border: 1px solid rgba(255,255,255,0.07);
   }
   .section-nav-item {
-    font-size: 11px; font-weight: 700; color: #8AAEC6;
-    -webkit-text-fill-color: #8AAEC6; padding: 3px 0;
+    font-size: 11px; font-weight: 700; color: #64748B;
+    -webkit-text-fill-color: #64748B; padding: 3px 0;
     letter-spacing: .03em;
   }
-  .section-nav-item.active { color: #00D4C8; -webkit-text-fill-color: #00D4C8; }
+  .section-nav-item.active { color: #0891B2; -webkit-text-fill-color: #0891B2; }
   .section-nav-sep { color: rgba(255,255,255,0.18); font-size: 11px; padding: 3px 2px; }
 
   /* ── Mini Data Card ─────────────────────────────────────────────────── */
@@ -1554,14 +1554,14 @@ st.markdown("""
     display: inline-flex; align-items: center;
     font-family: 'Inter', sans-serif;
     font-size: 10px; font-weight: 700; letter-spacing: .06em;
-    text-transform: uppercase; padding: 2px 7px; border-radius: 20px;
-    vertical-align: middle; margin: 0 2px; line-height: 1;
+    text-transform: uppercase; padding: 4px 10px; border-radius: 20px;
+    vertical-align: middle; margin: 0 4px 0 0; line-height: 1;
     border: 1px solid transparent;
   }
-  .nlm-tag-str    { background: rgba(0,212,200,.10);    color: #00D4C8; border-color: rgba(0,212,200,0.25); }
-  .nlm-tag-datafy { background: rgba(16,185,129,.10);  color: #10B981; border-color: rgba(16,185,129,0.25); }
-  .nlm-tag-costar { background: rgba(167,139,250,.10); color: #A78BFA; border-color: rgba(167,139,250,0.25); }
-  .nlm-tag-ai     { background: rgba(245,185,64,.10);  color: #F5B940; border-color: rgba(245,185,64,0.25); }
+  .nlm-tag-str    { background: #F0F9FF;      color: #0284C7; border-color: #BAE6FD; }
+  .nlm-tag-datafy { background: #ECFDF5;      color: #059669; border-color: #D1FAE5; }
+  .nlm-tag-costar { background: #F3E8FF;      color: #7C3AED; border-color: #E9D5FF; }
+  .nlm-tag-ai     { background: #FFFBEB;      color: #D97706; border-color: #FED7AA; }
 
   /* ── Intelligence Briefing Box ───────────────────────────────────────── */
   .nlm-briefing {
@@ -1597,11 +1597,11 @@ st.markdown("""
   }
   .nlm-qa-mark {
     width: 18px; height: 18px; min-width: 18px;
-    background: rgba(0,212,200,0.10); border-radius: 5px;
+    background: #ECFDF5; border-radius: 5px;
     display: inline-flex; align-items: center; justify-content: center;
-    font-size: 9px; font-weight: 900; color: var(--dp-teal);
+    font-size: 9px; font-weight: 900; color: #059669;
     flex-shrink: 0; margin-top: 1px;
-    border: 1px solid rgba(0,212,200,0.22);
+    border: 1px solid #D1FAE5;
   }
   .nlm-qa-a { font-size: 12px; color: var(--dp-text-2); line-height: 1.65; padding-left: 25px; }
 
@@ -1609,13 +1609,13 @@ st.markdown("""
   .nlm-source-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
     margin-top: 10px; padding-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.07);
+    border-top: 1px solid #E2E8F0;
   }
 
   /* ── Questions Block ─────────────────────────────────────────────────── */
   .nlm-questions {
-    background: rgba(0,212,200,0.05);
-    border: 1px solid rgba(0,212,200,0.14);
+    background: #F0F9FF;
+    border: 1px solid #BAE6FD;
     border-radius: var(--dp-radius-lg); padding: 14px 18px; margin-bottom: 14px;
   }
   .nlm-questions-title {
@@ -1660,7 +1660,7 @@ st.markdown("""
     justify-content: center; font-family: 'Outfit', sans-serif;
     font-weight: 900; position: relative; z-index: 1;
     border: 2px solid currentColor;
-    background: rgba(14, 26, 48, 0.95);
+    background: #FFFFFF;
   }
   .pulse-score { font-size: 22px; line-height: 1; letter-spacing: -.04em; }
   .pulse-label {
@@ -1680,8 +1680,8 @@ st.markdown("""
   .pulse-info-status {
     display: inline-block; margin-top: 8px; font-size: 10px; font-weight: 700;
     padding: 3px 10px; border-radius: 20px;
-    background: rgba(0,212,200,0.10); color: var(--dp-teal);
-    border: 1px solid rgba(0,212,200,0.22);
+    background: #ECFDF5; color: #059669;
+    border: 1px solid #D1FAE5;
     letter-spacing: .05em;
   }
   @keyframes pulse-ring {
@@ -1724,10 +1724,10 @@ st.markdown("""
   [data-testid="stDataFrame"] td, [data-testid="stDataFrame"] th {
     color: var(--dp-text-1) !important;
     background: var(--dp-card) !important;
-    border-color: rgba(255,255,255,0.06) !important;
+    border-color: #E2E8F0 !important;
   }
   [data-testid="stDataFrame"] thead th {
-    background: rgba(0,212,200,0.10) !important;
+    background: #F1F5F9 !important;
     color: var(--dp-teal) !important;
   }
   [data-testid="stDataFrame"] { background: var(--dp-card) !important; }
@@ -1738,19 +1738,19 @@ st.markdown("""
 
   /* ── Section Intelligence Card ───────────────────────────────────────── */
   .sec-intel {
-    background: linear-gradient(135deg, rgba(0,212,200,0.05) 0%, rgba(0,212,200,0.02) 100%);
-    border: 1px solid rgba(0,212,200,0.16);
+    background: linear-gradient(135deg, #F0F9FF 0%, #F8FAFC 100%);
+    border: 1px solid #BAE6FD;
     border-left: 3px solid var(--dp-teal);
     border-radius: var(--dp-radius-lg);
     padding: 16px 20px; margin: 8px 0 16px 0;
-    box-shadow: 0 2px 12px rgba(0,212,200,0.06);
+    box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
     position: relative; overflow: hidden;
   }
   .sec-intel::after {
     content: 'INTEL';
     position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
     font-family: 'Syne', sans-serif; font-size: 52px; font-weight: 800;
-    color: rgba(0,212,200,0.05); letter-spacing: -0.04em;
+    color: rgba(2, 132, 199, 0.08); letter-spacing: -0.04em;
     pointer-events: none; user-select: none;
   }
   .sec-intel-label {
@@ -1766,16 +1766,16 @@ st.markdown("""
   .sec-intel-body { font-size: 13px; color: var(--dp-text-2); line-height: 1.72; }
   .sec-intel-stat {
     display: inline-block;
-    background: rgba(0,212,200,0.10); border: 1px solid rgba(0,212,200,0.22);
+    background: #ECFDF5; border: 1px solid #D1FAE5;
     border-radius: 20px; padding: 3px 12px;
-    font-weight: 700; color: var(--dp-teal);
+    font-weight: 700; color: #059669;
     font-family: 'Syne', 'Outfit', sans-serif;
     font-size: 11.5px; letter-spacing: -0.01em;
   }
 
   /* ── Divider Rule ────────────────────────────────────────────────────── */
   .dp-divider {
-    border: none; border-top: 1px solid rgba(255,255,255,0.06);
+    border: none; border-top: 1px solid #E2E8F0;
     margin: 20px 0;
   }
 
@@ -1992,7 +1992,7 @@ st.markdown("""
     margin: 28px 0 14px 0 !important;
     background: rgba(255,255,255,0.07) !important;
     border: 1px solid rgba(255,255,255,0.14) !important;
-    border-left: 4px solid var(--sh-accent, #00D4C8) !important;
+    border-left: 4px solid var(--sh-accent, #0891B2) !important;
     box-shadow: 0 2px 12px rgba(0,0,0,0.25) !important;
     transition: box-shadow 0.22s ease, transform 0.22s ease !important;
   }
@@ -2017,11 +2017,11 @@ st.markdown("""
     text-transform: uppercase !important; padding: 3px 11px !important;
     border-radius: 20px !important; white-space: nowrap !important;
     background: rgba(0,212,200,0.18) !important;
-    color: #00D4C8 !important; -webkit-text-fill-color: #00D4C8 !important;
+    color: #0891B2 !important; -webkit-text-fill-color: #0891B2 !important;
     border: 1px solid rgba(0,212,200,0.45) !important;
   }
   /* Accent color variants */
-  .sh-teal   { --sh-accent: #00D4C8; }
+  .sh-teal   { --sh-accent: #0891B2; }
   .sh-blue   { --sh-accent: #38BDF8; }
   .sh-green  { --sh-accent: #10B981; }
   .sh-purple { --sh-accent: #7C3AED; }
@@ -2076,7 +2076,7 @@ st.markdown("""
     white-space: nowrap; flex-shrink: 0;
   }
   .goal-badge-active   { background: rgba(16,185,129,0.12);  color: #10B981; border: 1px solid rgba(16,185,129,0.28); }
-  .goal-badge-achieved { background: rgba(0,212,200,0.12);   color: #00D4C8; border: 1px solid rgba(0,212,200,0.35); }
+  .goal-badge-achieved { background: rgba(0,212,200,0.12);   color: #0891B2; border: 1px solid rgba(0,212,200,0.35); }
   .goal-badge-paused   { background: rgba(245,158,11,0.12);  color: #F5B940; border: 1px solid rgba(245,158,11,0.28); }
   .goal-badge-missed   { background: rgba(239,68,68,0.12);   color: #EF4444; border: 1px solid rgba(239,68,68,0.28); }
   .goal-meta {
@@ -2092,7 +2092,7 @@ st.markdown("""
     height: 100%; border-radius: 99px;
     transition: width 0.6s cubic-bezier(0.37,0,0.22,1);
   }
-  .goal-fill-active   { background: linear-gradient(90deg, #0891B2, #00D4C8); }
+  .goal-fill-active   { background: linear-gradient(90deg, #0891B2, #0891B2); }
   .goal-fill-achieved { background: linear-gradient(90deg, #059669, #10B981); }
   .goal-fill-paused   { background: linear-gradient(90deg, #D97706, #F5B940); }
   .goal-fill-missed   { background: linear-gradient(90deg, #DC2626, #EF4444); }
@@ -2114,11 +2114,11 @@ st.markdown("""
   /* Category colors on left border */
   .goal-cat-revenue    { border-left: 4px solid #10B981; }
   .goal-cat-visitors   { border-left: 4px solid #38BDF8; }
-  .goal-cat-occupancy  { border-left: 4px solid #00D4C8; }
+  .goal-cat-occupancy  { border-left: 4px solid #0891B2; }
   .goal-cat-tbid       { border-left: 4px solid #F5B940; }
   .goal-cat-marketing  { border-left: 4px solid #A78BFA; }
   .goal-cat-social     { border-left: 4px solid #FB923C; }
-  .goal-cat-custom     { border-left: 4px solid #8EC4DC; }
+  .goal-cat-custom     { border-left: 4px solid #64748B; }
   /* Section header for goals */
   .goals-section-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -2523,7 +2523,7 @@ st.markdown("""
   }
   .master-card::after {
     content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent 0%, #00D4C8 30%, #38BDF8 60%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, #0891B2 30%, #38BDF8 60%, transparent 100%);
   }
   .master-card-label {
     font-family: 'Syne', 'DM Sans', sans-serif; font-size: 9.5px; font-weight: 700;
@@ -2560,7 +2560,7 @@ st.markdown("""
     display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
     position: relative; z-index: 1; margin-left: 2px; box-shadow: 0 0 0 4px var(--dp-bg);
   }
-  .tl-dot-high   { background:rgba(0,212,200,0.15);   color:#00D4C8; border:2px solid #00D4C8; }
+  .tl-dot-high   { background:rgba(0,212,200,0.15);   color:#0891B2; border:2px solid #0891B2; }
   .tl-dot-peak   { background:rgba(16,185,129,0.15);  color:#10B981; border:2px solid #10B981; }
   .tl-dot-low    { background:rgba(239,68,68,0.12);   color:#EF4444; border:2px solid #EF4444; }
   .tl-dot-event  { background:rgba(167,139,250,0.12); color:#A78BFA; border:2px solid #A78BFA; }
@@ -2773,7 +2773,7 @@ st.markdown("""
     background: rgba(0,212,200,0.15);
     box-shadow: 0 4px 20px rgba(0,212,200,0.22);
   }
-  #back-to-top-btn svg { width: 18px; height: 18px; fill: #00D4C8; pointer-events: none; }
+  #back-to-top-btn svg { width: 18px; height: 18px; fill: #0891B2; pointer-events: none; }
 </style>
 <button id="back-to-top-btn" title="Back to top">
   <svg viewBox="0 0 24 24"><path d="M7.41 15.41L12 10.83l4.59 4.58L18 14l-6-6-6 6z"/></svg>
@@ -2873,14 +2873,14 @@ st.markdown("""
     pointer-events: none;
   }
   #dp-fixed-footer a {
-    color: #00D4C8;
+    color: #0891B2;
     text-decoration: none;
     pointer-events: all;
   }
   #dp-fixed-footer a:hover { opacity: 0.75; }
   #dp-fixed-footer .fp-brand {
     font-weight: 700;
-    color: #00D4C8;
+    color: #0891B2;
     letter-spacing: .03em;
   }
   #dp-fixed-footer .fp-sep { opacity: 0.35; margin: 0 6px; }
@@ -2960,7 +2960,7 @@ st.markdown("""
   }
   .live-dot {
     display: inline-block; width: 8px; height: 8px;
-    background: #00D4C8; border-radius: 50%;
+    background: #0891B2; border-radius: 50%;
     animation: live-ring 2s ease-in-out infinite;
     vertical-align: middle; margin-right: 5px;
   }
@@ -3086,7 +3086,7 @@ st.markdown("""
     position: absolute; inset: 0;
     border-radius: 14px;
     padding: 1px;
-    background: linear-gradient(270deg, #00D4C8, #38BDF8, #A78BFA, #00D4C8);
+    background: linear-gradient(270deg, #0891B2, #38BDF8, #A78BFA, #0891B2);
     background-size: 300% 300%;
     animation: border-sweep 5s ease infinite;
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
@@ -3474,7 +3474,7 @@ st.markdown("""
   .insight-positive::before { background: linear-gradient(90deg, #10B981, #34D399, #10B981) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
   .insight-warning::before  { background: linear-gradient(90deg, #F5B940, #FCD34D, #F5B940) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
   .insight-negative::before { background: linear-gradient(90deg, #EF4444, #F87171, #EF4444) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
-  .insight-info::before     { background: linear-gradient(90deg, #00D4C8, #38BDF8, #00D4C8) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-info::before     { background: linear-gradient(90deg, #0891B2, #38BDF8, #0891B2) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
   @keyframes border-sweep { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
   /* Adjust insight card padding for top border (was left: 14px indent, now top: 3px bar) */
   .insight-title { padding-left: 0 !important; padding-top: 8px !important; }
@@ -3503,7 +3503,7 @@ st.markdown("""
 
   /* ── Plotly modebar button enhancement ── */
   .modebar-btn path { fill: rgba(200,230,255,0.55) !important; }
-  .modebar-btn:hover path { fill: #00D4C8 !important; }
+  .modebar-btn:hover path { fill: #0891B2 !important; }
 
   /* ── Linear text-wrap: balance on headings (cleaner line breaks) ── */
   h1, h2, h3, .kpi-label, .insight-title, .event-label, .src-name, .empty-title {
@@ -3567,9 +3567,9 @@ st.markdown("""
   .splash-title {
     font-family: 'Syne', 'Outfit', system-ui, sans-serif;
     font-size: 26px; font-weight: 800;
-    color: #F4FAFF; letter-spacing: -0.03em; margin-bottom: 4px;
+    color: #0F172A; letter-spacing: -0.03em; margin-bottom: 4px;
   }
-  .splash-title span { color: #00D4C8; }
+  .splash-title span { color: #0891B2; }
   .splash-sub {
     font-family: 'Inter', system-ui, sans-serif;
     font-size: 13px; color: rgba(200,224,242,0.60);
@@ -3578,7 +3578,7 @@ st.markdown("""
   .splash-spinner {
     width: 38px; height: 38px; border-radius: 50%;
     border: 3px solid rgba(0,212,200,0.15);
-    border-top-color: #00D4C8;
+    border-top-color: #0891B2;
     animation: splash-spin 0.9s linear infinite;
     margin-bottom: 20px;
   }
@@ -5215,8 +5215,8 @@ def sparkline_svg(values: list, positive: bool = True, width: int = 120, height:
 
 def insight_icon_svg(kind: str, icon_key: str) -> str:
     """Animated SVG icon for insight cards (20px)."""
-    color_map = {"positive": "#10B981", "negative": "#EF4444", "warning": "#F5B940", "info": "#00D4C8"}
-    c = color_map.get(kind, "#00D4C8")
+    color_map = {"positive": "#10B981", "negative": "#EF4444", "warning": "#F5B940", "info": "#0891B2"}
+    c = color_map.get(kind, "#0891B2")
 
     icons: dict[str, str] = {
         "trend_up": (
@@ -5425,8 +5425,8 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
             f'<div style="display:flex;align-items:flex-end;gap:10px;margin:4px 0 2px;">'
             f'<div>'
             f'<div style="font-size:8px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;'
-            f'color:#00D4C8;margin-bottom:2px;">{_la}</div>'
-            f'<div class="kpi-value" style="color:#00D4C8;line-height:1;">{parts[0]}</div>'
+            f'color:#0891B2;margin-bottom:2px;">{_la}</div>'
+            f'<div class="kpi-value" style="color:#0891B2;line-height:1;">{parts[0]}</div>'
             f'</div>'
             f'<div style="font-size:18px;color:#334155;font-weight:300;padding-bottom:4px;">/</div>'
             f'<div>'
@@ -5444,7 +5444,7 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
         _trend_word  = "up" if (positive and not neutral) else ("down" if (not positive and not neutral) else "stable")
         _trend_color = "#10B981" if positive and not neutral else ("#EF4444" if not positive and not neutral else "#94A3B8")
         back_html = (
-            f'<div style="font-size:10px;font-weight:800;color:#00D4C8;text-transform:uppercase;'
+            f'<div style="font-size:10px;font-weight:800;color:#0891B2;text-transform:uppercase;'
             f'letter-spacing:.08em;margin-bottom:10px;">{label}</div>'
             f'<div style="font-size:22px;font-weight:800;color:#E2E8F0;margin-bottom:6px;">{value}</div>'
             f'<div style="font-size:12px;color:{_trend_color};font-weight:700;margin-bottom:8px;">'
@@ -5545,7 +5545,7 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
     _font  = "Syne, DM Sans, Inter, system-ui, sans-serif"
     _title = "Syne, Outfit, DM Sans, system-ui, sans-serif"
     _colorway = [
-        "#00D4C8",  # Pacific teal (primary)
+        "#0891B2",  # Pacific teal (primary)
         "#F5B940",  # coastal gold
         "#10B981",  # wave green
         "#A78BFA",  # purple
@@ -5557,7 +5557,7 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
     fig.update_layout(
         plot_bgcolor  = "rgba(0,0,0,0)",
         paper_bgcolor = "rgba(0,0,0,0)",
-        font    = dict(family=_font, size=12.5, color="#C8E0F2"),
+        font    = dict(family=_font, size=12.5, color="#334155"),
         height  = height,
         autosize = True,
         margin  = dict(l=14, r=20, t=52, b=14, autoexpand=True),
@@ -5566,7 +5566,7 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
             orientation = "h",
             yanchor = "bottom", y = 1.04,
             xanchor = "left",   x = 0,
-            font    = dict(size=11.5, family=_font, color="#8AAEC6"),
+            font    = dict(size=11.5, family=_font, color="#64748B"),
             bgcolor = "rgba(0,0,0,0)",
             borderwidth = 0,
             itemsizing  = "constant",
@@ -5583,14 +5583,14 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         modebar = dict(
             bgcolor     = "rgba(0,0,0,0)",
             color       = "#5A7A95",
-            activecolor = "#00D4C8",
+            activecolor = "#0891B2",
         ),
         dragmode = "zoom",
     )
     fig.update_xaxes(
         showgrid    = False,
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#8AAEC6"),
+        tickfont    = dict(size=11, family=_font, color="#64748B"),
         linecolor   = "rgba(255,255,255,0.10)",
         linewidth   = 1,
         showline    = True,
@@ -5617,7 +5617,7 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         "rgba(251,146,60,0.14)",  "rgba(56,189,248,0.14)",
     ]
     _line_palette = [
-        "#00D4C8", "#F5B940", "#10B981", "#A78BFA", "#FB923C", "#38BDF8",
+        "#0891B2", "#F5B940", "#10B981", "#A78BFA", "#FB923C", "#38BDF8",
     ]
     _fill_idx = 0
     for trace in fig.data:
@@ -5666,7 +5666,7 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
     # ── Title styling (white text on dark bg) ─────────────────────────────
     if fig.layout.title and fig.layout.title.text:
         fig.update_layout(
-            title_font = dict(family=_title, size=14, color="#C8E0F2"),
+            title_font = dict(family=_title, size=14, color="#334155"),
             title_x    = 0,
             title_pad  = dict(l=4, t=4),
         )
@@ -5717,14 +5717,14 @@ def generate_section_html(label: str, df: "pd.DataFrame", subtitle: str = "") ->
     * {{ box-sizing: border-box; margin: 0; padding: 0; }}
     body {{ font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1a2b3c; background: #fff; }}
     .hdr {{ background: #0F1C2E; color: #fff; padding: 18px 24px 14px; }}
-    .hdr-brand {{ font-size: 13px; font-weight: 700; color: #00D4C8; letter-spacing: .04em; text-transform: uppercase; }}
+    .hdr-brand {{ font-size: 13px; font-weight: 700; color: #0891B2; letter-spacing: .04em; text-transform: uppercase; }}
     .hdr-title {{ font-size: 20px; font-weight: 700; color: #fff; margin: 4px 0 2px; }}
     .hdr-meta  {{ font-size: 10px; color: #5A7A95; }}
     .body {{ padding: 20px 24px; }}
-    h2 {{ font-size: 13px; font-weight: 700; color: #0F1C2E; border-bottom: 2px solid #00D4C8;
+    h2 {{ font-size: 13px; font-weight: 700; color: #0F1C2E; border-bottom: 2px solid #0891B2;
           padding-bottom: 5px; margin: 0 0 12px; }}
     table {{ width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 12px; }}
-    th {{ background: #0F1C2E; color: #00D4C8; padding: 5px 8px; text-align: left;
+    th {{ background: #0F1C2E; color: #0891B2; padding: 5px 8px; text-align: left;
           font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }}
     td {{ padding: 5px 8px; border-bottom: 1px solid #e8eef3; vertical-align: top; }}
     tr:nth-child(even) td {{ background: #f5f8fa; }}
@@ -5777,7 +5777,7 @@ def render_share_bar(
     _btn_style = (
         "width:100%;height:32px;background:rgba(255,255,255,0.07);"
         "border:1px solid rgba(255,255,255,0.18);border-radius:8px;"
-        "cursor:pointer;color:#C8E0F2;font-size:11px;font-weight:600;"
+        "cursor:pointer;color:#334155;font-size:11px;font-weight:600;"
         "font-family:Inter,sans-serif;transition:background 0.2s;"
     )
     _hover_on  = "this.style.background='rgba(0,212,200,0.15)'"
@@ -6502,11 +6502,11 @@ with st.sidebar:
     display:flex; align-items:center; gap:6px;
     background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18);
     border-radius:8px; padding:6px 16px; cursor:pointer;
-    color:#C8E0F2; font-size:13px; font-weight:600;
+    color:#334155; font-size:13px; font-weight:600;
     font-family:'Inter',sans-serif; float:right;
     transition:background 0.2s;
   }
-  #hide-btn:hover { background:rgba(0,212,200,0.18); color:#00D4C8; border-color:rgba(0,212,200,0.40); }
+  #hide-btn:hover { background:rgba(0,212,200,0.18); color:#0891B2; border-color:rgba(0,212,200,0.40); }
 </style>
 <button id="hide-btn" onclick="
   var p = window.parent.document;
@@ -6526,15 +6526,15 @@ with st.sidebar:
         '<a href="?" style="text-decoration:none;">'
         '<div class="sidebar-brand">Dana Point PULSE</div>'
         '</a>'
-        '<div style="font-size:10px;color:#8EC4DC;font-weight:600;margin-top:1px;">'
+        '<div style="font-size:10px;color:#64748B;font-weight:600;margin-top:1px;">'
         'South Orange County, CA</div>'
         '</div>'
         '</div>'
-        '<div style="font-size:10px;color:#8AAEC6;letter-spacing:.05em;font-weight:600;'
+        '<div style="font-size:10px;color:#64748B;letter-spacing:.05em;font-weight:600;'
         'text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.10);padding-top:8px;">'
         'Performance · Intelligence · Strategy</div>'
         '</div>'
-        '<div style="font-size:10.5px;color:#8AAEC6;margin-bottom:4px;">'
+        '<div style="font-size:10.5px;color:#64748B;margin-bottom:4px;">'
         'VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>',
         unsafe_allow_html=True,
     )
@@ -8199,7 +8199,7 @@ _st_components.html("""
     display:flex;align-items:center;gap:7px;
     background:rgba(26,55,86,0.95);border:1px solid rgba(0,212,200,0.45);
     border-radius:10px;padding:7px 14px;cursor:pointer;
-    color:#00D4C8;font-size:13px;font-weight:700;
+    color:#0891B2;font-size:13px;font-weight:700;
     font-family:'Inter',sans-serif;
     box-shadow:0 2px 12px rgba(0,0,0,0.40);
     backdrop-filter:blur(8px);
@@ -8207,7 +8207,7 @@ _st_components.html("""
     white-space:nowrap;
   }
   #sb-toggle:hover{background:rgba(0,212,200,0.18);box-shadow:0 4px 18px rgba(0,212,200,0.28);}
-  #sb-toggle svg{width:16px;height:16px;fill:#00D4C8;flex-shrink:0;}
+  #sb-toggle svg{width:16px;height:16px;fill:#0891B2;flex-shrink:0;}
 </style>
 <button id="sb-toggle" onclick="
   var p=window.parent.document;
@@ -8357,7 +8357,7 @@ with tab_ov:
 
         st.markdown(
             f"""<div style="
-            margin-bottom: 40px;
+            margin-bottom: 50px;
             padding: 0;
             ">
             <div style="
@@ -8373,20 +8373,20 @@ with tab_ov:
             font-weight: 900;
             letter-spacing: -0.02em;
             margin: 0;
-            color: #F4FAFF;
+            color: #0F172A;
             line-height: 1.1;
             ">{_headline}</h1>
             </div>
             <p style="
             font-size: 16px;
-            color: #C8E0F2;
+            color: #334155;
             margin: 12px 0 6px 0;
             line-height: 1.6;
             font-weight: 400;
             ">{_headline_detail}</p>
             <p style="
             font-size: 13px;
-            color: #8EC4DC;
+            color: #64748B;
             margin: 0;
             font-weight: 500;
             letter-spacing: 0.05em;
@@ -8425,12 +8425,12 @@ with tab_ov:
             with col:
                 st.markdown(
                     f"""<div style="
-                    background: linear-gradient(135deg, rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.08) 0%, rgba({int(color[1:3], 16)}, {int(color[3:5], 16)}, {int(color[5:7], 16)}, 0.04) 100%);
-                    border: 1px solid {color}33;
+                    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+                    border: 1px solid #E2E8F0;
                     border-top: 3px solid {color};
                     border-radius: 16px;
                     padding: 32px 28px;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+                    box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
                     transition: all 0.3s cubic-bezier(0.28, 0, 0.49, 1);
                     position: relative;
                     overflow: hidden;
@@ -8446,7 +8446,7 @@ with tab_ov:
                     font-weight: 700;
                     text-transform: uppercase;
                     letter-spacing: 0.1em;
-                    color: #8EC4DC;
+                    color: #64748B;
                     margin-bottom: 12px;
                     ">{label}</div>
                     <div style="
@@ -8454,14 +8454,14 @@ with tab_ov:
                     font-size: 48px;
                     font-weight: 900;
                     letter-spacing: -0.04em;
-                    color: #F4FAFF;
+                    color: #0F172A;
                     line-height: 1;
                     margin-bottom: 14px;
                     ">{value}</div>
                     <div style="
                     font-size: 13px;
                     font-weight: 700;
-                    color: {'#10B981' if delta_cls == 'up' else '#EF4444' if delta_cls == 'down' else '#8EC4DC'};
+                    color: {'#059669' if delta_cls == 'up' else '#DC2626' if delta_cls == 'down' else '#64748B'};
                     display: flex;
                     align-items: center;
                     gap: 6px;
@@ -8483,7 +8483,7 @@ with tab_ov:
 
     # ── EXPLORE SECTION: Large Exploration Cards with Better Spacing ──────────────
     st.markdown(
-        '<div style="margin-bottom: 28px; margin-top: 16px;"><span style="font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8EC4DC;">📍 Explore by Topic</span></div>',
+        '<div style="margin-bottom: 28px; margin-top: 48px;"><span style="font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #64748B;">📍 Explore by Topic</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -8497,20 +8497,20 @@ with tab_ov:
             with col:
                 st.markdown(
                     f"""<div style="
-                    background: linear-gradient(135deg, rgba(0, 212, 200, 0.08) 0%, rgba(56, 189, 248, 0.04) 100%);
-                    border: 1px solid rgba(0, 212, 200, 0.25);
+                    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+                    border: 1px solid #E2E8F0;
                     border-top: 3px solid {accent_color};
                     border-radius: 16px;
                     padding: 28px 24px;
                     text-align: center;
                     cursor: pointer;
                     transition: all 0.3s cubic-bezier(0.28, 0, 0.49, 1);
-                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+                    box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
                     position: relative;
                     overflow: hidden;
                     "
-                    onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 8px 32px rgba(0, 212, 200, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08)';"
-                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.08)';"
+                    onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 12px rgba(15,23,42,0.15), 0 2px 4px rgba(15,23,42,0.10)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24)';"
                     onclick="document.querySelectorAll('[role=tab]')[{tab_idx}].click();">
                     <div style="position: relative; z-index: 1;">
                     <div style="
@@ -8523,12 +8523,12 @@ with tab_ov:
                     font-size: 18px;
                     font-weight: 800;
                     letter-spacing: -0.01em;
-                    color: #F4FAFF;
+                    color: #0F172A;
                     margin: 0 0 10px 0;
                     ">{title}</h3>
                     <p style="
                     font-size: 13px;
-                    color: #C8E0F2;
+                    color: #334155;
                     line-height: 1.6;
                     margin: 0;
                     ">{desc}</p>
@@ -8561,20 +8561,20 @@ with tab_ov:
         if _trips_fmt != "—":
             st.markdown(
                 f"""<div style="
-                background: linear-gradient(135deg, rgba(34, 211, 238, 0.08) 0%, rgba(56, 189, 248, 0.04) 100%);
-                border: 1px solid rgba(34, 211, 238, 0.25);
-                border-left: 4px solid #22D3EE;
+                background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+                border: 1px solid #E2E8F0;
+                border-left: 4px solid #0284C7;
                 border-radius: 12px;
                 padding: 24px 28px;
                 margin-bottom: 40px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+                box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
                 ">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
                 <span style="font-size: 22px;">👥</span>
-                <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #F4FAFF; margin: 0;">Visitor Economy Context</h3>
+                <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #0F172A; margin: 0;">Visitor Economy Context</h3>
                 </div>
-                <p style="color: #C8E0F2; font-size: 14px; line-height: 1.6; margin: 0;">
-                <strong style="color: #22D3EE;">{_trips_fmt}</strong> annual visitor trips with <strong style="color: #22D3EE;">{_oos_pct:.0f}%</strong> out-of-state visitors driving higher spending per trip.
+                <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0;">
+                <strong style="color: #0284C7;">{_trips_fmt}</strong> annual visitor trips with <strong style="color: #0284C7;">{_oos_pct:.0f}%</strong> out-of-state visitors driving higher spending per trip.
                 Explore feeder markets and visitor demographics in the <strong>Our Visitors</strong> tab.
                 </p>
                 </div>""",
@@ -8583,13 +8583,13 @@ with tab_ov:
     except Exception as e:
         _logger.debug(f"Failed to render visitor context: {str(e)}")
 
-    st.markdown("<div style='height: 24px;'></div>", unsafe_allow_html=True)
-    st.markdown("<hr style='border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 0;'>", unsafe_allow_html=True)
     st.markdown("<div style='height: 32px;'></div>", unsafe_allow_html=True)
+    st.markdown("<hr style='border: 0; border-top: 1px solid #E2E8F0; margin: 0;'>", unsafe_allow_html=True)
+    st.markdown("<div style='height: 48px;'></div>", unsafe_allow_html=True)
 
     # ── DEEP DIVES: Sub-Tabs for Detailed Analysis ────────────────────────────────
     st.markdown(
-        '<div style="margin-bottom: 20px;"><span style="font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #8EC4DC;">📑 Deep Dives</span></div>',
+        '<div style="margin-bottom: 28px;"><span style="font-size: 14px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #64748B;">📑 Deep Dives</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -8640,8 +8640,8 @@ with tab_ov:
                     + _ytd_kpi("RevPAR (12m avg)", f"${_ytd_rvp:.0f}", _ytd_arrow(_ytd_rvpd), "#38BDF8")
                     + _ytd_kpi("ADR (12m avg)", f"${_ytd_adr:.0f}", _ytd_arrow(_ytd_adrd), "#818CF8")
                     + _ytd_kpi("Occupancy (12m)", f"{_ytd_occ:.1f}%", _ytd_arrow(_ytd_occd, "pp"), "#34D399")
-                    + _ytd_kpi("12-Mo Room Revenue", f"${_ytd_rev/1e6:.1f}M", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">Layer 1 STR truth</span>', "#F59E0B")
-                    + _ytd_kpi("12-Mo TBID Est.", f"${_ytd_tbid/1e3:.0f}K", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">at blended 1.25%</span>', "#A78BFA")
+                    + _ytd_kpi("12-Mo Room Revenue", f"${_ytd_rev/1e6:.1f}M", '<span style="font-size:11px;color:#64748B;font-weight:600;">Layer 1 STR truth</span>', "#F59E0B")
+                    + _ytd_kpi("12-Mo TBID Est.", f"${_ytd_tbid/1e3:.0f}K", '<span style="font-size:11px;color:#64748B;font-weight:600;">at blended 1.25%</span>', "#A78BFA")
                     + f'</div></div>'
                 )
                 st.markdown(_ytd_html, unsafe_allow_html=True)
@@ -8797,7 +8797,7 @@ with tab_ov:
     with _ov_t4:
         st.markdown(sec_div("🤖 VDP AI Analyst"), unsafe_allow_html=True)
         st.markdown(
-            '<span style="color:#8EC4DC;font-size:13px;">Ask anything about Dana Point hotel and visitor performance.</span>',
+            '<span style="color:#64748B;font-size:13px;">Ask anything about Dana Point hotel and visitor performance.</span>',
             unsafe_allow_html=True,
         )
 
@@ -9669,7 +9669,7 @@ with tab_tr:
                                 f'border-left:3px solid {_color};margin-top:8px;">'
                                 f'<div style="font-size:11px;font-weight:700;color:#065F46;">Ocean ↔ Occupancy</div>'
                                 f'<div style="font-size:20px;font-weight:900;color:{_color};">R = {_r}</div>'
-                                f'<div style="font-size:10px;color:#8AAEC6;">{len(_merged)} months of data</div>'
+                                f'<div style="font-size:10px;color:#64748B;">{len(_merged)} months of data</div>'
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
@@ -9789,7 +9789,7 @@ with tab_fo:
             f'<div style="font-size:10px;color:#718096;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:.10em;margin-bottom:6px;">{label}</div>'
             f'<div style="font-size:1.9rem;font-weight:900;letter-spacing:-0.04em;line-height:1.1;'
-            f'color:#F4FAFF;">{value}</div>'
+            f'color:#0F172A;">{value}</div>'
             f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:5px;">{delta}</div>'
             f'</div>'
         )
@@ -10952,7 +10952,7 @@ with tab_ev:
                 f'<img src="{img_url}" style="width:100%;height:100%;object-fit:cover;" loading="lazy" />'
                 f'</div>'
                 f'<div style="padding:10px 14px 12px;">'
-                f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#8AAEC6;">{label}</div>'
+                f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748B;">{label}</div>'
                 f'<div style="font-size:22px;font-weight:900;background:linear-gradient(135deg,#FFFFFF,#A8D8F0);'
                 f'-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'
                 f'font-family:\'Syne\',sans-serif;">{value}</div>'
@@ -11994,9 +11994,9 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                     f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7A95;margin-bottom:6px;">{short_geo}</div>'
                     f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
                     f'<div style="font-size:11px;color:#5A7A95;">Population</div>'
-                    f'<div style="font-size:14px;font-weight:700;color:#F4FAFF;margin-top:6px;">{_inc_v}</div>'
+                    f'<div style="font-size:14px;font-weight:700;color:#0F172A;margin-top:6px;">{_inc_v}</div>'
                     f'<div style="font-size:11px;color:#5A7A95;">Median HH Income</div>'
-                    f'<div style="font-size:13px;font-weight:600;color:#F4FAFF;margin-top:4px;">{_hom_v}</div>'
+                    f'<div style="font-size:13px;font-weight:600;color:#0F172A;margin-top:4px;">{_hom_v}</div>'
                     f'<div style="font-size:11px;color:#5A7A95;">Median Home Value</div>'
                     f'</div>',
                     unsafe_allow_html=True,
@@ -15202,7 +15202,7 @@ with tab_cs:
                 f'</div>', unsafe_allow_html=True)
         with _ac3:
             st.markdown(
-                f'<div style="background:#0C1525;border:1px solid rgba(0,212,200,0.22);border-left:3px solid #00D4C8;'
+                f'<div style="background:#0C1525;border:1px solid rgba(0,212,200,0.22);border-left:3px solid #0891B2;'
                 f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
                 f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">Insights Status</div>'
                 f'<div style="font-size:18px;font-weight:800;color:#EFF6FF;">{_insights_status}</div>'
@@ -15215,7 +15215,7 @@ with tab_cs:
         _ac4, _ac5 = st.columns([1, 2])
         with _ac4:
             st.markdown(
-                f'<div style="background:#0C1525;border:1px solid rgba(0,212,200,0.18);border-left:3px solid #00D4C8;'
+                f'<div style="background:#0C1525;border:1px solid rgba(0,212,200,0.18);border-left:3px solid #0891B2;'
                 f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
                 f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">STR Data Recency</div>'
                 f'<div style="font-size:18px;font-weight:800;color:#EFF6FF;">{_str_status}</div>'
@@ -15761,32 +15761,32 @@ _SOURCES_HTML = """
   <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">STR</div>
-    <div style="color:#8AAEC6;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
+    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">STR</div>
+    <div style="color:#64748B;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
   </div>
   <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Datafy</div>
-    <div style="color:#8AAEC6;">Visitor economy platform · trips, spend, DMA attribution</div>
+    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Datafy</div>
+    <div style="color:#64748B;">Visitor economy platform · trips, spend, DMA attribution</div>
   </div>
   <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">CoStar</div>
-    <div style="color:#8AAEC6;">Market data · comp set, pipeline, profitability</div>
+    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">CoStar</div>
+    <div style="color:#64748B;">Market data · comp set, pipeline, profitability</div>
   </div>
   <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Visit California</div>
-    <div style="color:#8AAEC6;">State forecasts · lodging, travel volume, airport traffic</div>
+    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Visit California</div>
+    <div style="color:#64748B;">State forecasts · lodging, travel volume, airport traffic</div>
   </div>
   <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-    <div style="font-weight:700;color:#F4FAFF;margin-bottom:2px;">Zartico</div>
-    <div style="color:#8AAEC6;">Historical reference · Jun 2025 snapshot · visitor trends</div>
+    <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Zartico</div>
+    <div style="color:#64748B;">Historical reference · Jun 2025 snapshot · visitor trends</div>
   </div>
 </div>
 """
@@ -15798,7 +15798,7 @@ with _gl1:
             st.markdown(
                 f'<div style="margin-bottom:10px;">'
                 f'<span style="font-weight:700;color:#0891B2;">{_term}</span>'
-                f'<span style="color:#8AAEC6;font-size:13px;"> — {_defn}</span>'
+                f'<span style="color:#64748B;font-size:13px;"> — {_defn}</span>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
