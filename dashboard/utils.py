@@ -229,3 +229,41 @@ def format_metric_delta(value: float, decimals: int = 1, as_percentage: bool = T
     css_class = "up" if value >= 0 else "down"
     return formatted, css_class
 
+
+def format_insight_card(icon: str, title: str, main_value: str, subtitle: str = "", body: str = "", accent_color: str = "#0284C7") -> str:
+    """
+    Format a styled insight card with metric highlight, supporting text, and visual hierarchy.
+
+    Args:
+        icon: Emoji icon (e.g., "💰")
+        title: Card title (e.g., "Transient Occupancy Tax")
+        main_value: Large metric value (e.g., "$3.6M")
+        subtitle: Optional subtext below title (e.g., "90-day trailing")
+        body: Supporting context paragraph
+        accent_color: Left border color
+
+    Returns:
+        HTML string for the insight card
+    """
+    subtitle_html = f'<div style="font-size:12px;color:#64748B;margin-top:4px;font-weight:500;">{subtitle}</div>' if subtitle else ''
+    body_html = f'<p style="font-size:13px;color:#334155;line-height:1.6;margin:16px 0 0 0;">{body}</p>' if body else ''
+
+    return f"""<div style="
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+    border: 1px solid #E2E8F0;
+    border-left: 4px solid {accent_color};
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
+    ">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+    <span style="font-size: 24px;">{icon}</span>
+    <div>
+    <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #0F172A; margin: 0; letter-spacing: -0.01em;">{title}</h3>
+    {subtitle_html}
+    </div>
+    </div>
+    <div style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 900; letter-spacing: -0.03em; color: {accent_color}; margin: 8px 0;">{main_value}</div>
+    {body_html}
+    </div>"""
