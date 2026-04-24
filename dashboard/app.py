@@ -2288,33 +2288,29 @@ st.markdown("""
   .pulse-ticker-track:hover { animation-play-state: paused; }
   .pulse-ticker-item {
     display: flex; align-items: center; gap: 10px;
-    padding: 6px 16px;
-    margin: 4px 8px;
+    padding: 0 28px;
     font-family: 'DM Sans', 'Inter', sans-serif;
-    font-size: 15px; font-weight: 700;
+    font-size: 15px; font-weight: 900;
     color: #FFFFFF;
     white-space: nowrap;
-    border-right: 1px solid rgba(255,255,255,0.20);
+    border-right: 1px solid rgba(255,255,255,0.25);
     transition: all 0.2s ease;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.50);
-    background: rgba(0,0,0,0.25);
-    border-radius: 6px;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.60), 0 0 12px rgba(0,0,0,0.40);
   }
-  .pulse-ticker-item:hover { color: #FFFFFF; opacity: 1; background: rgba(0,0,0,0.35); }
+  .pulse-ticker-item:hover { color: #FFFFFF; text-shadow: 0 2px 8px rgba(0,0,0,0.70), 0 0 16px rgba(0,0,0,0.50); }
   .pulse-ticker-item:last-child { border-right: none; }
   .pulse-ticker-label {
     font-family: 'Syne', 'DM Sans', sans-serif;
-    font-size: 10px; font-weight: 900; text-transform: uppercase;
+    font-size: 11px; font-weight: 900; text-transform: uppercase;
     letter-spacing: .18em; color: #FFFFFF;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.40);
-    opacity: 0.85;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.50);
   }
   .pulse-ticker-val {
     color: #FFFFFF;
     font-family: 'Outfit', sans-serif;
-    font-size: 19px; font-weight: 900;
+    font-size: 20px; font-weight: 900;
     letter-spacing: -0.02em;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.50);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.60), 0 0 12px rgba(0,0,0,0.40);
   }
   .pulse-ticker-pos { color: #34D399; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
   .pulse-ticker-neg { color: #F87171; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
