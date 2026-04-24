@@ -2290,27 +2290,26 @@ st.markdown("""
     display: flex; align-items: center; gap: 10px;
     padding: 0 28px;
     font-family: 'DM Sans', 'Inter', sans-serif;
-    font-size: 15px; font-weight: 900;
-    color: #FFFFFF;
+    font-size: 16px; font-weight: 900;
+    color: #FFFFFF !important;
     white-space: nowrap;
-    border-right: 1px solid rgba(255,255,255,0.25);
+    border-right: 1px solid rgba(255,255,255,0.30);
     transition: all 0.2s ease;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.60), 0 0 12px rgba(0,0,0,0.40);
+    filter: brightness(1.2);
   }
-  .pulse-ticker-item:hover { color: #FFFFFF; text-shadow: 0 2px 8px rgba(0,0,0,0.70), 0 0 16px rgba(0,0,0,0.50); }
+  .pulse-ticker-item:hover { color: #FFFFFF !important; filter: brightness(1.4); }
   .pulse-ticker-item:last-child { border-right: none; }
   .pulse-ticker-label {
     font-family: 'Syne', 'DM Sans', sans-serif;
-    font-size: 11px; font-weight: 900; text-transform: uppercase;
-    letter-spacing: .18em; color: #FFFFFF;
-    text-shadow: 0 2px 5px rgba(0,0,0,0.50);
+    font-size: 12px; font-weight: 900; text-transform: uppercase;
+    letter-spacing: .20em; color: #FFFFFF !important;
+    opacity: 1 !important;
   }
   .pulse-ticker-val {
-    color: #FFFFFF;
+    color: #FFFFFF !important;
     font-family: 'Outfit', sans-serif;
-    font-size: 20px; font-weight: 900;
+    font-size: 21px; font-weight: 900;
     letter-spacing: -0.02em;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.60), 0 0 12px rgba(0,0,0,0.40);
   }
   .pulse-ticker-pos { color: #34D399; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
   .pulse-ticker-neg { color: #F87171; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
