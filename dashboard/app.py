@@ -2300,9 +2300,9 @@ st.markdown("""
   .pulse-ticker-item:hover { color: #FFFFFF !important; filter: brightness(1.4); }
   .pulse-ticker-item:last-child { border-right: none; }
   .pulse-ticker-label {
-    font-family: 'Syne', 'DM Sans', sans-serif;
-    font-size: 12px; font-weight: 900; text-transform: uppercase;
-    letter-spacing: .20em; color: #FFFFFF !important;
+    font-family: 'Syne', 'DM Sans', sans-serif !important;
+    font-size: 12px !important; font-weight: 900 !important; text-transform: uppercase !important;
+    letter-spacing: .20em !important; color: #FFFFFF !important;
     opacity: 1 !important;
   }
   .pulse-ticker-val {
@@ -3394,6 +3394,9 @@ st.markdown("""
     font-family: 'JetBrains Mono', 'Fira Code', 'Outfit', monospace !important;
     font-variant-numeric: tabular-nums !important;
     letter-spacing: -0.03em !important;
+    color: #FFFFFF !important;
+    font-weight: 900 !important;
+    font-size: 21px !important;
   }
 
   /* ── Chart container glow (Railway pattern — teal instead of indigo) ── */
