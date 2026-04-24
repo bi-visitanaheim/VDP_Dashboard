@@ -3570,12 +3570,12 @@ st.markdown("""
   .splash-title {
     font-family: 'Syne', 'Outfit', system-ui, sans-serif;
     font-size: 26px; font-weight: 800;
-    color: #F4FAFF; letter-spacing: -0.03em; margin-bottom: 4px;
+    color: #FFFFFF; letter-spacing: -0.03em; margin-bottom: 4px;
   }
   .splash-title span { color: #00D4C8; }
   .splash-sub {
     font-family: 'Inter', system-ui, sans-serif;
-    font-size: 13px; color: rgba(200,224,242,0.60);
+    font-size: 13px; color: #FFFFFF;
     letter-spacing: 0.04em; margin-bottom: 36px;
   }
   .splash-spinner {
@@ -3587,7 +3587,7 @@ st.markdown("""
   }
   .splash-status {
     font-family: 'Inter', system-ui, sans-serif;
-    font-size: 12px; color: rgba(200,224,242,0.45);
+    font-size: 12px; color: #FFFFFF;
     letter-spacing: 0.06em; text-transform: uppercase;
   }
 </style>
@@ -5888,13 +5888,12 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
 
     def _item(label: str, val: str, delta: str = "", positive: bool | None = None) -> str:
         delta_cls = ""
-        if delta and positive is True:   delta_cls = "pulse-ticker-pos"
-        elif delta and positive is False: delta_cls = "pulse-ticker-neg"
-        delta_html = f'<span class="{delta_cls}">{delta}</span>' if delta else ""
+        delta_color = "#34D399" if positive is True else "#F87171" if positive is False else "#FFFFFF"
+        delta_html = f'<span style="color:{delta_color};font-size:11px;font-weight:700;letter-spacing:0.02em;">{delta}</span>' if delta else ""
         return (
-            f'<div class="pulse-ticker-item">'
-            f'<span class="pulse-ticker-label">{label}</span>'
-            f'<span class="pulse-ticker-val">{val}</span>'
+            f'<div class="pulse-ticker-item" style="color:#FFFFFF !important;">'
+            f'<span class="pulse-ticker-label" style="color:#FFFFFF !important;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.20em;font-family:Syne,DM Sans,sans-serif;">{label}</span>'
+            f'<span class="pulse-ticker-val" style="color:#FFFFFF !important;font-weight:900;font-size:21px;letter-spacing:-0.02em;">{val}</span>'
             f'{delta_html}'
             f'</div>'
         )
