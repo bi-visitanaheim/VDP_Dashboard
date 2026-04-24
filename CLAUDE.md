@@ -346,6 +346,12 @@ After every session or error correction:
 - `OCC_HIGH_THRESHOLD`, `OCC_MED_THRESHOLD`, `OCC_SHOULDER_TARGET` are named constants at the top of app.py — use these instead of hardcoded 0.90/0.80/0.65 magic numbers.
 - `requirements.txt` uses upper-bound pins (e.g., `pandas>=2.0.0,<3.0.0`) to prevent breaking changes on fresh installs. Update upper bounds only with deliberate testing.
 - `data/str/*.xlsx` is gitignored — raw STR Excel exports are NOT committed; only `data/analytics.sqlite` is the committed truth.
+- **Executive summary design rule:** Main tabs should be 2-minute scans, not data dumps. Move detailed analytics to sub-tabs. Headline insight + 4 hero metrics + call-to-action exploration cards (not 12 metric boxes + 8 button banks).
+- **KPI consolidation:** Create utility functions for repeated formatting patterns (e.g., `format_hero_kpi_card()`, `format_exec_kpi_banner()`). Reduces duplicate code, makes style updates centralized, eases maintenance.
+- **SQL query batching:** Replace N sequential single-row queries with 1 batched query. Example: 3 separate `SELECT ... FROM later_*_profile_growth` queries → `combine_social_followers()` function. Reduces round-trips and improves performance.
+- **Sub-tab naming:** Use consistent, self-explanatory names (Scorecard, Board Report, Goals, AI Assistant) not generic ones (Performance, Stories, Analysis). Users shouldn't need to click to understand content.
+- **Exploration cards:** Use small cards with icons, titles, and brief descriptions to guide users to related tabs. Improves navigation without cluttering the main tab.
+- **App size management:** Watch line counts. If a single file approaches 18K+ lines, begin extracting components. The Overview tab refactor reduced it from 2,180 → 428 lines—same functionality, clearer intent.
 
 ---
 
@@ -384,3 +390,4 @@ After every session or error correction:
 | 2026-03-30 | EIA gas prices + TSA checkpoint data sources (pipeline steps 16+17); intel panels added to tab_sp and tab_dl; gas price correlation section in Market Intelligence; EIA/TSA source health cards in Data Vault; updated DB inventory; EIA/TSA sidebar status dots | Claude + John Picou |
 | 2026-03-31 | Multi-model AI engine (Claude + GPT-4o + Gemini + Perplexity Sonar — 8 models); universal stream_ai_response() router; sidebar model selector; Live Market Intelligence panel; all charts downloadable (scale=3, 1600×800); 7 new CSV download buttons; style_fig v4 | Claude + John Picou |
 | 2026-03-31 | Data organization standard: all raw data in data/<source>/ canonical dirs; STR files moved to data/str/; build_table_relationships.py (step 20, always-last); 120 relationships (from 37); FRED_API_KEY placeholder; Standard Process section in CLAUDE.md | Claude + John Picou |
+| 2026-04-24 | Major Overview tab redesign: reduced from 2,180 to 428 lines; new exec summary format (headline insight + 4 hero metrics + 5 exploration cards); moved AI Analyst panel to dedicated 🤖 AI Assistant sub-tab; consolidated KPI formatting functions into utils.py module; renamed sub-tabs (Scorecard, Board Report, Goals, AI Assistant) for clarity; added error logging to all except blocks; optimized social followers query; created dashboard/assets/styles.css for future stylesheet separation | Claude |

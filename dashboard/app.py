@@ -28,12 +28,16 @@ import re as _re
 
 _logger = logging.getLogger("vdp_dashboard")
 
-# Import interactive visual components
+# Import interactive visual components and utilities
 sys.path.insert(0, str(Path(__file__).parent))
 from components import (
     render_narrative_box, render_kpi_blob_loaders, inject_shader_wallpaper,
     render_mono_cards, render_fun_facts_sprite, render_monthly_highlights,
     render_topic_animation,
+)
+from utils import (
+    format_hero_kpi_card, format_exec_kpi_banner, safe_sql_query,
+    combine_social_followers, safe_execute_with_logging, format_metric_delta,
 )
 
 
@@ -8331,33 +8335,36 @@ with tab_ov:
     _tab_controls("ov")
     # Filter: Time Period only — Overview uses the window to compute 30-day KPI snapshot
     _str_filters("ov", show_grain=False, show_metric=False)
-    st.markdown(tab_intro(
-        "Today's Overview — Visit Dana Point",
-        "Your live command center. All numbers are from verified hotel and visitor data — updated automatically.",
-        [
-            "🎯 Click 'Full Story' in the AI Analyst below for a complete demo narrative",
-            "📊 Performance Metrics sub-tab → 12-Month Scorecard + Hidden Intelligence signals",
-            "📋 Board Report sub-tab → print-ready executive summary with download",
-            "🗺️ See 'Where They're From' tab for feeder market breakdown",
-        ]
-    ), unsafe_allow_html=True)
 
-    # ── This Month's Top Signals ──────────────────────────────────────────────
+    # ══════════════════════════════════════════════════════════════════════════════
+    # EXECUTIVE SUMMARY — Clean, high-impact main tab (2-minute scan)
+    # ══════════════════════════════════════════════════════════════════════════════
+
+    # ── Headline Insight ──────────────────────────────────────────────────────────
     try:
-        _top_insights = []
-        if not df_insights.empty:
-            _top_insights = (
-                df_insights.sort_values("priority")
-                .head(3)
-                .to_dict("records")
-            )
-        if _top_insights:
-            st.markdown("### 🔆 This Month's Top Signals", unsafe_allow_html=True)
-            render_monthly_highlights(_top_insights)
-    except Exception:
-        pass
+        _headline = "On Track"
+        _headline_color = "🟢"
+        _headline_detail = "Market performing as expected"
 
-    # ── Board Executive Summary Banner ─────────────────────────────────────────
+        # Determine headline based on top insight
+        if not df_insights.empty:
+            _top = df_insights.sort_values("priority").iloc[0]
+            _headline = (_top.get("headline", "") or "On Track")
+            _headline_detail = (_top.get("body", "") or _headline)
+            _headline_color = "🟢"
+
+        st.markdown(
+            f"""<div class="headline-insight">
+            <div class="headline-insight-icon">{_headline_color}</div>
+            <p class="headline-insight-text">{_headline}</p>
+            <p class="headline-insight-sub">{_headline_detail}</p>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    except Exception as e:
+        _logger.debug(f"Failed to render headline insight: {str(e)}")
+
+    # ── Hero Metrics (4-column) ───────────────────────────────────────────────────
     try:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
         _exec_adr   = m.get("adr_30", 0.0) if m else 0.0
@@ -8366,268 +8373,205 @@ with tab_ov:
         _exec_rvp_d = m.get("revpar_delta", 0.0) if m else 0.0
         _exec_adr_d = m.get("adr_delta", 0.0) if m else 0.0
         _exec_occ_d = m.get("occ_delta", 0.0) if m else 0.0
-        # 12-month room revenue
-        _exec_rev12  = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
-        _exec_tbid12 = _exec_rev12 * 0.0125
-        _exec_tot12  = _exec_rev12 * 0.10
-        # Social audience — from Later.com exports (later_ig/fb/tk_profile_growth tables)
-        # Shown here and in Social Media Command Center. Source: Later.com CSV exports.
-        _exec_ig_fol = 0; _exec_fb_fol = 0; _exec_tk_fol = 0; _exec_social_total = 0
-        try:
-            _conn_s = sqlite3.connect(DB_PATH)
-            _ig_row = pd.read_sql_query(
-                "SELECT followers FROM later_ig_profile_growth WHERE followers IS NOT NULL ORDER BY data_date DESC LIMIT 1", _conn_s
+
+        from utils import format_hero_kpi_card, format_metric_delta
+
+        # Format deltas
+        _rvp_delta_str, _rvp_delta_cls = format_metric_delta(_exec_rvp_d)
+        _adr_delta_str, _adr_delta_cls = format_metric_delta(_exec_adr_d)
+        _occ_delta_str, _occ_delta_cls = format_metric_delta(_exec_occ_d, as_percentage=False)
+
+        _h1, _h2, _h3, _h4 = st.columns(4)
+
+        with _h1:
+            st.markdown(
+                format_hero_kpi_card("RevPAR (30d)", f"${_exec_rvp:.0f}", _rvp_delta_str, _rvp_delta_cls, "#38BDF8"),
+                unsafe_allow_html=True,
             )
-            _fb_row = pd.read_sql_query(
-                "SELECT page_followers FROM later_fb_profile_growth WHERE page_followers IS NOT NULL ORDER BY data_date DESC LIMIT 1", _conn_s
+        with _h2:
+            st.markdown(
+                format_hero_kpi_card("ADR (30d)", f"${_exec_adr:.0f}", _adr_delta_str, _adr_delta_cls, "#818CF8"),
+                unsafe_allow_html=True,
             )
-            _tk_row = pd.read_sql_query(
-                "SELECT followers FROM later_tk_profile_growth WHERE followers IS NOT NULL ORDER BY data_date DESC LIMIT 1", _conn_s
+        with _h3:
+            st.markdown(
+                format_hero_kpi_card("Occupancy (30d)", f"{_exec_occ:.1f}%", _occ_delta_str, _occ_delta_cls, "#34D399"),
+                unsafe_allow_html=True,
             )
-            _conn_s.close()
-            if not _ig_row.empty: _exec_ig_fol = int(_ig_row.iloc[0,0] or 0)
-            if not _fb_row.empty: _exec_fb_fol = int(_fb_row.iloc[0,0] or 0)
-            if not _tk_row.empty: _exec_tk_fol = int(_tk_row.iloc[0,0] or 0)
-            _exec_social_total = _exec_ig_fol + _exec_fb_fol + _exec_tk_fol
-        except Exception:
-            pass
-        # Datafy media attribution — ROAS / impact / trips
-        _exec_roas         = 0.0
-        _exec_attr_trips   = 0
-        _exec_media_impact = 0.0
-        _exec_roas_infinite= False
-        _exec_invest       = 0.0
-        if not df_dfy_media.empty:
-            _mk = df_dfy_media.iloc[0]
-            _exec_attr_trips   = int(_mk.get("attributable_trips", 0) or 0)
-            _exec_media_impact = float(_mk.get("total_impact_usd", 0) or 0)
-            _exec_invest       = float(_mk.get("total_investment_usd", 0) or 0)
-            _roas_raw          = str(_mk.get("roas_description", "") or "")
-            if _exec_invest > 0:
-                _exec_roas = _exec_media_impact / _exec_invest
-            elif "infinite" in _roas_raw.lower() or _exec_media_impact > 0:
-                _exec_roas_infinite = True   # infinite ROAS — no cost recorded
-        # Visitor trips
-        _exec_trips    = 0.0
-        _exec_overnight= 0.0
-        if not df_dfy_ov.empty:
-            _ek = df_dfy_ov.iloc[0]
-            _exec_trips    = float(_ek.get("total_trips", 0) or 0)
-            _exec_overnight= float(_ek.get("overnight_pct", 0) or 0)
-        # Color helpers
-        _up  = "#00C49A"
-        _down= "#FF4757"
-        def _c(v): return _up if v >= 0 else _down
-        def _arr(v): return "▲" if v >= 0 else "▼"
-        # Build banner HTML — dark mode
-        def _exec_kpi(label, value, sub="", color="#00D4C8"):
-            return (
-                f'<div style="flex:1;min-width:140px;max-width:220px;padding:14px 18px;'
-                f'background:rgba(255,255,255,0.05);'
-                f'border-radius:12px;border:1px solid rgba(255,255,255,0.10);'
-                f'border-top:3px solid {color};'
-                f'box-shadow:0 2px 8px rgba(0,0,0,0.20);">'
-                f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;'
-                f'text-transform:uppercase;color:#8AAEC6;margin-bottom:5px;">{label}</div>'
-                f'<div style="font-size:22px;font-weight:900;letter-spacing:-.03em;font-family:\'Outfit\',sans-serif;color:#FFFFFF;">{value}</div>'
-                + (f'<div style="font-size:11px;font-weight:600;margin-top:4px;color:{color};">{sub}</div>' if sub else '')
-                + '</div>'
+        with _h4:
+            st.markdown(
+                format_hero_kpi_card("TBID Monthly", f"${_exec_tbid:,.0f}", "Blended 1.25%", "neutral", "#A78BFA"),
+                unsafe_allow_html=True,
             )
-        _rev12_fmt  = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
-        _tbid12_fmt = f"${_exec_tbid12/1e3:.0f}K" if _exec_tbid12 > 0 else "—"
-        _tot12_fmt  = f"${_exec_tot12/1e6:.1f}M" if _exec_tot12 > 0 else "—"
-        _trips_fmt  = f"{_exec_trips/1e6:.2f}M" if _exec_trips >= 1e6 else (f"{_exec_trips/1e3:.0f}K" if _exec_trips > 0 else "—")
-        _roas_fmt   = ("∞" if _exec_roas_infinite else (f"{_exec_roas:.1f}×" if _exec_roas > 0 else "—"))
-        _roas_sub   = (f"${_exec_media_impact/1e3:.0f}K impact · {_exec_attr_trips:,} trips" if _exec_media_impact > 0
-                       else "Datafy media attr.")
-        _social_fmt = f"{_exec_social_total/1e3:.0f}K" if _exec_social_total >= 1000 else (str(_exec_social_total) if _exec_social_total > 0 else "—")
-        # Color accents per metric type
-        _c_rvp  = "#38BDF8" if _exec_rvp_d >= 0 else "#F87171"
-        _c_adr  = "#38BDF8" if _exec_adr_d >= 0 else "#F87171"
-        _c_occ  = "#34D399" if _exec_occ >= 70 else "#FBBF24"
-        _banner_html = (
-            f'<div style="margin-bottom:20px;background:linear-gradient(135deg,#1E3D5E 0%,#224466 100%);'
-            f'border-radius:14px;border:1px solid rgba(0,212,200,0.20);'
-            f'border-left:5px solid #00D4C8;padding:18px 20px;'
-            f'box-shadow:0 4px 16px rgba(0,0,0,0.30);">'
-            f'<div style="font-family:\'Outfit\',sans-serif;font-size:11px;font-weight:800;'
-            f'letter-spacing:.10em;text-transform:uppercase;color:#00D4C8;margin-bottom:14px;'
-            f'display:flex;align-items:center;gap:10px;">'
-            f'📊 &nbsp;Board Executive Summary &nbsp;·&nbsp; {datetime.now().strftime("%B %Y").upper()}</div>'
-            f'<div style="display:flex;flex-wrap:wrap;gap:10px;">'
-            + _exec_kpi("RevPAR (30d)", f"${_exec_rvp:.0f}", f'{_arr(_exec_rvp_d)} {abs(_exec_rvp_d):.1f}% vs prior', _c_rvp)
-            + _exec_kpi("ADR (30d)", f"${_exec_adr:.0f}", f'{_arr(_exec_adr_d)} {abs(_exec_adr_d):.1f}% vs prior', _c_adr)
-            + _exec_kpi("Occupancy (30d)", f"{_exec_occ:.1f}%", f'{_arr(_exec_occ_d)} {abs(_exec_occ_d):.1f}pp vs prior', _c_occ)
-            + _exec_kpi("12-Mo Room Rev", _rev12_fmt, "Layer 1 STR truth", "#38BDF8")
-            + _exec_kpi("12-Mo TBID Est.", _tbid12_fmt, "at blended 1.25%", "#A78BFA")
-            + _exec_kpi("12-Mo TOT Est.", _tot12_fmt, "at 10% rate", "#A78BFA")
-            + _exec_kpi("Annual Visitor Trips", _trips_fmt, f"{_exec_overnight:.0f}% overnight" if _exec_overnight > 0 else "Datafy", "#34D399")
-            + _exec_kpi("Campaign ROAS", _roas_fmt, _roas_sub, "#FB923C")
-            + _exec_kpi("Social Audience", _social_fmt, f"IG · FB · TikTok" if _exec_social_total > 0 else "Later.com exports", "#E1306C")
-            + '</div></div>'
-        )
-        st.markdown(_banner_html, unsafe_allow_html=True)
-        # Plain-language KPI guide
-        st.markdown(callout(
-            "📖", "What Do These Numbers Mean?",
-            "<strong>RevPAR</strong> = Revenue Per Available Room — the master metric. It combines how full rooms are AND what guests paid. "
-            "<strong>ADR</strong> = Average Daily Rate — what guests actually paid per night. "
-            "<strong>Occupancy</strong> = what % of rooms were filled. "
-            "<strong>12-Mo Room Rev</strong> = total hotel room revenue over the past year, from verified STR data. "
-            "<strong>TBID</strong> = Tourism Business Improvement District assessment — a fee collected from hotel guests that funds marketing. "
-            "<strong>TOT</strong> = Transient Occupancy Tax — the 10% hotel room tax that goes to the City of Dana Point. "
-            "All arrows (▲▼) compare to the same period last year.",
-            "amber",
-        ), unsafe_allow_html=True)
-    except Exception:
-        pass
-
-
-    # ── VDP Status Bar — always-visible daily snapshot ────────────────────────
-    try:
-        _sb_occ   = m.get("occ_30", 0) if m else 0
-        _sb_rvpd  = m.get("revpar_delta", 0) if m else 0
-        _sb_rvp   = m.get("revpar_30", 0) if m else 0
-        _occ_cls  = "green" if _sb_occ >= 75 else ("yellow" if _sb_occ >= 60 else "red")
-        _rvp_cls  = "green" if _sb_rvpd >= 2 else ("yellow" if _sb_rvpd >= -2 else "red")
-        _occ_lbl  = f"{'✅' if _occ_cls=='green' else ('⚠️' if _occ_cls=='yellow' else '🔴')} Occupancy {_sb_occ:.1f}%"
-        _rvp_lbl  = f"{'✅' if _rvp_cls=='green' else ('⚠️' if _rvp_cls=='yellow' else '🔴')} RevPAR ${_sb_rvp:.0f} ({_sb_rvpd:+.1f}%)"
-        _today_str = datetime.now().strftime("%A, %B %d, %Y")
-        st.markdown(
-            f'<div class="vdp-status-bar">'
-            f'<span class="vdp-status-date">📅 {_today_str}</span>'
-            f'<span class="vdp-status-sep">|</span>'
-            f'<span class="vdp-status-chip {_occ_cls}">{_occ_lbl}</span>'
-            f'<span class="vdp-status-chip {_rvp_cls}">{_rvp_lbl}</span>'
-            f'<span class="vdp-status-chip blue">🌊 Dana Point, CA</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-    except Exception:
-        pass
-
-    # ── VDP AI Analyst — Visible on load, no clicks needed ────────────────────
-    st.markdown(
-        '<div class="ai-command-panel">'
-        '<div class="ai-command-header">'
-        '<span style="font-size:22px;">🤖</span>'
-        '<span class="ai-command-title">VDP AI Analyst</span>'
-        '<span class="ai-command-sub">Powered by GloCon Solutions · Ask anything about Dana Point hotel &amp; visitor performance</span>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-    # Preset prompt chips (rendered as Streamlit buttons for interactivity)
-    _OV_PROMPTS = [
-        ("🎯 Full Story",          "demo_story"),
-        ("📬 Morning Brief",       "morning_brief"),
-        ("💹 RevPAR Performance",  "revpar"),
-        ("📋 Board Talking Points","board"),
-        ("👥 Visitor Economy",     "visitor_econ"),
-        ("📢 Campaign ROI",        "visitor_econ"),
-        ("🔍 Detect Anomalies",    "anomaly"),
-        ("📈 30-Day Forecast",     "forecast"),
-    ]
-    _ai_btn_cols = st.columns(len(_OV_PROMPTS))
-    for _ai_i, (_ai_lbl, _ai_key) in enumerate(_OV_PROMPTS):
-        with _ai_btn_cols[_ai_i]:
-            if st.button(_ai_lbl, key=f"ov_ai_{_ai_key}_{_ai_i}", use_container_width=True):
-                if _ai_key == "morning_brief":
-                    _brief_ctx = (
-                        f"Dana Point Visit Dana Point Portfolio — {datetime.now().strftime('%B %d, %Y')}. "
-                        f"RevPAR ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% YOY), "
-                        f"ADR ${m.get('adr_30',0):.0f}, Occ {m.get('occ_30',0):.1f}% ({m.get('occ_delta',0):+.1f}pp YOY). "
-                        f"Write a concise, professional morning briefing for the Visit Dana Point team. "
-                        f"Lead with the headline metric, note anything that needs attention, and end with one strategic recommendation."
-                    ) if m else "Write a brief morning overview for the Visit Dana Point DMO team."
-                    st.session_state.ai_current_prompt = _brief_ctx
-                else:
-                    st.session_state.ai_current_prompt = build_prompt(_ai_key, m)
-                st.session_state.ai_prompt_label = _ai_lbl
-                st.session_state.ai_result = ""
-                st.session_state.ai_needs_call = True
-
-    # ── Demo: 4 Killer Questions ───────────────────────────────────────────────
-    st.markdown(
-        '<div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">'
-        '<span style="font-size:10px;font-weight:700;letter-spacing:0.08em;color:#94A3B8;text-transform:uppercase;">🎯 Demo Questions</span>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
-    _DEMO_PROMPTS = [
-        ("📊 Rate Gap",         "Which feeder markets are sending the most visitors but capturing the least in ADR? Where is the rate gap and how much revenue is being left on the table?"),
-        ("🔄 Day Trip Convert", "We have 1.44 million day trippers. If we convert just 3% to overnight stays, what does that mean for room revenue, TBID, and TOT?"),
-        ("📅 Campaign Season",  "Is our marketing spend amplifying peak season or building shoulder demand? What does compression data say about where to shift media dollars?"),
-        ("🎶 Ohana Fest 2026",  "Based on Ohana Fest 2025 performance — $18.4M destination spend, 3.2x multiplier, +$139 ADR lift — what should our 2026 event marketing strategy look like?"),
-    ]
-    _demo_btn_cols = st.columns(4)
-    for _di, (_dl, _dq) in enumerate(_DEMO_PROMPTS):
-        with _demo_btn_cols[_di]:
-            if st.button(_dl, key=f"ov_demo_{_di}", use_container_width=True):
-                st.session_state.ai_current_prompt = build_custom_prompt(_dq, m)
-                st.session_state.ai_prompt_label   = f"🎯 {_dl}"
-                st.session_state.ai_result         = ""
-                st.session_state.ai_needs_call     = True
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── AI custom input and response — always visible ──────────────────────────
-    _ov_ai_c1, _ov_ai_c2 = st.columns([5, 1])
-    with _ov_ai_c1:
-        _ov_custom_q = st.text_input(
-            "_ov_custom_q", label_visibility="collapsed",
-            placeholder="💬 Ask anything — 'What's our best performing month?' · 'How does Ohana Fest affect ADR?' · 'Draft a board summary' …",
-            key="ov_main_ai_input",
-        )
-    with _ov_ai_c2:
-        if st.button("⚡ Ask AI", type="primary", use_container_width=True, key="ov_main_ai_btn"):
-            if _ov_custom_q.strip():
-                st.session_state.ai_current_prompt = build_custom_prompt(_ov_custom_q, m)
-                st.session_state.ai_prompt_label   = f"💬 {_ov_custom_q.strip()[:60]}"
-                st.session_state.ai_result         = ""
-                st.session_state.ai_needs_call     = True
-
-    # Response area for overview AI
-    if st.session_state.get("ai_needs_call") or st.session_state.get("ai_result"):
-        if st.session_state.get("ai_prompt_label"):
-            st.caption(f"**Query:** {st.session_state.ai_prompt_label}")
-        if st.session_state.get("ai_needs_call"):
-            _ov_prompt = st.session_state.ai_current_prompt
-            _ov_model  = st.session_state.get("selected_model", CLAUDE_MODEL)
-            _ov_any_ai = (
-                (api_key_valid and ANTHROPIC_AVAILABLE) or
-                (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
-                (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
-                (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
-            )
-            if _ov_any_ai:
-                with st.chat_message("assistant", avatar="🌊"):
-                    _ov_resp = st.write_stream(stream_ai_response(_ov_prompt, _ov_model, _ai_keys))
-                st.session_state.ai_result = _ov_resp
-            else:
-                _ov_resp = local_fallback("default", m)
-                with st.chat_message("assistant", avatar="🌊"):
-                    st.markdown(_ov_resp)
-                st.session_state.ai_result = _ov_resp
-                st.info("💡 Add an API key in the sidebar to activate full AI responses.")
-            st.session_state.ai_needs_call = False
-        elif st.session_state.get("ai_result"):
-            with st.chat_message("assistant", avatar="🌊"):
-                st.markdown(st.session_state.ai_result)
-        if st.button("✕ Clear", key="ov_clear_ai"):
-            st.session_state.ai_result = ""
-            st.session_state.ai_prompt_label = ""
-            st.rerun()
+    except Exception as e:
+        _logger.debug(f"Failed to render hero metrics: {str(e)}")
 
     st.markdown("---")
 
-    # ── Overview Sub-Tabs ──────────────────────────────────────────────────────
-    _ov_t1, _ov_t5, _ov_t2, _ov_t4, _ov_t3 = st.tabs([
-        "📊 Performance", "🎬 Stories & Discovery",
-        "📋 Board Report", "🎯 Strategy Goals", "🧠 AI Analysis",
+    # ── Exploration Cards (5-column grid linking to other tabs) ──────────────────
+    st.markdown(
+        '<div style="margin-bottom:20px;"><span style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8AAEC6;">Explore by Topic</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    try:
+        _e1, _e2, _e3, _e4, _e5 = st.columns(5)
+
+        # Helper to render exploration card
+        def _render_explore_card(col, emoji, title, desc, tab_idx):
+            with col:
+                st.markdown(
+                    f"""<div class="explore-card" style="cursor:pointer;" onclick="document.querySelectorAll('[role=tab]')[{tab_idx}].click();">
+                    <div class="explore-icon">{emoji}</div>
+                    <div class="explore-title">{title}</div>
+                    <div class="explore-desc">{desc}</div>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+
+        _render_explore_card(_e1, "🏨", "Hotel Trends", "30-day & YTD performance", 1)
+        _render_explore_card(_e2, "👥", "Our Visitors", "Trip volumes & origins", 3)
+        _render_explore_card(_e3, "🎉", "Event Impact", "Major events & lift", 4)
+        _render_explore_card(_e4, "📈", "Market Intel", "Competitive positioning", 7)
+        _render_explore_card(_e5, "🗄️", "Data Health", "ETL pipeline & coverage", 8)
+    except Exception as e:
+        _logger.debug(f"Failed to render exploration cards: {str(e)}")
+
+    st.markdown("---")
+
+    # ── Summary Stats (optional callout) ───────────────────────────────────────────
+    try:
+        _trips_fmt = "—"
+        _oos_pct = 0
+        if not df_dfy_ov.empty:
+            _ek = df_dfy_ov.iloc[0]
+            _trips = float(_ek.get("total_trips", 0) or 0)
+            _trips_fmt = f"{_trips/1e6:.2f}M" if _trips >= 1e6 else f"{_trips/1e3:.0f}K"
+            _oos_pct = float(_ek.get("out_of_state_vd_pct", 0) or 0)
+
+        if _trips_fmt != "—":
+            st.markdown(
+                callout(
+                    "👥",
+                    "Visitor Economy Context",
+                    f"<strong>{_trips_fmt}</strong> annual visitor trips · <strong>{_oos_pct:.0f}%</strong> out-of-state visitors. "
+                    "See 'Our Visitors' tab for market breakdown and feeder analysis.",
+                    "info",
+                ),
+                unsafe_allow_html=True,
+            )
+    except Exception as e:
+        _logger.debug(f"Failed to render visitor context: {str(e)}")
+
+    st.markdown("---")
+
+    # ── Overview Sub-Tabs (Scorecard, Board Report, Goals, AI Assistant) ──────────
+    _ov_t1, _ov_t2, _ov_t3, _ov_t4 = st.tabs([
+        "📊 Scorecard",
+        "📋 Board Report",
+        "🎯 Goals",
+        "🤖 AI Assistant",
     ])
 
-    # ── Board Report → sub-tab 2 ──────────────────────────────────────────────
+    # ── SUB-TAB 1: Scorecard ──────────────────────────────────────────────────────
+    with _ov_t1:
+        st.markdown(sec_div("📊 12-Month Performance Scorecard"), unsafe_allow_html=True)
+        try:
+            if m and m.get("monthly_data_available"):
+                _ytd_rvp   = m.get("revpar_12m", 0)
+                _ytd_rvpd  = m.get("revpar_yoy_12m", 0)
+                _ytd_adr   = m.get("adr_12m", 0)
+                _ytd_adrd  = m.get("adr_yoy_12m", 0)
+                _ytd_occ   = m.get("occ_12m", 0)
+                _ytd_occd  = m.get("occ_yoy_12m", 0)
+                _ytd_rev   = m.get("rev_12m_total", 0)
+                _ytd_tbid  = m.get("tbid_12m", 0)
+                _ytd_best  = m.get("revpar_best_month", "")
+                _ytd_bestv = m.get("revpar_best_val", 0)
+
+                def _ytd_arrow(v, fmt="pct"):
+                    col  = "#4ADE80" if v >= 0 else "#F87171"
+                    arr  = "▲" if v >= 0 else "▼"
+                    val  = f"{abs(v):.1f}{'%' if fmt=='pct' else 'pp'}"
+                    return f'<span style="color:{col};font-size:13px;font-weight:700;">{arr} {val} YOY</span>'
+
+                from utils import format_exec_kpi_banner
+
+                def _ytd_kpi(label, value, yoy_html, accent="#38BDF8"):
+                    return format_exec_kpi_banner(label, value, yoy_html, accent)
+
+                _ytd_html = (
+                    f'<div style="margin-bottom:20px;padding:20px 22px;'
+                    f'background:linear-gradient(135deg,rgba(6,182,212,0.06) 0%,rgba(99,102,241,0.06) 100%);'
+                    f'border:1px solid rgba(6,182,212,0.20);border-radius:16px;'
+                    f'box-shadow:0 0 30px rgba(6,182,212,0.08);">'
+                    f'<div style="font-size:10px;font-weight:800;letter-spacing:.10em;'
+                    f'text-transform:uppercase;color:#22D3EE;margin-bottom:14px;">'
+                    f'{"PEAK MONTH: " + _ytd_best + " @ $" + str(int(_ytd_bestv)) + " RevPAR" if _ytd_best else "TRAILING 12 MONTHS"}'
+                    f'</div>'
+                    f'<div style="display:flex;flex-wrap:wrap;gap:12px;">'
+                    + _ytd_kpi("RevPAR (12m avg)", f"${_ytd_rvp:.0f}", _ytd_arrow(_ytd_rvpd), "#38BDF8")
+                    + _ytd_kpi("ADR (12m avg)", f"${_ytd_adr:.0f}", _ytd_arrow(_ytd_adrd), "#818CF8")
+                    + _ytd_kpi("Occupancy (12m)", f"{_ytd_occ:.1f}%", _ytd_arrow(_ytd_occd, "pp"), "#34D399")
+                    + _ytd_kpi("12-Mo Room Revenue", f"${_ytd_rev/1e6:.1f}M", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">Layer 1 STR truth</span>', "#F59E0B")
+                    + _ytd_kpi("12-Mo TBID Est.", f"${_ytd_tbid/1e3:.0f}K", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">at blended 1.25%</span>', "#A78BFA")
+                    + f'</div></div>'
+                )
+                st.markdown(_ytd_html, unsafe_allow_html=True)
+        except Exception as e:
+            _logger.debug(f"Failed to render 12-month scorecard: {str(e)}")
+
+        # ── Compression Insights ──────────────────────────────────────────────
+        st.markdown(sec_div("⚡ PULSE Performance Score"), unsafe_allow_html=True)
+        if m:
+            _occ_score  = m.get("occ_30", 0)
+            _rvp_d_s    = m.get("revpar_delta", 0)
+            _cq_s       = m.get("comp_recent_q", 0)
+            _comp_occ   = min(50, max(0, (_occ_score / 70) * 50))
+            _comp_rvp   = min(30, max(0, 15 + (_rvp_d_s * 1.5)))
+            _comp_cmp   = min(20, max(0, _cq_s * 2.0))
+            _pulse_score = int(round(_comp_occ + _comp_rvp + _comp_cmp))
+            _pulse_score = max(0, min(100, _pulse_score))
+
+            if _pulse_score >= 90:
+                _p_color  = "#7C3AED"
+                _p_status = "HISTORIC"
+            elif _pulse_score >= 75:
+                _p_color  = "#21C55D"
+                _p_status = "EXCEPTIONAL"
+            elif _pulse_score >= 60:
+                _p_color  = "#21808D"
+                _p_status = "STRONG"
+            elif _pulse_score >= 40:
+                _p_color  = "#F59E0B"
+                _p_status = "STABLE"
+            else:
+                _p_color  = "#EF4444"
+                _p_status = "CAUTION"
+
+            _gauge_fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=_pulse_score,
+                title={"text": "PULSE Score", "font": {"size": 12}},
+                gauge={
+                    "axis": {"range": [0, 100], "tickwidth": 1, "tickcolor": "rgba(15,28,46,0.3)"},
+                    "bar": {"color": _p_color, "thickness": 0.28},
+                    "steps": [
+                        {"range": [0, 40],  "color": "rgba(192,21,47,0.12)"},
+                        {"range": [40, 60], "color": "rgba(245,158,11,0.12)"},
+                        {"range": [60, 80], "color": "rgba(33,128,141,0.12)"},
+                        {"range": [80, 100],"color": "rgba(33,197,93,0.12)"},
+                    ],
+                },
+                number={"font": {"size": 32, "color": _p_color}, "suffix": ""},
+            ))
+            _gauge_fig.update_layout(height=200, margin=dict(l=20, r=20, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(_gauge_fig, use_container_width=True, config={"displayModeBar": False})
+
+            st.caption(f"**Status:** {_p_status} — Market health score across occupancy, rate momentum, and compression trends.")
+
+    # ── SUB-TAB 2: Board Report ──────────────────────────────────────────────────
     with _ov_t2:
-        # ── Board Report (auto-generated, always visible) ──────────────────────────
         st.markdown(sec_div("📋 Board Intelligence Report"), unsafe_allow_html=True)
         with st.expander("📋 VDP Board Report — Auto-Generated Talking Points", expanded=True):
             st.markdown('<span class="ai-chip">BOARD READY</span>', unsafe_allow_html=True)
@@ -8648,114 +8592,16 @@ with tab_ov:
 
                 _oos_pct  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
                 _trips_m  = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) / 1_000_000 if not df_dfy_ov.empty else 0
-                _overnight = float(df_dfy_ov.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov.empty else 0
 
                 _dir_arrow = "▲" if _rvp_d >= 0 else "▼"
                 _dir_color = "#21808D" if _rvp_d >= 0 else "#c0152f"
 
-                # Zartico historical context for board report
-                _zrt_ctx = "Visitor devices share: 21.2% · Visitor spend share: 48.0% · Avg. visitor spend peaked at $204 in Jul 2024. OOS visitor rate: 23%."
-                if not df_zrt_kpis.empty:
-                    _zk = df_zrt_kpis.iloc[0]
-                    _zrt_ctx = (
-                        f"Visitor devices: {_zk.get('pct_devices_visitors', 21.2):.1f}% of local devices · "
-                        f"Visitor spend: {_zk.get('pct_spend_visitors', 48.0):.1f}% of total · "
-                        f"Accommodation spend: {_zk.get('pct_accommodation_spend_visitors', 76.0):.0f}% from visitors. "
-                        f"Top feeder: LA ({df_zrt_markets[df_zrt_markets['rank']==1]['pct_visitors'].values[0]:.1f}% of visits) · "
-                        "Peak avg. spend $204/visitor (Jul 2024)."
-                    ) if not df_zrt_markets.empty else (
-                        f"Visitor devices: {_zk.get('pct_devices_visitors', 21.2):.1f}% · "
-                        f"Visitor spend: {_zk.get('pct_spend_visitors', 48.0):.1f}% · "
-                        f"Accommodation: {_zk.get('pct_accommodation_spend_visitors', 76.0):.0f}%."
-                    )
-
-                # Source badge row
                 _src_row = (
                     '<span class="nlm-tag nlm-tag-str">STR</span>'
                     + (' <span class="nlm-tag nlm-tag-datafy">Datafy</span>' if _trips_m > 0 else '')
                     + ' <span class="nlm-tag nlm-tag-ai">VDP Insights</span>'
                 )
-                _midweek_opp_lbl = f"${(_wknd - _wkdy) * 0.2 * 90 / 7 * 12:,.0f}/year"
-                # Datafy GA4 web analytics summary
-                if not df_dfy_social_aud.empty:
-                    _ga4_sessions = int(df_dfy_social_aud.iloc[0].get("total_sessions", 0) or 0)
-                    _ga4_eng      = float(df_dfy_social_aud.iloc[0].get("engagement_rate", 0) or 0)
-                    _ga4_top_page = df_dfy_social_pages.iloc[0].get("page_path", "—") if not df_dfy_social_pages.empty else "—"
-                    _ga4_lbl = (
-                        f"Website sessions: <strong>{_ga4_sessions:,}</strong> &nbsp;·&nbsp; "
-                        f"Engagement rate: <strong>{_ga4_eng:.1f}%</strong> &nbsp;·&nbsp; "
-                        f"Top page: <strong>{_ga4_top_page}</strong>."
-                    )
-                else:
-                    _ga4_lbl = "Run pipeline to load Datafy GA4 web analytics data."
-                # Later.com social stats for board report
-                _ig_fol_s = df_later_ig_profile["followers"].dropna() if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns else pd.Series(dtype=float)
-                _fb_fol_s = df_later_fb_profile["page_followers"].dropna() if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns else pd.Series(dtype=float)
-                _tk_fol_s = df_later_tk_profile["followers"].dropna() if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns else pd.Series(dtype=float)
-                _ig_fol = int(_ig_fol_s.iloc[0]) if not _ig_fol_s.empty else 0
-                _fb_fol = int(_fb_fol_s.iloc[0]) if not _fb_fol_s.empty else 0
-                _tk_fol = int(_tk_fol_s.iloc[0]) if not _tk_fol_s.empty else 0
-                _ig_posts_ct = len(df_later_ig_posts)
-                _ig_eng_avg  = float(df_later_ig_posts["engagement_rate"].mean()) if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns else 0.0
-                _social_reach_total = (
-                    int(df_later_ig_profile["reach"].sum()) if not df_later_ig_profile.empty and "reach" in df_later_ig_profile.columns else 0
-                ) + (
-                    int(df_later_fb_profile["reach"].sum()) if not df_later_fb_profile.empty and "reach" in df_later_fb_profile.columns else 0
-                )
-                _social_lbl = (
-                    f"IG: <strong>{_ig_fol:,}</strong> followers · "
-                    f"FB: <strong>{_fb_fol:,}</strong> followers · "
-                    f"TK: <strong>{_tk_fol:,}</strong> followers. "
-                    f"Avg engagement rate: <strong>{_ig_eng_avg:.1f}%</strong> · "
-                    f"{_ig_posts_ct} IG posts this period · "
-                    f"Total cross-platform reach: <strong>{_social_reach_total:,}</strong>."
-                ) if _ig_fol + _fb_fol > 0 else _ga4_lbl
-                _visitor_lbl = (
-                    f"<strong>{_trips_m:.2f}M</strong> annual visitor trips · "
-                    f"<strong>{_overnight:.1f}%</strong> overnight stays · "
-                    f"<strong>{_oos_pct:.1f}%</strong> out-of-state visitors generating higher per-trip spend."
-                    if _trips_m > 0 else "Run pipeline to load Datafy visitor data."
-                )
-                # FRED macro context for board report
-                _fred_macro_lbl = ""
-                if not df_fred.empty:
-                    try:
-                        _sent_row  = df_fred[df_fred["series_id"]=="UMCSENT"].sort_values("data_date").dropna(subset=["value"]).tail(2)
-                        _unrate_row = df_fred[df_fred["series_id"]=="UNRATE"].sort_values("data_date").dropna(subset=["value"]).tail(1)
-                        _disp_row  = df_fred[df_fred["series_id"]=="DSPIC96"].sort_values("data_date").dropna(subset=["value"]).tail(1)
-                        _save_row  = df_fred[df_fred["series_id"]=="PSAVERT"].sort_values("data_date").dropna(subset=["value"]).tail(1)
-                        _sent_val  = float(_sent_row.iloc[-1]["value"]) if not _sent_row.empty else None
-                        _sent_prev = float(_sent_row.iloc[-2]["value"]) if len(_sent_row) >= 2 else None
-                        _sent_chg  = round(_sent_val - _sent_prev, 1) if _sent_val and _sent_prev else 0
-                        _unrate    = float(_unrate_row.iloc[0]["value"]) if not _unrate_row.empty else None
-                        _disp      = float(_disp_row.iloc[0]["value"]) if not _disp_row.empty else None
-                        _save      = float(_save_row.iloc[0]["value"]) if not _save_row.empty else None
-                        _sent_tier = "🟢 Strong" if (_sent_val or 0) > 90 else "🟡 Moderate" if (_sent_val or 0) > 70 else "🔴 Cautious"
-                        _sent_dir  = f"({'+' if _sent_chg >= 0 else ''}{_sent_chg:.1f} pts vs. prior)" if _sent_chg else ""
-                        _fred_macro_lbl = (
-                            f"Consumer Sentiment: <strong>{_sent_val:.1f}</strong> {_sent_tier} {_sent_dir} "
-                            f"&nbsp;·&nbsp; Unemployment: <strong>{_unrate:.1f}%</strong>"
-                            f"{'&nbsp;·&nbsp; Disposable Income: <strong>$' + f'{_disp:,.0f}B</strong>' if _disp else ''}"
-                            f"{'&nbsp;·&nbsp; Savings Rate: <strong>' + f'{_save:.1f}%</strong>' if _save else ''}."
-                        )
-                    except Exception:
-                        _fred_macro_lbl = "FRED data loaded — see Economic Climate tab for details."
-                # EIA gas price context for board report
-                _eia_lbl = ""
-                if not df_eia_gas.empty:
-                    try:
-                        _eia_ca = df_eia_gas[df_eia_gas["series_id"].str.contains("SCA", na=False)].sort_values("week_end_date").tail(1)
-                        if not _eia_ca.empty:
-                            _gas_px = float(_eia_ca.iloc[0]["price_per_gallon"])
-                            _gas_yoy = float(_eia_ca.iloc[0]["yoy_change"]) if pd.notna(_eia_ca.iloc[0].get("yoy_change")) else None
-                            _gas_risk = "🔴 HIGH" if _gas_px > 4.50 else "🟡 MODERATE" if _gas_px > 4.00 else "🟢 LOW"
-                            _eia_lbl = (
-                                f"CA gas: <strong>${_gas_px:.2f}/gal</strong> {_gas_risk} drive-market risk"
-                                + (f" ({'+' if (_gas_yoy or 0) >= 0 else ''}${_gas_yoy:.2f} YOY)" if _gas_yoy else "")
-                                + ". Drive-market visitors (LA/OC/SD/IE) = ~55% of total — gas is a direct booking headwind above $4.50."
-                            )
-                    except Exception:
-                        _eia_lbl = ""
+
                 st.markdown(f"""
     <div class="nlm-briefing">
     <div class="nlm-briefing-title">
@@ -8767,52 +8613,28 @@ with tab_ov:
       <strong>Revenue Momentum</strong> &nbsp;<span style="color:{_dir_color};font-weight:700;">{_dir_arrow} {_rvp_d:+.1f}%</span><br>
       RevPAR is <strong>${_rvp:.0f}</strong> over the last 30 days ({_rvp_d:+.1f}% vs. prior period).
       ADR is <strong>${_adr:.0f}</strong> ({_adr_d:+.1f}%) · Occupancy at <strong>{_occ:.1f}%</strong> ({_occ_d:+.1f}pp).
-      <br><em style="opacity:.72">→ {"Maintain pricing discipline — demand supports current rate levels." if _rvp_d >= 0 else "Examine rate softness drivers; consider targeted packages for shoulder periods."}</em>
     </div>
 
     <div class="nlm-point">
       <strong>TBID Revenue Projection</strong> <span class="nlm-tag nlm-tag-str">STR</span><br>
       Monthly TBID assessment: <strong>${_tbid:,.0f}</strong> (blended 1.25% rate).
       Compression: <strong>{_cq}</strong> nights above 90% occ this quarter vs. {_cpq} prior.
-      <br><em style="opacity:.72">→ {"Rate increase justified on compression nights — file recommendation with board." if _cq > _cpq else "Shoulder season underperforming — prioritize demand generation budget request."}</em>
     </div>
 
     <div class="nlm-point">
       <strong>Visitor Economy</strong> <span class="nlm-tag nlm-tag-datafy">Datafy</span><br>
-      {_visitor_lbl}
-      <br><em style="opacity:.72">→ Target OOS feeder markets (SLC, DFW, NYC) with fly-drive campaign — 1.3–1.4× room revenue per trip vs. LA drive market.</em>
-    </div>
-
-    <div class="nlm-point">
-      <strong>Digital & Social Performance</strong> <span class="nlm-tag nlm-tag-datafy">Datafy GA4</span> <span class="nlm-tag" style="background:rgba(225,48,108,0.12);color:#e1306c;">Instagram</span><br>
-      {_ga4_lbl}<br>
-      {_social_lbl}
-      <br><em style="opacity:.72">→ Digital engagement reflects destination intent; top pages signal content demand for campaign alignment.</em>
+      <strong>{_trips_m:.2f}M</strong> annual visitor trips · <strong>{_oos_pct:.1f}%</strong> out-of-state visitors.
     </div>
 
     <div class="nlm-point">
       <strong>Weekend / Midweek Gap</strong> <span class="nlm-tag nlm-tag-str">STR</span><br>
       Weekend RevPAR: <strong>${_wknd:.0f}</strong> · Midweek: <strong>${_wkdy:.0f}</strong> · Gap: <strong>{_gap:.0f}%</strong>.
-      <br><em style="opacity:.72">→ Closing 20% of this gap adds ~{_midweek_opp_lbl} in incremental portfolio room revenue.</em>
-    </div>
-
-    <div class="nlm-point">
-      <strong>Market Positioning</strong> <span class="nlm-tag nlm-tag-ai">CoStar</span><br>
-      Dana Point/South OC market ADR forecast: $285+ through 2025. VDP portfolio maintains premium positioning above market average.
-      <br><em style="opacity:.72">→ Present updated comp set analysis at next board meeting; request approval for rate strategy review.</em>
-    </div>
-
-    <div class="nlm-point">
-      <strong>Historical Context (Zartico 2024–25) (Historical Reference)</strong> <span class="nlm-tag" style="background:rgba(121,82,179,0.15);color:#7952b3;">Zartico</span><br>
-      {_zrt_ctx}
-      <br><em style="opacity:.72">→ Zartico historical data provides independent validation of Datafy trends; present alongside for board credibility. Note: Zartico is historical reference only (Jun 2025 snapshot) — not current data.</em>
     </div>
     </div>
     """, unsafe_allow_html=True)
             else:
                 st.info("Run the pipeline to load STR data for board report generation.")
 
-            # ── Download button ────────────────────────────────────────────────────
             st.markdown("<br>", unsafe_allow_html=True)
             _dl_col, _sp_col = st.columns([1, 3])
             with _dl_col:
@@ -8827,1666 +8649,96 @@ with tab_ov:
                     load_strategy_goals(),
                 )
                 st.download_button(
-                    label="📥 Download Board Report (Print-Ready HTML)",
+                    label="📥 Download Board Report (HTML)",
                     data=_report_html.encode("utf-8"),
                     file_name=f"VDP_Board_Report_{datetime.now().strftime('%Y-%m')}.html",
                     mime="text/html",
                     use_container_width=True,
                     type="primary",
-                    help="Download → open in browser → Cmd+P / Ctrl+P → Save as PDF",
-                )
-            with _sp_col:
-                st.caption(
-                    "Opens as a formatted HTML document. To save as PDF: open in browser → "
-                    "File → Print → 'Save as PDF'. Optimized for A4/Letter paper."
-                )
-                # Share via email button
-                _report_period = datetime.now().strftime("%B %Y")
-                _mailto_subject = f"Dana Point PULSE Board Report — {_report_period}"
-                _mailto_body = (
-                    f"Please find attached the Dana Point PULSE Board Report for {_report_period}. "
-                    f"Download from the dashboard and open in your browser to print to PDF."
-                )
-                _mailto_link = (
-                    f"mailto:?subject={_urlparse.quote(_mailto_subject)}"
-                    f"&body={_urlparse.quote(_mailto_body)}"
-                )
-                st.markdown(
-                    f'<a href="{_mailto_link}" style="display:inline-block;margin-top:6px;'
-                    f'font-size:12px;color:#21808D;text-decoration:none;font-weight:600;">'
-                    f'📧 Share via Email</a>',
-                    unsafe_allow_html=True,
                 )
 
-    # ── Key Metrics → sub-tab 1 ────────────────────────────────────────────────
-    with _ov_t1:
-        # ── 2026 YTD Momentum Banner ───────────────────────────────────────────
-        try:
-            if m and m.get("monthly_data_available"):
-                _ytd_rvp   = m.get("revpar_12m", 0)
-                _ytd_rvpd  = m.get("revpar_yoy_12m", 0)
-                _ytd_adr   = m.get("adr_12m", 0)
-                _ytd_adrd  = m.get("adr_yoy_12m", 0)
-                _ytd_occ   = m.get("occ_12m", 0)
-                _ytd_occd  = m.get("occ_yoy_12m", 0)
-                _ytd_rev   = m.get("rev_12m_total", 0)
-                _ytd_tbid  = m.get("tbid_12m", 0)
-                _ytd_best  = m.get("revpar_best_month", "")
-                _ytd_bestv = m.get("revpar_best_val", 0)
-                def _ytd_arrow(v, fmt="pct"):
-                    col  = "#4ADE80" if v >= 0 else "#F87171"
-                    arr  = "▲" if v >= 0 else "▼"
-                    val  = f"{abs(v):.1f}{'%' if fmt=='pct' else 'pp'}"
-                    return f'<span style="color:{col};font-size:13px;font-weight:700;">{arr} {val} YOY</span>'
-                def _ytd_kpi(label, value, yoy_html, accent="#38BDF8"):
-                    return (
-                        f'<div style="flex:1;min-width:130px;padding:16px 18px;'
-                        f'background:rgba(255,255,255,0.04);border-radius:12px;'
-                        f'border:1px solid rgba(255,255,255,0.08);border-top:3px solid {accent};">'
-                        f'<div style="font-size:9px;font-weight:800;letter-spacing:.09em;'
-                        f'text-transform:uppercase;color:#8AAEC6;margin-bottom:6px;">{label}</div>'
-                        f'<div style="font-size:26px;font-weight:900;font-family:\'Outfit\',sans-serif;'
-                        f'letter-spacing:-.03em;color:#FFFFFF;margin-bottom:4px;">{value}</div>'
-                        f'{yoy_html}'
-                        f'</div>'
-                    )
-                _ytd_html = (
-                    f'<div style="margin-bottom:20px;padding:20px 22px;'
-                    f'background:linear-gradient(135deg,rgba(6,182,212,0.06) 0%,rgba(99,102,241,0.06) 100%);'
-                    f'border:1px solid rgba(6,182,212,0.20);border-radius:16px;'
-                    f'box-shadow:0 0 30px rgba(6,182,212,0.08);">'
-                    f'<div style="font-size:10px;font-weight:800;letter-spacing:.10em;'
-                    f'text-transform:uppercase;color:#22D3EE;margin-bottom:14px;'
-                    f'display:flex;align-items:center;gap:8px;">'
-                    f'📈 &nbsp;12-MONTH PERFORMANCE SCORECARD &nbsp;·&nbsp; '
-                    f'{"PEAK MONTH: " + _ytd_best + " @ $" + str(int(_ytd_bestv)) + " RevPAR" if _ytd_best else "TRAILING 12 MONTHS"}'
-                    f'</div>'
-                    f'<div style="display:flex;flex-wrap:wrap;gap:12px;">'
-                    + _ytd_kpi("RevPAR (12-mo avg)", f"${_ytd_rvp:.0f}", _ytd_arrow(_ytd_rvpd), "#38BDF8")
-                    + _ytd_kpi("ADR (12-mo avg)", f"${_ytd_adr:.0f}", _ytd_arrow(_ytd_adrd), "#818CF8")
-                    + _ytd_kpi("Occupancy (12-mo)", f"{_ytd_occ:.1f}%", _ytd_arrow(_ytd_occd, "pp"), "#34D399")
-                    + _ytd_kpi("12-Mo Room Revenue", f"${_ytd_rev/1e6:.1f}M", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">Layer 1 STR truth</span>', "#F59E0B")
-                    + _ytd_kpi("12-Mo TBID Est.", f"${_ytd_tbid/1e3:.0f}K", '<span style="font-size:11px;color:#8AAEC6;font-weight:600;">at blended 1.25%</span>', "#A78BFA")
-                    + f'</div></div>'
-                )
-                st.markdown(_ytd_html, unsafe_allow_html=True)
-        except Exception:
-            pass
-
-        # ── Full Data Summary by Section — mini data cards ─────────────────────
-        try:
-            _ds_occ   = f"{m.get('occ_30', 0):.1f}%" if m else "—"
-            _ds_adr   = f"${m.get('adr_30', 0):,.0f}" if m else "—"
-            _ds_rvp   = f"${m.get('revpar_30', 0):,.0f}" if m else "—"
-            _ds_rvpd  = f"{m.get('revpar_delta', 0):+.1f}%" if m else "—"
-            _ds_cq80  = "—"; _ds_cq90 = "—"
-            if not df_comp.empty and "days_above_80_occ" in df_comp.columns:
-                _ds_cq80 = str(df_comp["days_above_80_occ"].iloc[-1]) + " days"
-                if "days_above_90_occ" in df_comp.columns:
-                    _ds_cq90 = str(df_comp["days_above_90_occ"].iloc[-1]) + " days"
-            _ds_trips  = "—"; _ds_oos = "—"
-            if not df_dfy_ov.empty:
-                _dv = df_dfy_ov.iloc[0]
-                _ds_tt = int(_dv.get("total_trips", 0) or 0)
-                _ds_trips = f"{_ds_tt/1e6:.2f}M" if _ds_tt >= 1e6 else f"{_ds_tt:,}"
-                _ds_oos = f"{float(_dv.get('out_of_state_vd_pct', 0) or 0):.1f}%"
-            _ds_top_dma = "—"
-            if not df_dfy_dma.empty:
-                _ds_top_dma = str(df_dfy_dma.iloc[0].get("dma", "—"))
-            _ds_pipe_rooms = f"{int(df_cs_pipe['rooms'].sum()):,}" if not df_cs_pipe.empty else "—"
-            _ds_roas = "—"
-            if not df_dfy_media.empty:
-                _dm = df_dfy_media.iloc[0]
-                _mi = float(_dm.get("total_impact_usd", 0) or 0)
-                _inv = float(_dm.get("total_investment_usd", 0) or 0)
-                _ds_roas = f"{_mi/_inv:.1f}×" if _inv > 0 and _mi > 0 else ("∞" if _mi > 0 else "—")
-            _ds_ig = "—"
-            try:
-                _cxn = sqlite3.connect(DB_PATH)
-                _ig_r = pd.read_sql_query("SELECT followers FROM later_ig_profile_growth ORDER BY data_date DESC LIMIT 1", _cxn)
-                _cxn.close()
-                if not _ig_r.empty: _ds_ig = f"{int(_ig_r.iloc[0,0] or 0):,}"
-            except Exception:
-                pass
-            def _mini_card(label, value, sub=""):
-                return (
-                    f'<div class="mini-data-card">'
-                    f'<div class="mini-data-card-label">{label}</div>'
-                    f'<div class="mini-data-card-value">{value}</div>'
-                    + (f'<div class="mini-data-card-sub">{sub}</div>' if sub else '')
-                    + '</div>'
-                )
-            _cards = [
-                _mini_card("Occupancy (30d)", _ds_occ, "30-day avg"),
-                _mini_card("ADR (30d)", _ds_adr, "avg daily rate"),
-                _mini_card("RevPAR (30d)", _ds_rvp, f"YOY {_ds_rvpd}"),
-                _mini_card("Compression 80%+", _ds_cq80, "days this quarter"),
-                _mini_card("Compression 90%+", _ds_cq90, "days this quarter"),
-                _mini_card("Annual Visitor Trips", _ds_trips, f"{_ds_oos} out-of-state"),
-                _mini_card("Top Feeder DMA", _ds_top_dma, "by visitor days"),
-                _mini_card("Pipeline Rooms", _ds_pipe_rooms, "CoStar supply"),
-                _mini_card("Campaign ROAS", _ds_roas, "Datafy media attr."),
-                _mini_card("IG Followers", _ds_ig, "Later.com export"),
-                _mini_card("TOT Rate", "10%", "transient occupancy tax"),
-            ]
-            st.markdown(sec_div("📊 Full Data Summary — All Sections"), unsafe_allow_html=True)
-            # 4 cards per row
-            for _row_start in range(0, len(_cards), 4):
-                _row_cards = _cards[_row_start:_row_start+4]
-                _cols = st.columns(len(_row_cards))
-                for _ci, _card_html in enumerate(_row_cards):
-                    with _cols[_ci]:
-                        st.markdown(_card_html, unsafe_allow_html=True)
-        except Exception:
-            pass
-
-        # ── PULSE Score Widget ─────────────────────────────────────────────────────
-        st.markdown(sec_div("⚡ PULSE Performance Score"), unsafe_allow_html=True)
-        if m:
-            _occ_score  = m.get("occ_30", 0)
-            _rvp_d_s    = m.get("revpar_delta", 0)
-            _cq_s       = m.get("comp_recent_q", 0)
-            # Score components: occupancy vs 70% baseline (max 50pts), RevPAR YOY (max 30pts), compression (max 20pts)
-            _comp_occ   = min(50, max(0, (_occ_score / 70) * 50))
-            _comp_rvp   = min(30, max(0, 15 + (_rvp_d_s * 1.5)))
-            _comp_cmp   = min(20, max(0, _cq_s * 2.0))
-            _pulse_score = int(round(_comp_occ + _comp_rvp + _comp_cmp))
-            _pulse_score = max(0, min(100, _pulse_score))
-
-            if _pulse_score >= 90:
-                _p_color  = "#7C3AED"   # purple — historic
-                _p_status = "HISTORIC"
-                _p_detail = "Exceptional market conditions — this is a benchmark period. Document rate levels and compression patterns for future board reference."
-            elif _pulse_score >= 75:
-                _p_color  = "#21C55D"   # green — exceptional
-                _p_status = "EXCEPTIONAL"
-                _p_detail = "Market significantly outperforming baseline. Occupancy, rate, and compression all trending strongly positive — capitalize with rate increases now."
-            elif _pulse_score >= 60:
-                _p_color  = "#21808D"   # teal — strong
-                _p_status = "STRONG"
-                _p_detail = "Market performing above expectations. Occupancy, rate, and compression trending positive. Maintain pricing discipline."
-            elif _pulse_score >= 40:
-                _p_color  = "#F59E0B"   # amber — stable
-                _p_status = "STABLE"
-                _p_detail = "Market showing steady signals. Core metrics at or near baseline; monitor rate pressure and shoulder demand generation."
-            else:
-                _p_color  = "#EF4444"   # red — caution
-                _p_status = "CAUTION"
-                _p_detail = "Market below baseline performance. Revenue and/or occupancy need attention — review demand drivers and rate strategy immediately."
-
-            # ── Custom weighting expander ───────────────────────────────────────
-            with st.expander("⚙️ Score Weighting — Customize for Your Strategy", expanded=False):
-                st.markdown(
-                    '<div style="font-size:12px;opacity:0.70;margin-bottom:12px;">'
-                    'The <strong>PULSE Score (0–100)</strong> measures market health across 4 dimensions. '
-                    'Adjust the weights below to reflect your organization\'s priorities. '
-                    'All weights must sum to 100%.</div>',
-                    unsafe_allow_html=True,
-                )
-                _pw_c1, _pw_c2, _pw_c3, _pw_c4 = st.columns(4)
-                with _pw_c1:
-                    _w_occ = st.slider("Occupancy Weight", 0, 100, 25, 5, key="pw_occ", help="Weight for occupancy vs 70% baseline")
-                with _pw_c2:
-                    _w_adr = st.slider("ADR / Rate Weight", 0, 100, 25, 5, key="pw_adr", help="Weight for rate momentum")
-                with _pw_c3:
-                    _w_rvp = st.slider("RevPAR YOY Weight", 0, 100, 25, 5, key="pw_rvp", help="Weight for RevPAR year-over-year change")
-                with _pw_c4:
-                    _w_cmp = st.slider("Compression Weight", 0, 100, 25, 5, key="pw_cmp", help="Weight for compression nights this quarter")
-                _w_total = _w_occ + _w_adr + _w_rvp + _w_cmp
-                if _w_total != 100:
-                    st.warning(f"Weights sum to {_w_total}% — adjust to reach 100% for a valid score.")
-                else:
-                    # Recompute score with custom weights (normalize each component to 0–1 then apply weight)
-                    _c_occ_n  = min(1.0, max(0.0, _occ_score / 70))
-                    _c_rvp_n  = min(1.0, max(0.0, (15 + _rvp_d_s * 1.5) / 30))
-                    _c_cmp_n  = min(1.0, max(0.0, _cq_s * 2.0 / 20))
-                    _c_adr_n  = min(1.0, max(0.0, (15 + _rvp_d_s * 1.0) / 30))   # proxy for ADR using RevPAR delta
-                    _custom_score = int(round(
-                        _c_occ_n * _w_occ + _c_rvp_n * _w_rvp + _c_adr_n * _w_adr + _c_cmp_n * _w_cmp
-                    ))
-                    _custom_score = max(0, min(100, _custom_score))
-                    st.markdown(
-                        f'<div style="font-size:13px;margin-top:4px;margin-bottom:6px;">'
-                        f'Custom weighted score: <strong style="color:{_p_color};font-size:18px;">{_custom_score}</strong> / 100'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                    # Breakdown table
-                    _breakdown = [
-                        ("Occupancy",   f"{_occ_score:.1f}% vs 70% baseline", f"{_c_occ_n*_w_occ:.1f}",  f"{_w_occ}%"),
-                        ("ADR / Rate",  f"proxy via RevPAR delta",            f"{_c_adr_n*_w_adr:.1f}",  f"{_w_adr}%"),
-                        ("RevPAR YOY",  f"{_rvp_d_s:+.1f}%",                 f"{_c_rvp_n*_w_rvp:.1f}",  f"{_w_rvp}%"),
-                        ("Compression", f"{_cq_s} nights this quarter",       f"{_c_cmp_n*_w_cmp:.1f}",  f"{_w_cmp}%"),
-                    ]
-                    import pandas as _pd_bd
-                    _bd_df = _pd_bd.DataFrame(_breakdown, columns=["Component","Signal","Points","Weight"])
-                    st.dataframe(_bd_df, use_container_width=True, hide_index=True)
-                    st.download_button("⬇️ Download PULSE Score Breakdown CSV", _bd_df.to_csv(index=False).encode(), "pulse_score_breakdown.csv", "text/csv", key="dl_pulse_bd")
-
-            # ── Gauge bar chart ─────────────────────────────────────────────────
-            _gauge_fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=_pulse_score,
-                title={"text": "PULSE Score", "font": {"size": 12}},
-                gauge={
-                    "axis": {
-                        "range": [0, 100], "tickwidth": 1,
-                        "tickcolor": "rgba(15,28,46,0.3)",
-                        "tickfont": {"size": 11, "color": "#64748B"},
-                        "nticks": 6,
-                    },
-                    "bar": {"color": _p_color, "thickness": 0.28},
-                    "bgcolor": "rgba(0,0,0,0)",
-                    "borderwidth": 0,
-                    "steps": [
-                        {"range": [0, 40],  "color": "rgba(192,21,47,0.12)"},
-                        {"range": [40, 60], "color": "rgba(245,158,11,0.12)"},
-                        {"range": [60, 80], "color": "rgba(33,128,141,0.12)"},
-                        {"range": [80, 100],"color": "rgba(33,197,93,0.12)"},
-                    ],
-                    "threshold": {
-                        "line": {"color": _p_color, "width": 3},
-                        "thickness": 0.8,
-                        "value": _pulse_score,
-                    },
-                },
-                number={"font": {"size": 32, "color": _p_color}, "suffix": ""},
-            ))
-            _gauge_fig.update_layout(
-                height=200,
-                margin=dict(l=20, r=20, t=10, b=0),
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Outfit, Inter, system-ui, sans-serif", color="#334155"),
-            )
-
-            _pulse_col1, _pulse_col2 = st.columns([3, 2])
-            with _pulse_col1:
-                st.markdown(
-                    f'<div class="pulse-wrapper" style="background:var(--dp-card);border:1px solid var(--dp-border);border-left:4px solid {_p_color};box-shadow:var(--dp-shadow);">'
-                    f'  <div class="pulse-circle" style="color:{_p_color};">'
-                    f'    <div class="pulse-ring"></div>'
-                    f'    <div class="pulse-ring-2"></div>'
-                    f'    <div class="pulse-core">'
-                    f'      <span class="pulse-score" style="color:{_p_color};">{_pulse_score}</span>'
-                    f'      <span class="pulse-label" style="color:#5A7A95;">PULSE</span>'
-                    f'    </div>'
-                    f'  </div>'
-                    f'  <div class="pulse-info">'
-                    f'    <div class="pulse-info-title" style="color:#EFF6FF;">Dana Point Market PULSE Score</div>'
-                    f'    <div class="pulse-info-detail" style="color:#334155;">'
-                    f'      Occ {_occ_score:.1f}% &nbsp;·&nbsp; RevPAR YOY {_rvp_d_s:+.1f}% '
-                    f'      &nbsp;·&nbsp; Compression {_cq_s} nights this quarter<br>'
-                    f'      {_p_detail}'
-                    f'    </div>'
-                    f'    <span class="pulse-info-status" style="background:{_p_color};color:#ffffff;margin-top:8px;display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;">{_p_status}</span>'
-                    f'  </div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-            with _pulse_col2:
-                st.plotly_chart(_gauge_fig, use_container_width=True, config={"displayModeBar": False})
-            # Tier legend — light mode
-            st.markdown(
-                '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;margin-bottom:12px;">'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(239,68,68,0.18);color:#FCA5A5;-webkit-text-fill-color:#FCA5A5;font-weight:700;border:1px solid rgba(239,68,68,0.45);">0–39 Caution</span>'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(245,158,11,0.18);color:#FCD34D;-webkit-text-fill-color:#FCD34D;font-weight:700;border:1px solid rgba(245,158,11,0.45);">40–59 Stable</span>'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(56,189,248,0.18);color:#93C5FD;-webkit-text-fill-color:#93C5FD;font-weight:700;border:1px solid rgba(56,189,248,0.45);">60–74 Strong</span>'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(16,185,129,0.18);color:#6EE7B7;-webkit-text-fill-color:#6EE7B7;font-weight:700;border:1px solid rgba(16,185,129,0.45);">75–89 Exceptional</span>'
-                '<span style="font-size:10px;padding:3px 12px;border-radius:99px;background:rgba(139,92,246,0.18);color:#C4B5FD;-webkit-text-fill-color:#C4B5FD;font-weight:700;border:1px solid rgba(139,92,246,0.45);">90–100 Historic</span>'
-                '</div>',
-                unsafe_allow_html=True,
-            )
-
-        # ── PULSE Score plain-language context ────────────────────────────────────
-        st.markdown(callout(
-            "💡", "How to Read the PULSE Score",
-            "The PULSE Score combines three factors into one number: <strong>how full hotels are</strong> (occupancy), "
-            "<strong>how much guests are paying</strong> (RevPAR growth), and <strong>how well the market compares</strong> to the wider Orange County hotel market. "
-            "A score of 60–74 means the market is performing well. 75–89 is exceptional. Above 90 is historic. "
-            "Scores below 60 signal the need for demand-generation or rate strategy action.",
-        ), unsafe_allow_html=True)
-
-        # ── Cross-Dataset Intelligence Spotlight ─────────────────────────────────
-        try:
-            _cross_df = load_insights(audience="cross")
-            if not _cross_df.empty:
-                st.markdown(sec_div("🔍 Hidden Intelligence: Cross-Dataset Signals"), unsafe_allow_html=True)
-                st.markdown(
-                    '<div style="font-size:12px;color:#5A7A95;margin-bottom:12px;">'
-                    'These signals only appear when <strong>hotel data</strong> is read alongside '
-                    '<strong>visitor economy</strong> and <strong>campaign data</strong> — '
-                    'invisible in any single source alone.</div>',
-                    unsafe_allow_html=True,
-                )
-                _top_cross = _cross_df.head(3)
-                _cx_cols = st.columns(len(_top_cross))
-                _cx_type_map = {
-                    "HIDDEN OPPORTUNITY": ("#059669", "#D1FAE5", "OPPORTUNITY"),
-                    "HIDDEN SIGNAL":      ("#0567C8", "#DBEAFE", "SIGNAL"),
-                    "HIDDEN RISK":        ("#DC2626", "#FEE2E2", "RISK"),
-                    "HIDDEN GAP":         ("#D97706", "#FEF3C7", "GAP"),
-                    "DRIVE-MARKET":       ("#0567C8", "#DBEAFE", "SIGNAL"),
-                    "MACRO":              ("#6B7280", "#F3F4F6", "SIGNAL"),
-                }
-                for _ci, (_cx_idx, _cx_row) in enumerate(zip(_cx_cols, _top_cross.itertuples())):
-                    with _cx_idx:
-                        _hd = str(_cx_row.headline)
-                        # Extract type from headline prefix
-                        _cx_col, _cx_bg, _cx_lbl = "#0567C8", "#DBEAFE", "SIGNAL"
-                        for _pfx, (_cc, _cb, _cl) in _cx_type_map.items():
-                            if _hd.startswith(_pfx):
-                                _cx_col, _cx_bg, _cx_lbl = _cc, _cb, _cl
-                                _hd = _hd[len(_pfx):].lstrip(": ").strip()
-                                break
-                        _body_txt = str(_cx_row.body)[:200] + ("…" if len(str(_cx_row.body)) > 200 else "")
-                        st.markdown(
-                            f'<div style="background:rgba(255,255,255,0.04);border-radius:12px;'
-                            f'padding:14px 16px;border:1px solid rgba(255,255,255,0.08);'
-                            f'border-top:3px solid {_cx_col};height:100%;">'
-                            f'<div style="font-size:9px;font-weight:800;letter-spacing:.09em;'
-                            f'text-transform:uppercase;color:{_cx_col};margin-bottom:8px;'
-                            f'background:rgba(5,103,200,0.08);display:inline-block;'
-                            f'padding:2px 8px;border-radius:99px;">{_cx_lbl}</div>'
-                            f'<div style="font-size:12px;font-weight:700;color:#EFF6FF;'
-                            f'margin-bottom:8px;line-height:1.4;">{_hd}</div>'
-                            f'<div style="font-size:11px;color:#94A3B8;line-height:1.55;">'
-                            f'{_body_txt}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
-        except Exception:
-            pass
-
-        # ── Overview Section Intelligence ─────────────────────────────────────────
-        if m:
-            _ov_rvp_yoy   = m.get("revpar_delta", 0)
-            _ov_occ       = m.get("occ_30", 0)
-            _ov_rvp       = m.get("revpar_30", 0)
-            _ov_cq        = m.get("comp_recent_q", 0)
-            _ov_rate_vs   = "outpacing occupancy — strong rate discipline" if _ov_rvp_yoy > 0 else "lagging occupancy — rate capture gap"
-            _ov_fwd       = ("Maintain pricing strength; advance rate floors before Q3 compression window."
-                             if _ov_occ >= 70 else "Focus shoulder demand generation; protect RevPAR floor.")
-            st.markdown(sec_intel(
-                "Overview Brain",
-                "hotel market health for the VDP Select 12-property portfolio",
-                f"RevPAR YOY is {_ov_rvp_yoy:+.1f}%, {_ov_rate_vs}. "
-                f"{_ov_cq} compression nights this quarter signal {'strong' if _ov_cq >= 10 else 'moderate'} pricing power.",
-                _ov_fwd,
-                f"RevPAR YOY: {_ov_rvp_yoy:+.1f}%",
-            ), unsafe_allow_html=True)
-
-        # ── Executive Intelligence Panel ───────────────────────────────────────────
-        try:
-            _ov_rvp_d2   = m.get("revpar_delta", 0) if m else 0
-            _ov_occ_d2   = m.get("occ_delta", 0) if m else 0
-            _ov_adr_d2   = m.get("adr_delta", 0) if m else 0
-            _ov_cq2      = m.get("comp_recent_q", 0) if m else 0
-            _ov_trips2   = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
-            _ov_oos2     = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
-            _ov_rev12_2  = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
-
-            _ov_next_steps = [
-                f"<strong>Rate Optimization:</strong> ADR is {'+' if _ov_adr_d2 >= 0 else ''}{_ov_adr_d2:.1f}% YOY — "
-                + ("momentum is strong; consider pushing rates further on compression nights." if _ov_adr_d2 > 3 else
-                   "growth is modest; review comp-set pricing vs CoStar benchmarks in Competitive Intel tab."),
-                f"<strong>Compression Night Strategy:</strong> {_ov_cq2} compression days this quarter — "
-                + ("activate TBID tiered rate (≥$400) on high-demand nights to maximize TBID revenue." if _ov_cq2 >= 8 else
-                   "low compression count signals opportunity to build mid-week demand with targeted packages."),
-                f"<strong>Out-of-State Visitor Capture:</strong> {_ov_oos2:.0f}% OOS visitors drive premium ADR — "
-                "target SLC, Dallas, and Phoenix feeder markets with fly-drive packages. See Origin Markets tab.",
-                f"<strong>TBID Revenue:</strong> Estimated 12-month TBID ~${_ov_rev12_2 * 0.0125 / 1_000_000:.2f}M — "
-                "present at next board meeting alongside TOT figures to demonstrate total economic contribution.",
-            ]
-            _ov_questions = [
-                "What's driving the RevPAR change vs last year?",
-                "Which months have the most compression opportunity?",
-                "How do our TBID and TOT estimates compare to prior year?",
-                "What's the highest-value visitor segment right now?",
-                "Where should we focus marketing spend next quarter?",
-            ]
-            _ov_context = (
-                f"Dana Point VDP portfolio. RevPAR ${m.get('revpar_30',0):.0f} ({m.get('revpar_delta',0):+.1f}% YOY), "
-                f"ADR ${m.get('adr_30',0):.0f}, Occ {m.get('occ_30',0):.1f}%, "
-                f"12-mo revenue ~${_ov_rev12_2/1_000_000:.1f}M, "
-                f"{_ov_cq2} compression days, {_ov_trips2:,} annual visitor trips, {_ov_oos2:.0f}% OOS."
-                if m else "Dana Point VDP portfolio executive overview."
-            )
-            render_intel_panel("ov_exec", _ov_next_steps, _ov_questions, _ov_context)
-        except Exception:
-            pass
-
-        # ── Executive Narrative (end of Performance tab) ─────────────────────────
-        st.divider()
-        st.markdown("### 📝 Executive Narrative", unsafe_allow_html=True)
-        st.caption("Edit below — trigger particle effects by typing: fire · smoke · metal · wind")
-        _narrative_ov = (
-            "This fire of structural market leadership is driven by metal-hard positioning "
-            "across key segments. Wind from competitive pressures in the Bay Area continues "
-            "to shape demand patterns. Smoke signals suggest summer bookings will remain "
-            "strong, with June compression reaching 82% occupancy and ADR holding steady. "
-            "Event-driven demand — particularly Ohana Fest ($18.4M destination spend) — "
-            "reinforces our destination value. RevPAR tracking YOY +12.3%, supply stable, demand firm."
-        )
-        render_narrative_box("ov", _narrative_ov, height=240)
-
-    # ── VDP Analyst Panel ──────────────────────────────────────────────────────
-    # ── AI Analysis → sub-tab 3 ─────────────────────────────────────────────────
+    # ── SUB-TAB 3: Goals ──────────────────────────────────────────────────────────
     with _ov_t3:
-        st.markdown(sec_div("🧠 VDP Analyst"), unsafe_allow_html=True)
-        with st.expander("🧠 PULSE VDP Analyst — Interrogate your data", expanded=False):
-            st.markdown('<span class="ai-chip">AI ANALYST</span>', unsafe_allow_html=True)
-
-            PROMPTS_META = [
-                ("🎯 Full Story",           "demo_story"),
-                ("💹 RevPAR Drivers",       "revpar"),
-                ("📅 Opportunity Nights",   "opportunity"),
-                ("🗺️ Visitor Economy",      "visitor_econ"),
-                ("📋 Board Talking Points", "board"),
-                ("🌙 Weekend vs Midweek",   "midweek"),
-                ("🔍 Detect Anomalies",     "anomaly"),
-                ("📈 30-Day Forecast",      "forecast"),
-            ]
-
-            btn_cols = st.columns(4)
-            for i, (label, key) in enumerate(PROMPTS_META):
-                with btn_cols[i % 4]:
-                    if st.button(label, key=f"ai_btn_{key}", use_container_width=True):
-                        st.session_state.ai_current_prompt = build_prompt(key, m)
-                        st.session_state.ai_prompt_label   = label
-                        st.session_state.ai_result         = ""
-                        st.session_state.ai_needs_call     = True
-
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            inp_col, btn_col = st.columns([5, 1])
-            with inp_col:
-                custom_q = st.text_input(
-                    "custom_q", label_visibility="collapsed",
-                    placeholder="Ask anything about your VDP portfolio data…",
-                    key="ai_custom_input",
-                )
-            with btn_col:
-                if st.button("⚡ Brief Me", type="primary", use_container_width=True):
-                    if custom_q.strip():
-                        st.session_state.ai_current_prompt = build_custom_prompt(custom_q, m)
-                        st.session_state.ai_prompt_label   = f"💬 {custom_q.strip()[:60]}"
-                        st.session_state.ai_result         = ""
-                        st.session_state.ai_needs_call     = True
-
-            # ── Response area ──────────────────────────────────────────────────────
-            if st.session_state.ai_needs_call or st.session_state.ai_result:
-                st.markdown("---")
-                if st.session_state.ai_prompt_label:
-                    st.caption(f"**Query:** {st.session_state.ai_prompt_label}")
-
-                if st.session_state.ai_needs_call:
-                    prompt_to_run = st.session_state.ai_current_prompt
-                    # Detect which preset key matches the label
-                    matched_key = next(
-                        (k for lbl, k in PROMPTS_META
-                         if lbl == st.session_state.ai_prompt_label), "default"
-                    )
-                    _active_mdl = st.session_state.get("selected_model", CLAUDE_MODEL)
-                    _active_info = AI_MODELS.get(_active_mdl, {})
-                    _active_label = f"{_active_info.get('badge','🟦')} {_active_info.get('label', _active_mdl)}"
-                    _any_ai_active = (
-                        (api_key_valid and ANTHROPIC_AVAILABLE) or
-                        (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
-                        (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
-                        (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
-                    )
-                    if _any_ai_active:
-                        st.caption(f"Running {_active_label}…")
-                        with st.chat_message("assistant", avatar="🌊"):
-                            response = st.write_stream(
-                                stream_ai_response(prompt_to_run, _active_mdl, _ai_keys)
-                            )
-                        st.session_state.ai_result = response
-                        st.session_state.ai_result_model = _active_label
-                    else:
-                        response = local_fallback(matched_key, m)
-                        with st.chat_message("assistant", avatar="🌊"):
-                            st.markdown(response)
-                        st.session_state.ai_result = response
-                        if not api_key_valid:
-                            st.caption(
-                                "💡 Add API keys in the sidebar (VDP Analyst) to activate AI streaming."
-                            )
-                    st.session_state.ai_needs_call = False
-
-                elif st.session_state.ai_result:
-                    with st.chat_message("assistant", avatar="🌊"):
-                        st.markdown(st.session_state.ai_result)
-
-        # ── AI Insight Cards ───────────────────────────────────────────────────────
-        if m:
-            st.markdown(
-                '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
-                'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;">🔥 Market Intelligence Signals</div>'
-                '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:8px;">'
-                'Pattern analysis from the selected date range</div>',
-                unsafe_allow_html=True,
-            )
-            insights = generate_ai_insights(df_sel, df_comp, m)
-            if insights:
-                ic = st.columns(len(insights))
-                for i, ins in enumerate(insights):
-                    with ic[i]:
-                        st.markdown(
-                            insight_card(ins["title"], ins["body"], ins["kind"],
-                                         ins.get("icon", ""), ins.get("date_label", "")),
-                            unsafe_allow_html=True,
-                        )
-            st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── Remaining content → sub-tab 1 ────────────────────────────────────────────
-    with _ov_t1:
-        st.markdown("---")
-
-        # ── Board Report Card (Traffic Light) ─────────────────────────────────────
-        try:
-            st.markdown(_sh("📋", "Board Report Card", "gold", "TRAFFIC LIGHT"), unsafe_allow_html=True)
-            st.caption("Traffic-light assessment for board presentation · Updates with every pipeline run")
-
-            def _report_card_row(metric, value, status, note, source):
-                _dot_map = {
-                    "green":  ("🟢", "#059669", "On Track"),
-                    "yellow": ("🟡", "#D97706", "Watch"),
-                    "red":    ("🔴", "#DC2626", "Action Required"),
-                }
-                _dot, _col, _lbl = _dot_map.get(status, ("⚫", "#8FA3B8", "Unknown"))
-                return (
-                    f'<div style="display:flex;align-items:center;gap:12px;padding:11px 16px;'
-                    f'border-bottom:1px solid rgba(255,255,255,0.06);font-family:\'Syne\',sans-serif;'
-                    f'background:rgba(255,255,255,0.03);">'
-                    f'<div style="font-size:16px;flex-shrink:0;">{_dot}</div>'
-                    f'<div style="flex:1.4;font-size:13px;font-weight:700;color:#F4FAFF;">{metric}</div>'
-                    f'<div style="flex:0.8;font-size:14px;font-weight:900;color:{_col};">{value}</div>'
-                    f'<div style="flex:1;font-size:11px;font-weight:800;color:{_col};text-transform:uppercase;'
-                    f'letter-spacing:.06em;">{_lbl}</div>'
-                    f'<div style="flex:2;font-size:12px;color:#C8E0F2;line-height:1.4;">{note}</div>'
-                    f'<div style="flex:0.8;font-size:10px;font-weight:700;letter-spacing:.05em;'
-                    f'color:rgba(200,224,242,0.55);text-transform:uppercase;">{source}</div>'
-                    f'</div>'
-                )
-
-            _rc_occ_status    = "green" if _exec_occ >= 75 else ("yellow" if _exec_occ >= 60 else "red")
-            _rc_revpar_status = "green" if _exec_rvp_d >= 2 else ("yellow" if _exec_rvp_d >= -2 else "red")
-            _rc_adr_status    = "green" if _exec_adr_d >= 3 else ("yellow" if _exec_adr_d >= 0 else "red")
-            _rc_roas_status   = ("green" if (_exec_roas_infinite or _exec_roas >= 5) else ("yellow" if _exec_roas >= 2 else "red")) if (_exec_roas > 0 or _exec_roas_infinite) else "yellow"
-            _rc_social_status = ("green" if _exec_ig_fol >= 20000 else ("yellow" if _exec_ig_fol >= 10000 else "red")) if _exec_ig_fol > 0 else "yellow"
-            _rc_trips_status  = ("green" if _exec_trips >= 1000000 else ("yellow" if _exec_trips >= 500000 else "red")) if _exec_trips > 0 else "yellow"
-
-            _rc_occ_note    = f"{_exec_occ:.1f}% occ · {_arr(_exec_occ_d)}{abs(_exec_occ_d):.1f}pp vs prior · {'Maintain pricing discipline.' if _exec_occ >= 75 else 'Demand generation programs needed.'}"
-            _rc_revpar_note = f"${_exec_rvp:.0f} RevPAR · {_arr(_exec_rvp_d)}{abs(_exec_rvp_d):.1f}% YOY · {'Rate strategy working.' if _exec_rvp_d >= 2 else 'Review rate strategy and comp set positioning.'}"
-            _rc_adr_note    = f"${_exec_adr:.0f} ADR · {'Premium rate capture on track.' if _exec_adr_d >= 3 else 'Rate pressure — audit discount patterns and channel mix.'}"
-            _rc_roas_note   = (
-                f"∞ ROAS (no media cost recorded) · ${_exec_media_impact:,.0f} est. campaign impact · {_exec_attr_trips:,} attributable trips · Organic performance — strong case for paid investment."
-                if _exec_roas_infinite else
-                (f"{_roas_fmt} return · {_exec_attr_trips:,} attributable trips · {'Strong ROI — recommend budget increase.' if _exec_roas >= 5 else 'Acceptable ROI.' if _exec_roas >= 2 else 'Investigate attribution model and campaign targeting.'}") if _exec_roas > 0
-                else "Run Datafy media attribution pipeline to populate."
-            )
-            _rc_social_note = (f"IG {_exec_ig_fol:,} · FB {_exec_fb_fol:,} · TK {_exec_tk_fol:,} · {'Healthy audience scale for a DMO.' if _exec_ig_fol >= 20000 else 'Growth campaigns recommended.'}") if _exec_social_total > 0 else "Load Later.com exports."
-            _rc_trips_note  = (f"{_trips_fmt} annual trips · {_exec_overnight:.0f}% overnight · {'Strong visitation base.' if _exec_trips >= 1e6 else 'Opportunity to grow overnight conversion.'}") if _exec_trips > 0 else "Run Datafy pipeline."
-
-            _rc_html = (
-                '<div style="background:#1E3D5E;border-radius:14px;'
-                'border:1px solid rgba(0,212,200,0.20);border-left:5px solid #D97706;'
-                'overflow:hidden;font-family:\'Syne\',sans-serif;margin-bottom:16px;'
-                'box-shadow:0 4px 16px rgba(0,0,0,0.30);">'
-                '<div style="padding:11px 16px;background:rgba(0,0,0,0.28);'
-                'border-bottom:1px solid rgba(255,255,255,0.10);font-size:10px;font-weight:800;'
-                'letter-spacing:.07em;text-transform:uppercase;color:rgba(200,224,242,0.65);display:flex;gap:40px;">'
-                '<span style="flex:0.15"></span>'
-                '<span style="flex:1.4">Metric</span>'
-                '<span style="flex:0.8">Current</span>'
-                '<span style="flex:1">Status</span>'
-                '<span style="flex:2">Board Note</span>'
-                '<span style="flex:0.8">Source</span>'
-                '</div>'
-                + _report_card_row("Occupancy Rate",       f"{_exec_occ:.1f}%",     _rc_occ_status,    _rc_occ_note,    "STR")
-                + _report_card_row("RevPAR Growth",        f"{_exec_rvp_d:+.1f}%",  _rc_revpar_status, _rc_revpar_note, "STR")
-                + _report_card_row("ADR Growth",           f"{_exec_adr_d:+.1f}%",  _rc_adr_status,    _rc_adr_note,    "STR")
-                + _report_card_row("Campaign ROAS",        _roas_fmt,               _rc_roas_status,   _rc_roas_note,   "Datafy")
-                + _report_card_row("Social Audience",      _social_fmt,             _rc_social_status, _rc_social_note, "Later.com")
-                + _report_card_row("Annual Visitor Trips", _trips_fmt,              _rc_trips_status,  _rc_trips_note,  "Datafy")
-                + '</div>'
-            )
-            st.markdown(_rc_html, unsafe_allow_html=True)
-        except Exception:
-            pass
-
-        # ── Cross-Dataset Intelligence Matrix ─────────────────────────────────────
-        try:
-            if m and (not df_dfy_ov.empty or not df_dfy_dma.empty or not df_dfy_media.empty):
-                st.markdown(sec_div("🔗 Cross-Dataset Intelligence"), unsafe_allow_html=True)
-                st.markdown(
-                    '<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#5A7A95;margin-bottom:14px;">'
-                    'Hidden signals that only appear when STR hotel data is read alongside visitor economy and campaign data.</div>',
-                    unsafe_allow_html=True,
-                )
-
-                # ── Compute cross-dataset signals ─────────────────────────────────
-                _cx_rvp      = m.get("revpar_30", 0)
-                _cx_adr      = m.get("adr_30", 0)
-                _cx_occ      = m.get("occ_30", 0)
-                _cx_rev12    = float(df_monthly["revenue"].sum()) if not df_monthly.empty and "revenue" in df_monthly.columns else 0.0
-                _cx_oos_pct  = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
-                _cx_trips    = int(df_dfy_ov.iloc[0].get("total_trips", 0) or 0) if not df_dfy_ov.empty else 0
-                _cx_daytrip  = float(df_dfy_ov.iloc[0].get("day_trip_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
-                _cx_los      = float(df_dfy_ov.iloc[0].get("avg_los", 0) or 0) if not df_dfy_ov.empty else 0.0
-                _cx_overnight_pct = float(df_dfy_ov.iloc[0].get("overnight_pct", 0) or 0) if not df_dfy_ov.empty else 0.0
-                _cx_roas     = _exec_roas if not _exec_roas_infinite else 99.0
-                _cx_impact   = float(df_dfy_media.iloc[0].get("total_impact_usd", 0) or 0) if not df_dfy_media.empty else 0.0
-                _cx_invest   = float(df_dfy_media.iloc[0].get("total_investment_usd", 0) or 0) if not df_dfy_media.empty else 0.0
-                _cx_attr_trips = int(df_dfy_media.iloc[0].get("attributable_trips", 0) or 0) if not df_dfy_media.empty else 0
-
-                # Signal 1: OOS premium capture gap
-                _oos_rate_gap = _cx_oos_pct * 0.01 * _cx_adr * 0.067  # 6.7% ADR YOY vs 1.0× spend ratio
-                _oos_signal  = (f"{_cx_oos_pct:.0f}% OOS visitors generate near 1:1 spend-per-visit but ADR growth is only "
-                                f"+{m.get('adr_delta',0):.1f}% YOY — rate capture gap of ~${_cx_adr * 0.05:,.0f}/night vs. OOS demand.")
-                # Signal 2: Day-trip conversion value
-                _daytrip_ct    = int(_cx_trips * _cx_daytrip * 0.01) if _cx_daytrip > 0 else 0
-                _daytrip_conv3 = _daytrip_ct * 0.03 * _cx_adr  # 3% conversion × ADR
-                _daytrip_signal = (f"{_daytrip_ct:,} estimated day trips — converting just 3% to overnight stays = "
-                                   f"~${_daytrip_conv3/1e6:.1f}M incremental room revenue annually." if _daytrip_ct > 0
-                                   else f"Day-trip data pending — load Datafy visitor report to compute conversion opportunity.")
-                # Signal 3: Campaign efficiency vs organic
-                _cost_per_trip = _cx_invest / _cx_attr_trips if _cx_attr_trips > 0 and _cx_invest > 0 else 0
-                _rev_per_trip  = _cx_impact / _cx_attr_trips if _cx_attr_trips > 0 and _cx_impact > 0 else 0
-                if _cx_roas >= 5 or _exec_roas_infinite:
-                    _camp_signal = (f"{'∞' if _exec_roas_infinite else f'{_cx_roas:.1f}×'} ROAS — ${_cx_impact/1e3:,.0f}K destination impact "
-                                    f"from {_cx_attr_trips:,} attributable trips. "
-                                    f"{'No media cost recorded — all organic; strong case for paid media investment.' if _exec_roas_infinite else 'Strong ROI — scale budget to capture next tier of feeder markets.'}")
-                elif _cx_roas > 0:
-                    _camp_signal = (f"{_cx_roas:.1f}× ROAS · ${_cost_per_trip:,.0f} cost/trip · ${_rev_per_trip:,.0f} revenue/trip — "
-                                    "acceptable efficiency; refine audience targeting to improve trip quality vs. volume.")
-                else:
-                    _camp_signal = "Load Datafy media attribution report to compute campaign-to-room-revenue signal."
-                # Signal 4: Compression × visitor overlap
-                _comp_q = m.get("comp_recent_q", 0)
-                _comp_day_signal = (
-                    f"{_comp_q} compression nights this quarter — on 80%+ occ nights, day-trip visitors add estimated "
-                    f"0.7× room count equivalent in off-property spend, invisible to STR. "
-                    f"Total visitor economic footprint exceeds hotel data by ~{0.7 * _comp_q * _cx_adr * 50:,.0f}$ on compression days."
-                    if _comp_q > 0 else
-                    "Compression data loading — run pipeline to populate kpi_compression_quarterly."
-                )
-                # Signal 5: LOS extension value
-                _los_val = (_cx_los if _cx_los > 0 else 2.0)
-                _los_ext_val = _cx_rev12 * 0.05  # 5% uplift from 0.5-day extension
-                _los_signal  = (f"Avg stay: {_cx_los:.1f} nights (Datafy) — extending avg LOS by 0.5 nights via minimum-stay "
-                                f"packages = estimated +${_los_ext_val/1e3:,.0f}K annual room revenue.")
-
-                def _cx_signal_card(icon, title, signal_text, source_tags, signal_type="insight"):
-                    _type_colors = {"insight": "#0567C8", "opportunity": "#059669", "risk": "#DC2626", "gap": "#D97706"}
-                    _tc = _type_colors.get(signal_type, "#0567C8")
-                    return (
-                        f'<div style="background:#1E3550;border-radius:12px;padding:16px 18px;'
-                        f'border:1px solid rgba(15,28,46,0.07);border-left:3px solid {_tc};'
-                        f'box-shadow:0 1px 4px rgba(15,28,46,0.06);margin-bottom:10px;">'
-                        f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
-                        f'<span style="font-size:16px;">{icon}</span>'
-                        f'<span style="font-family:\'Outfit\',sans-serif;font-size:12px;font-weight:700;color:#EFF6FF;">{title}</span>'
-                        f'<span style="margin-left:auto;font-size:9px;font-weight:800;letter-spacing:.08em;'
-                        f'text-transform:uppercase;color:{_tc};background:rgba(5,103,200,0.08);'
-                        f'padding:2px 8px;border-radius:99px;">{signal_type.upper()}</span>'
-                        f'</div>'
-                        f'<div style="font-family:\'Inter\',sans-serif;font-size:12px;color:#334155;line-height:1.6;">{signal_text}</div>'
-                        f'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">{source_tags}</div>'
-                        f'</div>'
-                    )
-
-                def _src(label, color_hex, bg_hex):
-                    return (f'<span style="font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;'
-                            f'color:{color_hex};background:{bg_hex};padding:2px 8px;border-radius:99px;">{label}</span>')
-
-                _cx_c1, _cx_c2 = st.columns(2)
-                with _cx_c1:
-                    st.markdown(_cx_signal_card("💎", "OOS Visitor Rate Capture Gap",  _oos_signal,
-                        _src("STR","#0567C8","rgba(5,103,200,0.10)") + _src("Datafy","#059669","rgba(5,150,105,0.10)"), "gap"), unsafe_allow_html=True)
-                    st.markdown(_cx_signal_card("🔁", "Day-Trip → Overnight Conversion", _daytrip_signal,
-                        _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
-                    st.markdown(_cx_signal_card("📏", "Length-of-Stay Extension Value", _los_signal,
-                        _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
-                with _cx_c2:
-                    st.markdown(_cx_signal_card("📡", "Campaign → Room Revenue Signal", _camp_signal,
-                        _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "insight"), unsafe_allow_html=True)
-                    st.markdown(_cx_signal_card("🏨", "Compression × Day-Trip Overlap", _comp_day_signal,
-                        _src("STR","#0567C8","rgba(5,103,200,0.10)") + _src("Datafy","#059669","rgba(5,150,105,0.10)"), "insight"), unsafe_allow_html=True)
-                    # Feeder market ADR premium signal
-                    _top_dma = str(df_dfy_dma.iloc[0].get("dma","—")) if not df_dfy_dma.empty else "—"
-                    _top_dma_share = float(df_dfy_dma.iloc[0].get("visitor_days_share_pct", 0) or 0) if not df_dfy_dma.empty else 0
-                    _fly_markets = [r for _, r in df_dfy_dma.iterrows()
-                                    if str(r.get("dma","")).upper() not in ("LOS ANGELES","LA","RIVERSIDE","SAN DIEGO","ORANGE COUNTY")
-                                    ] if not df_dfy_dma.empty else []
-                    _fly_spend = float(_fly_markets[0].get("avg_spend_usd", 0) or 0) if _fly_markets else 0
-                    _feeder_signal = (
-                        f"Top feeder: {_top_dma} ({_top_dma_share:.0f}% of visitor days) — drive market dominant on volume. "
-                        + (f"Fly markets (SLC, Dallas, NYC) avg ${_fly_spend:,.0f}/trip vs. LA drive market — "
-                           "1.3–1.4× revenue per visitor trip. Shift 10% of campaign budget to fly markets = outsized ADR gain."
-                           if _fly_spend > 0 else
-                           "Load full Datafy DMA table to compute fly-market ADR premium signal.")
-                    ) if _top_dma != "—" else "Load Datafy feeder market data to compute cross-dataset signal."
-                    st.markdown(_cx_signal_card("✈️", "Feeder Market ADR Premium",  _feeder_signal,
-                        _src("Datafy","#059669","rgba(5,150,105,0.10)") + _src("STR","#0567C8","rgba(5,103,200,0.10)"), "opportunity"), unsafe_allow_html=True)
-        except Exception:
-            pass
-
-        # ── KPI Cards ──────────────────────────────────────────────────────────────
-        kpis = compute_overview_kpis(df_sel, grain)
-        if not kpis:
-            st.markdown(empty_state(
-                "📊",
-                f"No {grain.lower()} data in the selected range.",
-                "Adjust the date range or run the pipeline to load data.",
-            ), unsafe_allow_html=True)
+        st.markdown(sec_div("🎯 Strategic Goals & Progress"), unsafe_allow_html=True)
+        _strategy_goals = load_strategy_goals()
+        if not _strategy_goals.empty:
+            st.dataframe(_strategy_goals[["title", "category", "current_value", "target_value", "status"]], use_container_width=True, hide_index=True)
         else:
-            st.markdown(sec_div("📊 Key Performance Indicators"), unsafe_allow_html=True)
-            st.markdown(
-                '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
-                'font-weight:700;letter-spacing:-0.01em;margin-bottom:8px;">Performance Command Center</div>',
-                unsafe_allow_html=True,
-            )
-            # ── Per-metric color palette (cutting-edge, distinct) ─────────────────
-            _METRIC_COLORS = {
-                "RevPAR":        ("#00C4CC", "rgba(0,196,204,0.18)"),
-                "ADR":           ("#8B5CF6", "rgba(139,92,246,0.18)"),
-                "Occupancy":     ("#0EA5E9", "rgba(14,165,233,0.18)"),
-                "Room Revenue":  ("#10B981", "rgba(16,185,129,0.18)"),
-                "Rooms Sold":    ("#F97316", "rgba(249,115,22,0.18)"),
-                "Est. TBID Rev": ("#F59E0B", "rgba(245,158,11,0.18)"),
-                "TBID":          ("#F59E0B", "rgba(245,158,11,0.18)"),
-                "Demand":        ("#F97316", "rgba(249,115,22,0.18)"),
-                "Supply":        ("#6366F1", "rgba(99,102,241,0.18)"),
-                "Revenue":       ("#10B981", "rgba(16,185,129,0.18)"),
-            }
-            def _metric_color(label, positive=True):
-                for k, v in _METRIC_COLORS.items():
-                    if k.lower() in label.lower():
-                        return v
-                return ("#00C4CC", "rgba(0,196,204,0.18)") if positive else ("#F97316", "rgba(249,115,22,0.18)")
+            st.info("No strategy goals configured. Add goals via the dashboard admin panel.")
 
-            # Render each KPI as [card | mini sparkline chart] pairs, 2 per row
-            def _mini_spark_fig(values, label="", positive=True, chart_key=""):
-                # Always render — if no data, show placeholder flat line
-                if not values or len(values) < 2:
-                    values = [0, 0]
-                _line_color, _fill_color = _metric_color(label, positive)
-                _fig = go.Figure()
-                _fig.add_trace(go.Scatter(
-                    y=values,
-                    mode="lines",
-                    line=dict(color=_line_color, width=2.5, shape="spline", smoothing=0.8),
-                    fill="tozeroy",
-                    fillcolor=_fill_color,
-                    hoverinfo="skip",
-                ))
-                # Accent dot at latest value
-                _fig.add_trace(go.Scatter(
-                    x=[len(values) - 1], y=[values[-1]],
-                    mode="markers",
-                    marker=dict(color=_line_color, size=6, line=dict(color="white", width=1.5)),
-                    hoverinfo="skip",
-                ))
-                _fig.update_layout(
-                    height=88, margin=dict(l=2, r=2, t=2, b=2),
-                    xaxis=dict(visible=False, fixedrange=True),
-                    yaxis=dict(visible=False, fixedrange=True),
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    showlegend=False,
-                    transition={"duration": 500, "easing": "cubic-in-out"},
-                )
-                return _fig
-
-            _kpi_rows = [kpis[i:i+2] for i in range(0, len(kpis), 2)]
-            for _ri, _row_kpis in enumerate(_kpi_rows):
-                _rcols = st.columns([1.1, 1.0, 1.1, 1.0])
-                for _idx, _k in enumerate(_row_kpis):
-                    # Use columns at indices 0,1 for first KPI and 2,3 for second
-                    _card_col  = _rcols[0 if _idx == 0 else 2]
-                    _chart_col = _rcols[1 if _idx == 0 else 3]
-                    _chart_key = f"kpi30_spark_{_ri}_{_idx}_{_k['label'].replace(' ','_').replace('.','')}"
-                    with _card_col:
-                        _card_html = kpi_card(_k["label"], _k["value"], _k["delta"],
-                                     _k.get("positive", True), _k.get("neutral", False),
-                                     "", _k.get("date_label", ""), _k.get("raw_value", 0.0),
-                                     [])
-                        # Map metric label to tab index for navigation
-                        _tab_map = {"RevPAR": 1, "ADR": 1, "Occupancy": 1, "Room Revenue": 1,
-                                    "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
-                                    "Demand": 1, "Supply": 1, "Revenue": 1}
-                        _tab_idx = next((v for k,v in _tab_map.items() if k.lower() in _k["label"].lower()), 1)
-                        st.markdown(_card_html, unsafe_allow_html=True)
-                        if st.button("→ View Detail", key=f"vd_{_ri}_{_idx}_{_k['label'].replace(' ','_')}", use_container_width=True):
-                            st.session_state["pending_tab_nav"] = _tab_idx
-                            st.rerun()
-                    with _chart_col:
-                        _spk = _k.get("sparkline") or []
-                        st.plotly_chart(
-                            _mini_spark_fig(_spk, _k["label"], _k.get("positive", True)),
-                            use_container_width=True,
-                            config={"displayModeBar": False},
-                            key=_chart_key,
-                        )
-
-            # ── Monthly Performance Strip ──────────────────────────────────────────
-            if m.get("monthly_data_available") and not df_monthly.empty:
-                _m12 = df_monthly.tail(12)
-                _m_pri = df_monthly.iloc[-24:-12] if len(df_monthly) >= 24 else pd.DataFrame()
-                _occ_col = "occupancy" if "occupancy" in df_monthly.columns else None
-
-                _m12_rvp = float(_m12["revpar"].mean())
-                _m12_adr = float(_m12["adr"].mean())
-                _m12_occ = float(_m12[_occ_col].mean()) if _occ_col else 0.0
-                _m12_rev = float(_m12["revenue"].sum())
-                _m12_dem = float(_m12["demand"].sum())
-                _m12_tbd = _m12_rev * 0.0125
-
-                _mp_rvp = float(_m_pri["revpar"].mean()) if not _m_pri.empty else _m12_rvp
-                _mp_adr = float(_m_pri["adr"].mean())    if not _m_pri.empty else _m12_adr
-                _mp_occ = float(_m_pri[_occ_col].mean()) if (not _m_pri.empty and _occ_col) else _m12_occ
-                _mp_rev = float(_m_pri["revenue"].sum())  if not _m_pri.empty else _m12_rev
-                _mp_dem = float(_m_pri["demand"].sum())   if not _m_pri.empty else _m12_dem
-
-                _min_mo = _m12["as_of_date"].min().strftime("%b %Y")
-                _max_mo = _m12["as_of_date"].max().strftime("%b %Y")
-                _mo_lbl = f"{_min_mo} – {_max_mo}"
-
-                st.markdown(
-                    '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
-                    'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;margin-top:4px;">'
-                    '12-Month Performance — Monthly STR</div>'
-                    f'<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:8px;">'
-                    f'Layer 1 verified data &nbsp;·&nbsp; {_mo_lbl} &nbsp;·&nbsp; vs. prior 12 months</div>',
-                    unsafe_allow_html=True,
-                )
-                def _m12_spark(col):
-                    return [v for v in _m12[col].tolist() if pd.notna(v)] if col in _m12.columns else []
-                _m_kpis = [
-                    {"label": "RevPAR",       "value": f"${_m12_rvp:.2f}",
-                     "delta": f"{pct_delta(_m12_rvp,_mp_rvp):+.1f}% YOY",
-                     "positive": _m12_rvp >= _mp_rvp, "neutral": False,
-                     "date_label": _mo_lbl, "raw_value": _m12_rvp, "sparkline": _m12_spark("revpar")},
-                    {"label": "ADR",          "value": f"${_m12_adr:.2f}",
-                     "delta": f"{pct_delta(_m12_adr,_mp_adr):+.1f}% YOY",
-                     "positive": _m12_adr >= _mp_adr, "neutral": False,
-                     "date_label": _mo_lbl, "raw_value": _m12_adr, "sparkline": _m12_spark("adr")},
-                    {"label": "Occupancy",    "value": f"{_m12_occ:.1f}%",
-                     "delta": f"{pct_delta(_m12_occ,_mp_occ):+.1f}pp YOY",
-                     "positive": _m12_occ >= _mp_occ, "neutral": False,
-                     "date_label": _mo_lbl, "raw_value": _m12_occ, "sparkline": _m12_spark("occupancy") if _occ_col else []},
-                    {"label": "Room Revenue", "value": f"${_m12_rev/1e6:.2f}M",
-                     "delta": f"{pct_delta(_m12_rev,_mp_rev):+.1f}% YOY",
-                     "positive": _m12_rev >= _mp_rev, "neutral": False,
-                     "date_label": _mo_lbl, "raw_value": _m12_rev, "sparkline": _m12_spark("revenue")},
-                    {"label": "Rooms Sold",   "value": f"{_m12_dem:,.0f}",
-                     "delta": f"{pct_delta(_m12_dem,_mp_dem):+.1f}% YOY",
-                     "positive": _m12_dem >= _mp_dem, "neutral": False,
-                     "date_label": _mo_lbl, "raw_value": _m12_dem, "sparkline": _m12_spark("demand")},
-                    {"label": "Est. TBID Rev","value": f"${_m12_tbd/1e3:.0f}K",
-                     "delta": "blended 1.25%", "positive": True, "neutral": True,
-                     "date_label": _mo_lbl, "raw_value": _m12_tbd, "sparkline": _m12_spark("revenue")},
-                ]
-                _m_kpi_rows = [_m_kpis[i:i+2] for i in range(0, len(_m_kpis), 2)]
-                for _mri, _m_row in enumerate(_m_kpi_rows):
-                    _mrc = st.columns([1.1, 1.0, 1.1, 1.0])
-                    for _mi, _mk in enumerate(_m_row):
-                        _mc  = _mrc[0 if _mi == 0 else 2]
-                        _mcc = _mrc[1 if _mi == 0 else 3]
-                        _mk_key = f"m12_spark_{_mri}_{_mi}_{_mk['label'].replace(' ','_').replace('.','')}"
-                        with _mc:
-                            _mk_card_html = kpi_card(_mk["label"], _mk["value"], _mk["delta"],
-                                         _mk.get("positive", True), _mk.get("neutral", False),
-                                         "", _mk.get("date_label", ""), _mk.get("raw_value", 0.0),
-                                         [])
-                            _mk_tab_map = {"RevPAR": 1, "ADR": 1, "Occupancy": 1, "Room Revenue": 1,
-                                           "Rooms Sold": 1, "Est. TBID Rev": 1, "TBID": 1,
-                                           "Demand": 1, "Supply": 1, "Revenue": 1}
-                            _mk_tab_idx = next((v for k,v in _mk_tab_map.items() if k.lower() in _mk["label"].lower()), 1)
-                            st.markdown(_mk_card_html, unsafe_allow_html=True)
-                            if st.button("→ View Detail", key=f"vd_m_{_mri}_{_mi}_{_mk['label'].replace(' ','_')}", use_container_width=True):
-                                st.session_state["pending_tab_nav"] = _mk_tab_idx
-                                st.rerun()
-                        with _mcc:
-                            _mspk = _mk.get("sparkline") or []
-                            st.plotly_chart(
-                                _mini_spark_fig(_mspk, _mk["label"], _mk.get("positive", True)),
-                                use_container_width=True,
-                                config={"displayModeBar": False},
-                                key=_mk_key,
-                            )
-
-            # ── PCC card navigation script (injected once after all cards) ──────────
-            st.markdown("""
-    <script>
-    (function(){
-      function findTabs(){
-        // Try multiple selectors for different Streamlit versions
-        var t = document.querySelectorAll('[data-testid="stTab"] button');
-        if(!t.length) t = document.querySelectorAll('button[data-baseweb="tab"]');
-        if(!t.length) t = document.querySelectorAll('[role="tab"]');
-        return t;
-      }
-      function attachPCC(){
-        document.querySelectorAll('.pcc-card-link').forEach(function(card){
-          if(card._pccBound) return;
-          card._pccBound = true;
-          card.addEventListener('mouseenter', function(){ this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 16px rgba(8,145,178,0.18)'; });
-          card.addEventListener('mouseleave', function(){ this.style.transform=''; this.style.boxShadow=''; });
-          card.addEventListener('click', function(){
-            var idx = parseInt(this.getAttribute('data-tab-idx') || '1');
-            var tabs = findTabs();
-            if(tabs[idx]){ tabs[idx].click(); }
-            setTimeout(function(){ window.scrollTo({top:0,behavior:'smooth'}); }, 150);
-          });
-        });
-      }
-      attachPCC();
-      setTimeout(attachPCC, 600);
-      setTimeout(attachPCC, 1800);
-      if(window.MutationObserver){
-        var obs = new MutationObserver(function(){ attachPCC(); });
-        obs.observe(document.body, {childList:true, subtree:true});
-      }
-    })();
-    </script>
-    """, unsafe_allow_html=True)
-
-            # ── Bullet Chart: KPI vs Benchmark ────────────────────────────────────
-            if kpis and not df_cs_snap.empty:
-                st.markdown('<div class="chart-header">Performance vs. Market Benchmark — Bullet Chart</div>', unsafe_allow_html=True)
-                st.markdown(
-                    '<div class="chart-caption">Black bar = VDP portfolio actual · '
-                    'Gray range = South OC market benchmark (CoStar) · '
-                    'Teal = target (5% above market)</div>',
-                    unsafe_allow_html=True,
-                )
-                _snap = df_cs_snap.iloc[0]
-                _mkt_occ  = float(_snap.get("occupancy_pct", 76.4) or 76.4)
-                _mkt_adr  = float(_snap.get("adr_usd", 288.50) or 288.50)
-                _mkt_rvp  = float(_snap.get("revpar_usd", 220.42) or 220.42)
-                # VDP actuals from kpis
-                _vdp_occ  = next((k["raw_value"] for k in kpis if "Occ" in k.get("label","")), _mkt_occ)
-                _vdp_adr  = next((k["raw_value"] for k in kpis if "ADR" in k.get("label","")), _mkt_adr)
-                _vdp_rvp  = next((k["raw_value"] for k in kpis if "RevPAR" in k.get("label","")), _mkt_rvp)
-                # Extract numeric from raw_value (already float)
-                def _num(v):
-                    if isinstance(v, (int, float)):
-                        return float(v)
-                    s = str(v).replace("$","").replace("%","").replace(",","").strip()
-                    try: return float(s)
-                    except: return 0.0
-                _vdp_occ_n = _num(_vdp_occ)
-                _vdp_adr_n = _num(_vdp_adr)
-                _vdp_rvp_n = _num(_vdp_rvp)
-
-                _bul_metrics = [
-                    ("Occupancy %", _vdp_occ_n, _mkt_occ, _mkt_occ * 1.05),
-                    ("ADR ($)",     _vdp_adr_n, _mkt_adr, _mkt_adr * 1.05),
-                    ("RevPAR ($)",  _vdp_rvp_n, _mkt_rvp, _mkt_rvp * 1.05),
-                ]
-                fig = go.Figure()
-                for idx, (lbl, actual, benchmark, target) in enumerate(_bul_metrics):
-                    y_pos = idx * 1.5
-                    # Background range (market benchmark ± 15%)
-                    fig.add_shape(type="rect",
-                        x0=benchmark * 0.85, x1=benchmark * 1.15,
-                        y0=y_pos - 0.4, y1=y_pos + 0.4,
-                        fillcolor="rgba(167,169,169,0.20)",
-                        line=dict(width=0),
-                    )
-                    # Target line
-                    fig.add_shape(type="line",
-                        x0=target, x1=target, y0=y_pos - 0.45, y1=y_pos + 0.45,
-                        line=dict(color=TEAL, width=2, dash="dash"),
-                    )
-                    # Actual bar
-                    color = TEAL if actual >= benchmark else ORANGE
-                    fig.add_shape(type="rect",
-                        x0=0, x1=actual,
-                        y0=y_pos - 0.18, y1=y_pos + 0.18,
-                        fillcolor=color,
-                        line=dict(width=0),
-                    )
-                    # Labels
-                    suffix = "%" if "%" in lbl else ""
-                    prefix = "$" if "$" in lbl else ""
-                    fig.add_annotation(
-                        x=0, y=y_pos + 0.55,
-                        text=f"<b>{lbl}</b>", showarrow=False,
-                        xanchor="left", font=dict(size=11, family="Syne, DM Sans, sans-serif"),
-                    )
-                    fig.add_annotation(
-                        x=actual, y=y_pos,
-                        text=f" {prefix}{actual:.1f}{suffix}", showarrow=False,
-                        xanchor="left", font=dict(size=10, color=color, family="Syne, DM Sans, sans-serif"),
-                    )
-                max_val = max(_vdp_adr_n, _mkt_adr) * 1.25
-                fig.update_layout(
-                    xaxis=dict(range=[0, max_val], showgrid=True, gridcolor="rgba(167,169,169,0.15)"),
-                    yaxis=dict(visible=False, range=[-0.8, 3.8]),
-                    showlegend=False,
-                    height=200,
-                    margin=dict(l=10, r=10, t=10, b=10),
-                )
-                st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
-                st.caption("Gray band = market ±15%. Dashed teal line = 5% above market target. Colored bar = VDP actual. Source: STR (portfolio) + CoStar (market).")
-                st.markdown("<br>", unsafe_allow_html=True)
-
-            st.markdown("---")
-
-            # ── Row 1: RevPAR with anomaly detection  |  Occ vs ADR ───────────────
-            c1, c2 = st.columns(2)
-
-            with c1:
-                st.markdown('<div class="chart-header">RevPAR Trend — Anomaly Detection</div>', unsafe_allow_html=True)
-                st.markdown('<div class="chart-caption">Teal markers = spikes >2σ &nbsp;·&nbsp; Red = drops <1.5σ &nbsp;·&nbsp; Hover for context</div>', unsafe_allow_html=True)
-
-                rvp_mean = df_sel["revpar"].mean()
-                rvp_std  = df_sel["revpar"].std()
-                spikes   = df_sel[df_sel["revpar"] > rvp_mean + 2 * rvp_std]
-                drops    = df_sel[df_sel["revpar"] < rvp_mean - 1.5 * rvp_std]
-
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=df_sel["as_of_date"], y=df_sel["revpar"],
-                    fill="tozeroy",
-                    line=dict(color=TEAL, width=2.2),
-                    fillcolor="rgba(33,128,141,0.12)",
-                    mode="lines", name="RevPAR",
-                    hovertemplate="<b>%{x|%b %d, %Y}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
-                ))
-                fig.add_hline(
-                    y=rvp_mean, line_dash="dash", line_color="rgba(167,169,169,0.45)",
-                    annotation_text=f"Avg ${rvp_mean:.0f}",
-                    annotation_position="top right",
-                    annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"),
-                )
-                if not spikes.empty:
-                    fig.add_trace(go.Scatter(
-                        x=spikes["as_of_date"], y=spikes["revpar"],
-                        mode="markers",
-                        marker=dict(color=TEAL, size=11, symbol="circle",
-                                    opacity=0.85, line=dict(width=0)),
-                        name="⚡ Spike",
-                        hovertemplate=(
-                            "<b>⚡ Revenue Spike</b><br>"
-                            "%{x|%b %d}: $%{y:.0f}<br>"
-                            "<i>Likely event or weekend surge</i><extra></extra>"
-                        ),
-                    ))
-                if not drops.empty:
-                    fig.add_trace(go.Scatter(
-                        x=drops["as_of_date"], y=drops["revpar"],
-                        mode="markers",
-                        marker=dict(color=RED, size=11, symbol="circle",
-                                    opacity=0.85, line=dict(width=0)),
-                        name="⚠️ Drop",
-                        hovertemplate=(
-                            "<b>⚠️ Below Average</b><br>"
-                            "%{x|%b %d}: $%{y:.0f}<br>"
-                            "<i>Investigate demand drivers</i><extra></extra>"
-                        ),
-                    ))
-                fig.update_layout(yaxis_title="RevPAR (USD)", yaxis_tickprefix="$")
-                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-
-            with c2:
-                st.markdown('<div class="chart-header">Occupancy vs. ADR</div>', unsafe_allow_html=True)
-                st.markdown('<div class="chart-caption">Dual-axis &nbsp;·&nbsp; fill rate & pricing power</div>', unsafe_allow_html=True)
-                fig = make_subplots(specs=[[{"secondary_y": True}]])
-                fig.add_trace(go.Scatter(
-                    x=df_sel["as_of_date"], y=df_sel["occupancy"],
-                    name="Occupancy %", line=dict(color=TEAL, width=2), mode="lines",
-                    hovertemplate="%{x|%b %d}: %{y:.1f}%<extra>Occ</extra>",
-                ), secondary_y=False)
-                fig.add_trace(go.Scatter(
-                    x=df_sel["as_of_date"], y=df_sel["adr"],
-                    name="ADR $", line=dict(color=ORANGE, width=2), mode="lines",
-                    hovertemplate="%{x|%b %d}: $%{y:.0f}<extra>ADR</extra>",
-                ), secondary_y=True)
-                fig.update_yaxes(title_text="Occ %", ticksuffix="%", secondary_y=False)
-                fig.update_yaxes(title_text="ADR $", tickprefix="$",
-                                 secondary_y=True, showgrid=False)
-                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-
-            # ── Row 2: Day-of-Week  |  Supply vs Demand ───────────────────────────
-            c3, c4 = st.columns(2)
-
-            with c3:
-                if grain == "Daily":
-                    st.markdown('<div class="chart-header">Day-of-Week Performance</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="chart-caption">Avg RevPAR &nbsp;·&nbsp; Orange = opportunity nights below average</div>', unsafe_allow_html=True)
-                    dow_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-                    tmp = df_sel.copy()
-                    tmp["dow"] = tmp["as_of_date"].dt.strftime("%a")
-                    dow_avg = tmp.groupby("dow")["revpar"].mean().reindex(dow_order)
-                    ov_avg  = dow_avg.mean()
-                    colors  = [TEAL if v >= ov_avg else ORANGE for v in dow_avg.fillna(0)]
-                    fig = go.Figure(go.Bar(
-                        x=dow_avg.index, y=dow_avg.values,
-                        marker=dict(color=colors, line_width=0, cornerradius=6),
-                        hovertemplate=(
-                            "<b>%{x}</b><br>Avg RevPAR: $%{y:.0f}<br>"
-                            "<i>Click 'Opportunity Nights' for AI analysis</i><extra></extra>"
-                        ),
-                    ))
-                    fig.add_hline(y=ov_avg, line_dash="dash", line_color="rgba(167,169,169,0.45)",
-                                  annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
-                                  annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
-                    fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                    st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-                else:
-                    # Monthly grain → show calendar-month seasonality using all monthly history
-                    st.markdown('<div class="chart-header">Month-of-Year Seasonality</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="chart-caption">Avg RevPAR by calendar month &nbsp;·&nbsp; all available monthly history</div>', unsafe_allow_html=True)
-                    month_order = ["Jan","Feb","Mar","Apr","May","Jun",
-                                   "Jul","Aug","Sep","Oct","Nov","Dec"]
-                    tmp = df_monthly.copy()
-                    tmp["mon"] = tmp["as_of_date"].dt.strftime("%b")
-                    mon_avg = tmp.groupby("mon")["revpar"].mean().reindex(month_order)
-                    ov_avg  = mon_avg.mean()
-                    colors  = [
-                        TEAL if (pd.notna(v) and v >= ov_avg) else ORANGE
-                        for v in mon_avg
-                    ]
-                    fig = go.Figure(go.Bar(
-                        x=mon_avg.index, y=mon_avg.values,
-                        marker=dict(color=colors, line_width=0, cornerradius=6),
-                        hovertemplate="<b>%{x}</b><br>Avg RevPAR: $%{y:.0f}<extra></extra>",
-                    ))
-                    fig.add_hline(y=ov_avg, line_dash="dash", line_color="rgba(167,169,169,0.45)",
-                                  annotation_text=f"Avg ${ov_avg:.0f}", annotation_position="top right",
-                                  annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
-                    fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                    st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-
-            with c4:
-                st.markdown('<div class="chart-header">Supply vs. Demand</div>', unsafe_allow_html=True)
-                st.markdown('<div class="chart-caption">Room inventory vs. rooms sold &nbsp;·&nbsp; gap = unrealized revenue</div>', unsafe_allow_html=True)
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=df_sel["as_of_date"], y=df_sel["supply"],
-                    name="Supply",
-                    line=dict(color="rgba(167,169,169,0.7)", width=1.5, dash="dot"),
-                    mode="lines",
-                ))
-                fig.add_trace(go.Scatter(
-                    x=df_sel["as_of_date"], y=df_sel["demand"],
-                    fill="tozeroy",
-                    line=dict(color=TEAL, width=2),
-                    fillcolor="rgba(33,128,141,0.10)",
-                    name="Demand", mode="lines",
-                ))
-                st.plotly_chart(style_fig(fig), use_container_width=True, config=PLOTLY_CONFIG)
-
-            # ── Row 3: Monthly RevPAR & ADR trend (always-on from monthly STR) ────
-            if not df_monthly.empty and len(df_monthly) >= 6:
-                st.markdown("---")
-                _mo24 = df_monthly.tail(24).copy()
-                _mo24["month_label"] = _mo24["as_of_date"].dt.strftime("%b %Y")
-                _occ_col = "occupancy" if "occupancy" in _mo24.columns else None
-
-                ca, cb = st.columns(2)
-                with ca:
-                    st.markdown('<div class="chart-header">Monthly RevPAR — Last 24 Months</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="chart-caption">Layer 1 verified · monthly STR exports &nbsp;·&nbsp; color = above/below 24-month avg</div>', unsafe_allow_html=True)
-                    _avg24 = _mo24["revpar"].mean()
-                    _colors24 = [TEAL if v >= _avg24 else ORANGE for v in _mo24["revpar"]]
-                    fig = go.Figure(go.Bar(
-                        x=_mo24["month_label"], y=_mo24["revpar"],
-                        marker=dict(color=_colors24, line_width=0, cornerradius=5),
-                        hovertemplate="<b>%{x}</b><br>RevPAR: $%{y:.0f}<extra></extra>",
-                    ))
-                    fig.add_hline(y=_avg24, line_dash="dash", line_color="rgba(167,169,169,0.45)",
-                                  annotation_text=f"24-mo avg ${_avg24:.0f}",
-                                  annotation_position="top right",
-                                  annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
-                    fig.update_layout(yaxis_tickprefix="$", showlegend=False)
-                    st.plotly_chart(style_fig(fig, height=340), use_container_width=True, config=PLOTLY_CONFIG)
-
-                with cb:
-                    st.markdown('<div class="chart-header">Monthly ADR vs. Occupancy — Last 24 Months</div>', unsafe_allow_html=True)
-                    st.markdown('<div class="chart-caption">Dual-axis &nbsp;·&nbsp; pricing power vs. fill rate trend</div>', unsafe_allow_html=True)
-                    fig2 = make_subplots(specs=[[{"secondary_y": True}]])
-                    fig2.add_trace(go.Scatter(
-                        x=_mo24["month_label"], y=_mo24["adr"],
-                        name="ADR $", line=dict(color=ORANGE, width=2.2),
-                        mode="lines+markers", marker=dict(size=4, color=ORANGE),
-                        hovertemplate="<b>%{x}</b><br>ADR: $%{y:.0f}<extra></extra>",
-                    ), secondary_y=False)
-                    if _occ_col:
-                        fig2.add_trace(go.Scatter(
-                            x=_mo24["month_label"], y=_mo24[_occ_col],
-                            name="Occ %", line=dict(color=TEAL, width=2.2),
-                            mode="lines+markers", marker=dict(size=4, color=TEAL),
-                            hovertemplate="<b>%{x}</b><br>Occ: %{y:.1f}%<extra></extra>",
-                        ), secondary_y=True)
-                    fig2.update_yaxes(title_text="ADR ($)", tickprefix="$", secondary_y=False)
-                    if _occ_col:
-                        fig2.update_yaxes(title_text="Occ %", ticksuffix="%",
-                                          secondary_y=True, showgrid=False)
-                    st.plotly_chart(style_fig(fig2, height=340), use_container_width=True, config=PLOTLY_CONFIG)
-
-            # ── Row 4: Datafy Visitor Economy Summary ─────────────────────────────
-            if not df_dfy_ov.empty:
-                st.markdown("---")
-                st.markdown(
-                    '<div style="font-family:\'Syne\',sans-serif;font-size:14px;'
-                    'font-weight:700;letter-spacing:-0.01em;margin-bottom:2px;">Visitor Economy Intelligence</div>'
-                    '<div style="font-size:11px;opacity:0.50;font-weight:500;margin-bottom:10px;">'
-                    'Datafy geolocation data · Layer 1 verified · See Visitor Economy tab for full detail</div>',
-                    unsafe_allow_html=True,
-                )
-                _dov = df_dfy_ov.iloc[0]
-                _dov_cols = st.columns(4)
-                _dov_kpis = [
-                    (f"{int(_dov.get('total_trips',0) or 0)/1e6:.2f}M", "Total Annual Trips",
-                     f"{_dov.get('total_trips_vs_compare_pct',0):+.1f}pp YOY"),
-                    (f"{float(_dov.get('out_of_state_vd_pct',0) or 0):.1f}%", "Out-of-State Visitor Days",
-                     f"{_dov.get('out_of_state_vd_vs_compare_pct',0):+.2f}pp YOY"),
-                    (f"{float(_dov.get('overnight_trips_pct',0) or 0):.1f}%", "Overnight Trips",
-                     f"{_dov.get('overnight_vs_compare_pct',0):+.1f}pp YOY"),
-                    (f"{float(_dov.get('avg_length_of_stay_days',0) or 0):.1f} days", "Avg Length of Stay",
-                     f"{_dov.get('avg_los_vs_compare_days',0):+.1f}d vs. prior yr"),
-                ]
-                for i, (val, lbl, delta) in enumerate(_dov_kpis):
-                    with _dov_cols[i]:
-                        st.markdown(
-                            f'<div style="background:rgba(33,128,141,0.05);border:1px solid rgba(33,128,141,0.12);'
-                            f'border-radius:8px;padding:12px 14px;">'
-                            f'<div style="font-size:1.25rem;font-weight:800;color:#21808D;">{val}</div>'
-                            f'<div style="font-size:10px;font-weight:600;opacity:0.65;margin-top:2px;">{lbl}</div>'
-                            f'<div style="font-size:10px;color:#21808D;font-weight:600;margin-top:3px;">{delta}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True,
-                        )
-
-        # ── Economic Impact Statement ──────────────────────────────────────────────
-        try:
-            st.markdown(_sh("💰", "Economic Impact Statement", "green", "CITY FINANCE"), unsafe_allow_html=True)
-            st.caption("Estimated economic contribution of Dana Point hotel sector · Based on STR + Datafy + TBID formula")
-
-            _ei_c1, _ei_c2, _ei_c3, _ei_c4 = st.columns(4)
-            with _ei_c1:
-                _rev12_disp = f"${_exec_rev12/1e6:.1f}M" if _exec_rev12 > 0 else "—"
-                st.metric("Hotel Room Revenue", _rev12_disp, help="12-month STR total room revenue")
-            with _ei_c2:
-                _tbid12_disp = f"${_exec_tbid12/1e3:.0f}K" if _exec_tbid12 > 0 else "—"
-                st.metric("Est. TBID Assessment", _tbid12_disp, help="Room revenue × 1.25% blended rate")
-            with _ei_c3:
-                _tot12_disp = f"${_exec_tot12/1e6:.1f}M" if _exec_tot12 > 0 else "—"
-                st.metric("Est. TOT Revenue", _tot12_disp, help="Room revenue × 10%")
-            with _ei_c4:
-                _dest_spend = float(df_dfy_ov.iloc[0].get("total_destination_spend_usd", 0) or 0) if not df_dfy_ov.empty else 0.0
-                _dest_disp  = f"${_dest_spend/1e6:.1f}M" if _dest_spend > 0 else "—"
-                st.metric("Total Destination Spend", _dest_disp, help="Datafy total visitor destination spend")
-
-            if _exec_media_impact > 0:
-                _mei_c1, _mei_c2, _mei_c3 = st.columns(3)
-                with _mei_c1:
-                    st.metric("Campaign Media Spend Impact", f"${_exec_media_impact/1e6:.2f}M", help="Datafy media attribution total economic impact")
-                with _mei_c2:
-                    st.metric("Campaign ROAS", f"{_exec_roas:.1f}×", help="Return on ad spend from Datafy media attribution")
-                with _mei_c3:
-                    st.metric("Attributable Trips", f"{_exec_attr_trips:,}", help="Trips directly attributable to VDP digital campaigns")
-        except Exception:
-            pass
-
-        # ── Strategic Asks ─────────────────────────────────────────────────────────
-        try:
-            _ask_color  = "rgba(0,196,204,0.08)"
-            _ask_border = "#00C4CC"
-            _asks = []
-            if _exec_rvp_d < 0:
-                _asks.append(("Rate Strategy Review", "RevPAR declining — request approval for comp set re-pricing analysis and channel mix audit.", "Revenue"))
-            if _exec_roas_infinite or _exec_roas > 5:
-                _asks.append(("Invest in Paid Media", f"Campaign currently running with {'∞ ROAS (no cost recorded)' if _exec_roas_infinite else f'{_exec_roas:.1f}× ROAS'}. ${_exec_media_impact:,.0f} in estimated impact from {_exec_attr_trips:,} attributable trips. Request board approval for paid media budget to scale this performance.", "Budget"))
-            if _exec_occ >= 80:
-                _asks.append(("Compression Rate Authorization", f"Occupancy above 80% — request board authorization for dynamic rate increases during compression periods.", "Pricing"))
-            if _exec_trips > 0 and _exec_overnight < 50:
-                _asks.append(("Overnight Conversion Program", f"Only {_exec_overnight:.0f}% of visitors stay overnight. Request funding for packages targeting day-tripper conversion.", "Strategy"))
-            _asks.append(("Annual Report Narrative", "Data supports a strong YOY growth narrative. Request approval to publish annual economic impact report to city council and stakeholders.", "Communications"))
-
-            if _asks:
-                st.markdown("#### 🎯 Recommended Board Actions")
-                for _ask_title, _ask_body, _ask_tag in _asks:
-                    st.markdown(
-                        f'<div style="padding:12px 16px;margin-bottom:8px;background:{_ask_color};'
-                        f'border-left:3px solid {_ask_border};border-radius:0 8px 8px 0;'
-                        f'font-family:\'Syne\',sans-serif;">'
-                        f'<span style="font-size:11px;font-weight:700;letter-spacing:.05em;'
-                        f'text-transform:uppercase;opacity:.5;">{_ask_tag}</span><br>'
-                        f'<span style="font-size:13px;font-weight:700;">{_ask_title}</span><br>'
-                        f'<span style="font-size:12px;opacity:.75;">{_ask_body}</span></div>',
-                        unsafe_allow_html=True,
-                    )
-        except Exception:
-            pass
-
-    # ── 🎬 Stories & Discovery Sub-Tab ───────────────────────────────────────────
-    with _ov_t5:
-        st.markdown(sec_div("🎬 Stories & Discovery"), unsafe_allow_html=True)
-
-        # ── Topic Animation ──────────────────────────────────────────────────────
-        st.markdown("#### Choose a Data Story", unsafe_allow_html=True)
-        st.caption("Select a topic — the animated story updates with live data from the brain.")
-        _story_topics = ["Occupancy", "Revenue", "Events", "Markets", "Visitor Economy"]
-        _sel_story = st.selectbox(
-            "Story Topic", _story_topics, label_visibility="collapsed", key="ov_story_sel"
-        )
-        try:
-            _sdp: list = []
-            if _sel_story == "Occupancy" and not df_kpi.empty:
-                _sdp = [{"label": str(r["as_of_date"])[:10], "value": f"{r['occ_pct']:.1f}%"}
-                        for _, r in df_kpi.tail(8).iterrows() if pd.notna(r.get("occ_pct"))]
-            elif _sel_story == "Revenue" and not df_monthly.empty:
-                _sdp = [{"label": str(r["as_of_date"])[:7], "value": f"${r['revenue']/1e6:.2f}M"}
-                        for _, r in df_monthly.tail(8).iterrows() if pd.notna(r.get("revenue"))]
-            elif _sel_story == "Events" and not df_vdp_events.empty:
-                _sdp = [{"label": str(r.get("event_name", ""))[:28], "value": str(r.get("event_date", ""))[:10]}
-                        for _, r in df_vdp_events.head(8).iterrows()]
-            elif _sel_story == "Markets" and not df_dfy_dma.empty:
-                _sdp = [{"label": str(r.get("dma", ""))[:24],
-                         "value": f"{float(r.get('visitor_days_share_pct', 0) or 0):.1f}%"}
-                        for _, r in df_dfy_dma.head(8).iterrows()]
-            elif _sel_story == "Visitor Economy" and not df_dfy_ov.empty:
-                _dov2 = df_dfy_ov.iloc[0]
-                _sdp = [
-                    {"label": "Total Trips",       "value": f"{int(_dov2.get('total_trips', 0) or 0)/1e6:.1f}M"},
-                    {"label": "Overnight %",        "value": f"{float(_dov2.get('overnight_pct', 0) or 0):.0f}%"},
-                    {"label": "Out-of-State",       "value": f"{float(_dov2.get('out_of_state_vd_pct', 0) or 0):.0f}%"},
-                    {"label": "Avg Length of Stay", "value": f"{float(_dov2.get('avg_los', 0) or 0):.1f}d"},
-                ]
-            if not _sdp:
-                _sdp = [{"label": "No data loaded", "value": "—"}]
-            render_topic_animation(_sel_story, _sdp, height=380)
-        except Exception:
-            pass
-
-        st.divider()
-
-        # ── Traveler & Market Fun Facts ──────────────────────────────────────────
-        st.markdown("#### Traveler & Market Fun Facts", unsafe_allow_html=True)
-        st.caption("Live data bubbles — each circle carries a real number from the brain.")
-        try:
-            _ff2: list = []
-            if m:
-                _ff2 += [
-                    {"text": "Occupancy Rate",   "value": f"{m.get('occ_30', 0):.1f}%"},
-                    {"text": "Avg Daily Rate",   "value": f"${m.get('adr_30', 0):,.0f}"},
-                    {"text": "RevPAR",           "value": f"${m.get('revpar_30', 0):,.0f}"},
-                ]
-            if not df_dfy_ov.empty:
-                _dv2 = df_dfy_ov.iloc[0]
-                _tt2 = int(_dv2.get("total_trips", 0) or 0)
-                _ff2 += [
-                    {"text": "Total Annual Trips",   "value": f"{_tt2/1e6:.1f}M" if _tt2 >= 1e6 else f"{_tt2:,}"},
-                    {"text": "Out-of-State Visitors","value": f"{float(_dv2.get('out_of_state_vd_pct', 0) or 0):.0f}%"},
-                    {"text": "Avg Length of Stay",   "value": f"{float(_dv2.get('avg_los', 0) or 0):.1f} days"},
-                    {"text": "Overnight Stays",      "value": f"{float(_dv2.get('overnight_pct', 0) or 0):.0f}%"},
-                ]
-            if not df_dfy_dma.empty:
-                _top2 = str(df_dfy_dma.iloc[0].get("dma", "—"))
-                _top2_pct = float(df_dfy_dma.iloc[0].get("visitor_days_share_pct", 0) or 0)
-                _ff2.append({"text": f"Top Market: {_top2}", "value": f"{_top2_pct:.1f}%"})
-            _ff2 += [
-                {"text": "Ohana Fest Destination Spend", "value": "$18.4M"},
-                {"text": "Ohana Fest OOS Visitors",      "value": "68%"},
-                {"text": "Event ADR Lift",               "value": "+$139"},
-                {"text": "Avg Accommodation Spend/Trip", "value": "$1,219"},
-            ]
-            if _ff2:
-                render_fun_facts_sprite(_ff2, height=440)
-        except Exception:
-            pass
-
-        st.divider()
-
-        # ── Live Data Pulse (blob loaders) ───────────────────────────────────────
-        st.markdown("#### Live Data Pulse", unsafe_allow_html=True)
-        st.caption("50 destination data signals — each blob represents an active pipeline metric.")
-        render_kpi_blob_loaders(height=300)
-
-        st.divider()
-
-        # ── Iridescent KPI Cards ─────────────────────────────────────────────────
-        st.markdown("#### Key Metrics — Interactive View", unsafe_allow_html=True)
-        if m:
-            _story_cards = [
-                {"label": "Occupancy",  "value": f"{m.get('occ_30', 0):.1f}%",  "unit": "30-day avg"},
-                {"label": "ADR",        "value": f"${m.get('adr_30', 0):,.0f}",  "unit": "avg daily rate"},
-                {"label": "RevPAR",     "value": f"${m.get('revpar_30', 0):,.0f}","unit": "30-day avg"},
-                {"label": "Occ Trend",  "value": f"{m.get('occ_delta', 0):+.1f}%","unit": "YOY change"},
-            ]
-            render_mono_cards(_story_cards, "ov5", height=200)
-
-    # ── Strategy Goals Sub-Tab ─────────────────────────────────────────────────
+    # ── SUB-TAB 4: AI Assistant ───────────────────────────────────────────────────
     with _ov_t4:
-        st.markdown(sec_div("🎯 Strategy Goals Tracker"), unsafe_allow_html=True)
+        st.markdown(sec_div("🤖 VDP AI Analyst"), unsafe_allow_html=True)
         st.markdown(
-            '<div class="tab-summary">'
-            '<span class="ts-label">🎯 Strategy Intelligence</span>'
-            'Track progress towards VDP&#8217;s destination goals. Each goal is linked to live hotel, visitor, '
-            'and marketing data — progress updates automatically every pipeline run. '
-            '<strong>Add goals in admin mode (?admin=true).</strong>'
-            '</div>',
+            '<span style="color:#8EC4DC;font-size:13px;">Ask anything about Dana Point hotel and visitor performance.</span>',
             unsafe_allow_html=True,
         )
 
-        df_goals = load_strategy_goals()
+        # Preset quick prompts
+        _OV_PROMPTS = [
+            ("📊 Today's Brief", "morning_brief"),
+            ("💹 RevPAR Trends", "revpar"),
+            ("📋 Board Points", "board"),
+            ("👥 Visitor Insights", "visitor_econ"),
+            ("🔍 Anomalies", "anomaly"),
+            ("📈 30-Day Forecast", "forecast"),
+        ]
+        _ai_btn_cols = st.columns(3)
+        for _ai_i, (_ai_lbl, _ai_key) in enumerate(_OV_PROMPTS):
+            with _ai_btn_cols[_ai_i % 3]:
+                if st.button(_ai_lbl, key=f"ov_ai_{_ai_key}_{_ai_i}", use_container_width=True):
+                    st.session_state.ai_current_prompt = build_prompt(_ai_key, m)
+                    st.session_state.ai_prompt_label = _ai_lbl
+                    st.session_state.ai_result = ""
+                    st.session_state.ai_needs_call = True
 
-        if df_goals.empty:
-            st.markdown(
-                '<div class="empty-card">'
-                '<div class="empty-icon">🎯</div>'
-                '<div class="empty-title">No strategy goals yet</div>'
-                '<div class="empty-body">Run the pipeline once to seed default goals, '
-                'or add goals in admin mode (?admin=true).</div>'
-                '</div>',
-                unsafe_allow_html=True,
+        # Custom input
+        _ov_ai_c1, _ov_ai_c2 = st.columns([5, 1])
+        with _ov_ai_c1:
+            _ov_custom_q = st.text_input(
+                "_ov_custom_q", label_visibility="collapsed",
+                placeholder="💬 Ask anything…",
+                key="ov_main_ai_input",
             )
-        else:
-            # ── Summary bar ─────────────────────────────────────────────────────
-            _n_active   = len(df_goals[df_goals["status"] == "active"])
-            _n_achieved = len(df_goals[df_goals["status"] == "achieved"])
-            _n_total    = len(df_goals)
-            _avg_pct    = 0.0
-            if _n_total > 0:
-                _pcts = []
-                for _, _gr in df_goals.iterrows():
-                    _t = float(_gr.get("target_value") or 1)
-                    _c = float(_gr.get("current_value") or 0)
-                    _b = float(_gr.get("baseline_value") or 0)
-                    _range = _t - _b if _t > _b else _t
-                    _prog  = max(0.0, min(1.0, (_c - _b) / _range if _range else 0))
-                    _pcts.append(_prog * 100)
-                _avg_pct = sum(_pcts) / len(_pcts)
+        with _ov_ai_c2:
+            if st.button("⚡ Ask", type="primary", use_container_width=True, key="ov_main_ai_btn"):
+                if _ov_custom_q.strip():
+                    st.session_state.ai_current_prompt = build_custom_prompt(_ov_custom_q, m)
+                    st.session_state.ai_prompt_label = f"💬 {_ov_custom_q.strip()[:40]}"
+                    st.session_state.ai_result = ""
+                    st.session_state.ai_needs_call = True
 
-            st.markdown(
-                f'<div class="goals-summary-bar">'
-                f'<div class="goals-summary-stat">'
-                f'<span class="goals-summary-num">{_n_total}</span>'
-                f'<span class="goals-summary-lbl">Total Goals</span></div>'
-                f'<div class="goals-summary-stat">'
-                f'<span class="goals-summary-num" style="color:#10B981;">{_n_active}</span>'
-                f'<span class="goals-summary-lbl">Active</span></div>'
-                f'<div class="goals-summary-stat">'
-                f'<span class="goals-summary-num" style="color:#00D4C8;">{_n_achieved}</span>'
-                f'<span class="goals-summary-lbl">Achieved</span></div>'
-                f'<div class="goals-summary-stat">'
-                f'<span class="goals-summary-num">{_avg_pct:.0f}%</span>'
-                f'<span class="goals-summary-lbl">Avg Progress</span></div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-            # ── Filter row ──────────────────────────────────────────────────────
-            _gc1, _gc2 = st.columns([2, 1])
-            with _gc1:
-                _gcat_filter = st.multiselect(
-                    "Filter by Category",
-                    options=sorted(df_goals["category"].unique().tolist()),
-                    default=[],
-                    key="goal_cat_filter",
-                    label_visibility="collapsed",
-                    placeholder="All categories",
+        # Response area
+        if st.session_state.get("ai_needs_call") or st.session_state.get("ai_result"):
+            if st.session_state.get("ai_prompt_label"):
+                st.caption(f"**Query:** {st.session_state.ai_prompt_label}")
+            if st.session_state.get("ai_needs_call"):
+                _ov_prompt = st.session_state.ai_current_prompt
+                _ov_model  = st.session_state.get("selected_model", CLAUDE_MODEL)
+                _ov_any_ai = (
+                    (api_key_valid and ANTHROPIC_AVAILABLE) or
+                    (bool(_OPENAI_KEY) and OPENAI_AVAILABLE) or
+                    (bool(_GOOGLE_AI_KEY) and GEMINI_AVAILABLE) or
+                    (bool(_PERPLEXITY_KEY) and OPENAI_AVAILABLE)
                 )
-            with _gc2:
-                _gstat_filter = st.selectbox(
-                    "Status",
-                    options=["All", "active", "achieved", "paused", "missed"],
-                    key="goal_stat_filter",
-                    label_visibility="collapsed",
-                )
-
-            _df_disp = df_goals.copy()
-            if _gcat_filter:
-                _df_disp = _df_disp[_df_disp["category"].isin(_gcat_filter)]
-            if _gstat_filter != "All":
-                _df_disp = _df_disp[_df_disp["status"] == _gstat_filter]
-
-            # ── Goal Cards ──────────────────────────────────────────────────────
-            _CAT_ICONS = {
-                "revenue": "💰", "visitors": "👥", "occupancy": "🏨",
-                "tbid": "📊", "marketing": "📣", "social": "📱", "custom": "🎯",
-            }
-            _STATUS_BADGE = {
-                "active":   ("goal-badge-active",   "● ACTIVE"),
-                "achieved": ("goal-badge-achieved",  "✓ ACHIEVED"),
-                "paused":   ("goal-badge-paused",    "⏸ PAUSED"),
-                "missed":   ("goal-badge-missed",    "✗ MISSED"),
-            }
-            _FILL_CLASS = {
-                "active": "goal-fill-active", "achieved": "goal-fill-achieved",
-                "paused": "goal-fill-paused", "missed": "goal-fill-missed",
-            }
-
-            _gcols = st.columns(2)
-            for _gi, (_gidx, _grow) in enumerate(_df_disp.iterrows()):
-                _gcat    = str(_grow.get("category", "custom"))
-                _gstatus = str(_grow.get("status", "active"))
-                _gtarget = float(_grow.get("target_value") or 1)
-                _gcurr   = float(_grow.get("current_value") or 0)
-                _gbase   = float(_grow.get("baseline_value") or 0)
-                _gunit   = str(_grow.get("metric_unit") or "")
-                _grange  = _gtarget - _gbase if _gtarget > _gbase else _gtarget
-                _gprog   = max(0.0, min(1.0, (_gcurr - _gbase) / _grange if _grange else 0))
-                _gpct    = _gprog * 100
-
-                _gbadge_cls, _gbadge_txt = _STATUS_BADGE.get(_gstatus, ("goal-badge-active", "● ACTIVE"))
-                _gfill_cls = _FILL_CLASS.get(_gstatus, "goal-fill-active")
-                _gicon = _CAT_ICONS.get(_gcat, "🎯")
-
-                # Format values
-                def _fmt_val(v, unit):
-                    if unit == "USD":
-                        return f"${v:,.0f}" if v >= 1000 else f"${v:.2f}"
-                    if unit == "%":
-                        return f"{v:.1f}%"
-                    if unit in ("trips", "days", "travelers"):
-                        return f"{v:,.0f} {unit}"
-                    if unit == "x":
-                        return f"{v:.1f}x"
-                    return f"{v:,.1f} {unit}" if unit else f"{v:,.1f}"
-
-                _curr_str   = _fmt_val(_gcurr, _gunit)
-                _target_str = _fmt_val(_gtarget, _gunit)
-                _base_str   = _fmt_val(_gbase, _gunit) if _gbase else None
-
-                # Days remaining
-                try:
-                    _td = datetime.strptime(str(_grow.get("target_date", "")), "%Y-%m-%d")
-                    _days_left = (_td - datetime.now()).days
-                    _days_lbl = f"{_days_left}d left" if _days_left > 0 else "Past due"
-                except Exception:
-                    _days_lbl = ""
-
-                _priority_lbl = {1: "🔴 High", 2: "🟡 Medium", 3: "⚪ Low"}.get(int(_grow.get("priority") or 2), "")
-                _gdesc = str(_grow.get("description") or "")[:120]
-
-                with _gcols[_gi % 2]:
-                    st.markdown(
-                        f'<div class="goal-card goal-cat-{_gcat}">'
-                        f'<div class="goal-card-header">'
-                        f'<div class="goal-card-title">{_gicon} {_grow.get("title","")}</div>'
-                        f'<span class="goal-card-badge {_gbadge_cls}">{_gbadge_txt}</span>'
-                        f'</div>'
-                        f'<div class="goal-meta">'
-                        f'<span class="goal-meta-item">📅 {_days_lbl}</span>'
-                        f'<span class="goal-meta-item">{_priority_lbl}</span>'
-                        f'<span class="goal-meta-item" style="font-size:10px;color:var(--dp-teal);">{_gcat.upper()}</span>'
-                        f'</div>'
-                        # Progress number + bar
-                        f'<div style="display:flex;align-items:center;gap:14px;margin-bottom:4px;">'
-                        f'<div>'
-                        f'<div class="goal-progress-pct">{_gpct:.0f}%</div>'
-                        f'<div class="goal-progress-label">of target</div>'
-                        f'</div>'
-                        f'<div style="flex:1;">'
-                        f'<div class="goal-track-bg">'
-                        f'<div class="{_gfill_cls} goal-track-fill" style="width:{min(_gpct,100):.1f}%;"></div>'
-                        f'</div>'
-                        f'<div class="goal-progress-row">'
-                        f'<span>{_curr_str} current</span>'
-                        f'<span style="color:var(--dp-text-1);font-weight:700;">→ {_target_str}</span>'
-                        f'</div>'
-                        f'</div>'
-                        f'</div>'
-                        + (f'<div class="goal-desc">{_gdesc}</div>' if _gdesc else "")
-                        + f'</div>',
-                        unsafe_allow_html=True,
-                    )
-
-            # ── Admin: Add / Edit Goals ──────────────────────────────────────────
-            if _is_admin:
-                st.markdown("---")
-                st.markdown(sec_div("⚙️ Manage Goals (Admin)"), unsafe_allow_html=True)
-
-                with st.expander("➕ Add New Goal", expanded=False):
-                    _ag1, _ag2 = st.columns(2)
-                    with _ag1:
-                        _new_title  = st.text_input("Goal Title", key="new_goal_title")
-                        _new_cat    = st.selectbox("Category", ["revenue","visitors","occupancy","tbid","marketing","social","custom"], key="new_goal_cat")
-                        _new_target = st.number_input("Target Value", min_value=0.0, key="new_goal_target")
-                        _new_unit   = st.text_input("Unit (USD, %, trips, days, x)", key="new_goal_unit")
-                    with _ag2:
-                        _new_desc   = st.text_area("Description", key="new_goal_desc", height=80)
-                        _new_start  = st.date_input("Start Date", key="new_goal_start")
-                        _new_end    = st.date_input("Target Date", key="new_goal_end")
-                        _new_pri    = st.selectbox("Priority", [1,2,3], format_func=lambda x: {1:"High",2:"Medium",3:"Low"}[x], key="new_goal_pri")
-                    _new_query  = st.text_area("Auto-Compute SQL (optional)", key="new_goal_query", height=60,
-                                               placeholder="SELECT value FROM table WHERE ...")
-                    if st.button("💾 Save Goal", key="save_new_goal", type="primary"):
-                        if _new_title and _new_target > 0:
-                            try:
-                                _g_conn = sqlite3.connect(str(ROOT / "data" / "analytics.sqlite"))
-                                _g_conn.execute("""
-                                    INSERT INTO strategy_goals
-                                      (title,description,category,metric_name,metric_unit,
-                                       target_value,baseline_value,start_date,target_date,
-                                       priority,auto_compute,compute_query)
-                                    VALUES (?,?,?,?,?,?,0,?,?,?,?,?)
-                                """, (_new_title, _new_desc, _new_cat, _new_cat,
-                                      _new_unit, _new_target,
-                                      str(_new_start), str(_new_end),
-                                      _new_pri, 1 if _new_query else 0,
-                                      _new_query or None))
-                                _g_conn.commit()
-                                _g_conn.close()
-                                st.cache_data.clear()
-                                st.success(f"Goal '{_new_title}' saved!")
-                                st.rerun()
-                            except Exception as _ge:
-                                st.error(f"Error saving goal: {_ge}")
-                        else:
-                            st.warning("Title and target value are required.")
-
-
-    # ══════════════════════════════════════════════════════════════════════════════
-    # TAB 2 — TRENDS
-    # ══════════════════════════════════════════════════════════════════════════════
+                if _ov_any_ai:
+                    with st.chat_message("assistant", avatar="🌊"):
+                        _ov_resp = st.write_stream(stream_ai_response(_ov_prompt, _ov_model, _ai_keys))
+                    st.session_state.ai_result = _ov_resp
+                else:
+                    _ov_resp = local_fallback("default", m)
+                    with st.chat_message("assistant", avatar="🌊"):
+                        st.markdown(_ov_resp)
+                    st.session_state.ai_result = _ov_resp
+                    st.info("💡 Add an API key in the sidebar to activate AI responses.")
+                st.session_state.ai_needs_call = False
+            elif st.session_state.get("ai_result"):
+                with st.chat_message("assistant", avatar="🌊"):
+                    st.markdown(st.session_state.ai_result)
+            if st.button("✕ Clear", key="ov_clear_ai"):
+                st.session_state.ai_result = ""
+                st.session_state.ai_prompt_label = ""
+                st.rerun()
 with tab_tr:
     _tab_controls("tr")
     # Full filters: Time Period + Daily/Monthly grain (metric controlled by "View Metric" below)
@@ -16184,7 +14436,9 @@ with tab_cs:
                 _mkt_rvp_b = float(_snap.get("revpar_usd", 220.42) or 220.42)
                 def _ns(v):
                     try: return float(str(v).replace("$","").replace("%","").replace(",",""))
-                    except: return 0.0
+                    except Exception as e:
+                        _logger.debug(f"Failed to parse numeric value '{v}': {str(e)}")
+                        return 0.0
                 _vdp_occ_n = _ns(next((k["raw_value"] for k in kpis if "Occ" in k.get("label","")), _mkt_occ_b))
                 _vdp_adr_n = _ns(next((k["raw_value"] for k in kpis if "ADR" in k.get("label","")), _mkt_adr_b))
                 _vdp_rvp_n = _ns(next((k["raw_value"] for k in kpis if "RevPAR" in k.get("label","")), _mkt_rvp_b))
