@@ -3392,14 +3392,21 @@ st.markdown("""
   [data-testid="stMetricValue"],
   div[data-testid="metric-container"] [data-testid="stMetricValue"],
   .hero-stat-val,
-  .event-val,
-  .pulse-ticker-val {
+  .event-val {
     font-family: 'JetBrains Mono', 'Fira Code', 'Outfit', monospace !important;
     font-variant-numeric: tabular-nums !important;
     letter-spacing: -0.03em !important;
     color: #FFFFFF !important;
     font-weight: 900 !important;
     font-size: 21px !important;
+  }
+  /* Ticker values are sized separately */
+  .pulse-ticker-val {
+    font-family: 'Outfit', sans-serif !important;
+    font-size: 28px !important;
+    color: #FFFFFF !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.02em !important;
   }
 
   /* ── Chart container glow (Railway pattern — teal instead of indigo) ── */
