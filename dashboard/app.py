@@ -6589,7 +6589,7 @@ with st.sidebar:
 
     # Admin: model selector + provider status
     if _is_admin:
-        st.markdown("**🧠 AI Analyst — Admin**")
+        st.markdown("**🧠 VDP Analyst — Admin**")
         if len(_model_opts) > 1:
             _sel_label = st.selectbox(
                 "Active AI Model", options=_model_labels, index=_default_idx,
@@ -6998,9 +6998,9 @@ st.markdown(
     f'<span style="font-size:16px;font-weight:800;color:#22D3EE;letter-spacing:.10em;'
     f'text-transform:uppercase;background:rgba(34,211,238,0.25);border:2px solid rgba(34,211,238,0.60);'
     f'padding:6px 18px;border-radius:28px;">⬤ LIVE</span>'
-    f'<span style="font-size:15px;color:rgba(230,250,255,0.98);font-weight:700;">{range_label} window</span>'
+    f'<span style="font-size:15px;color:#FFFFFF;font-weight:800;letter-spacing:.05em;">{range_label} window</span>'
     f'<span style="font-size:15px;color:rgba(255,255,255,0.50);">·</span>'
-    f'<span style="font-size:15px;color:rgba(230,250,255,0.98);font-weight:700;">Updated {last_upd}</span>'
+    f'<span style="font-size:15px;color:#FFFFFF;font-weight:800;letter-spacing:.05em;">Updated {last_upd}</span>'
     f'</div>'
     f'<div class="hero-stats-row">'
     f'<div class="hero-stat">'
@@ -8614,7 +8614,7 @@ with tab_ov:
         "📊 Scorecard",
         "📋 Board Report",
         "🎯 Goals",
-        "🤖 AI Assistant",
+        "🤖 VDP Assistant",
     ])
 
     # ── SUB-TAB 1: Scorecard ──────────────────────────────────────────────────────
