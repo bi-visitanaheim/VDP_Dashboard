@@ -2292,26 +2292,13 @@ st.markdown("""
   .pulse-ticker-item {
     display: flex; align-items: center; gap: 8px;
     padding: 0 28px;
-    font-family: 'DM Sans', 'Inter', sans-serif;
-    font-size: 12px; font-weight: 700;
-    color: #FFFFFF !important;
     white-space: nowrap;
     border-right: 1px solid rgba(255,255,255,0.07);
     transition: color 0.2s ease;
   }
-  .pulse-ticker-item:hover { color: #FFFFFF !important; }
   .pulse-ticker-item:last-child { border-right: none; }
-  .pulse-ticker-label {
-    font-family: 'Syne', 'DM Sans', sans-serif;
-    font-size: 8.5px; font-weight: 900; text-transform: uppercase;
-    letter-spacing: .14em; color: #FFFFFF !important;
-  }
-  .pulse-ticker-val {
-    color: #FFFFFF !important;
-    font-family: 'Outfit', sans-serif;
-    font-size: 14px; font-weight: 900;
-    letter-spacing: -0.02em;
-  }
+  .pulse-ticker-label { }
+  .pulse-ticker-val { }
   .pulse-ticker-pos { color: #34D399; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
   .pulse-ticker-neg { color: #F87171; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
   .pulse-ticker-dot {
@@ -5887,13 +5874,12 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
     import math
 
     def _item(label: str, val: str, delta: str = "", positive: bool | None = None) -> str:
-        delta_cls = ""
         delta_color = "#34D399" if positive is True else "#F87171" if positive is False else "#FFFFFF"
-        delta_html = f'<span style="color:{delta_color};font-size:11px;font-weight:700;letter-spacing:0.02em;">{delta}</span>' if delta else ""
+        delta_html = f'<span style="color:{delta_color};font-size:11px;font-weight:900;letter-spacing:0.02em;display:inline-block;margin-left:6px;">{delta}</span>' if delta else ""
         return (
-            f'<div class="pulse-ticker-item" style="color:#FFFFFF !important;">'
-            f'<span class="pulse-ticker-label" style="color:#FFFFFF !important;font-weight:900;font-size:12px;text-transform:uppercase;letter-spacing:.20em;font-family:Syne,DM Sans,sans-serif;">{label}</span>'
-            f'<span class="pulse-ticker-val" style="color:#FFFFFF !important;font-weight:900;font-size:21px;letter-spacing:-0.02em;">{val}</span>'
+            f'<div class="pulse-ticker-item" style="font-family:\'DM Sans\',\'Inter\',sans-serif;font-size:12px;font-weight:900;color:#FFFFFF;">'
+            f'<span class="pulse-ticker-label" style="color:#FFFFFF;font-weight:900;font-size:11px;text-transform:uppercase;letter-spacing:.18em;font-family:\'Syne\',\'DM Sans\',sans-serif;display:inline-block;margin-right:8px;">{label}</span>'
+            f'<span class="pulse-ticker-val" style="color:#FFFFFF;font-weight:900;font-size:16px;letter-spacing:-0.02em;display:inline-block;">{val}</span>'
             f'{delta_html}'
             f'</div>'
         )
