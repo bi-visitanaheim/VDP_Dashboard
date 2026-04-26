@@ -2422,25 +2422,25 @@ st.markdown("""
   }
   /* ── Hero banner stats row ────────────────────────────────────────────── */
   .hero-stats-row {
-    display: flex; gap: 40px; margin-top: 16px; flex-wrap: wrap;
-    border-top: 1px solid rgba(255,255,255,0.18); padding-top: 16px;
+    display: flex; gap: 60px; margin-top: 24px; flex-wrap: wrap;
+    border-top: 1px solid rgba(255,255,255,0.18); padding-top: 24px;
     justify-content: center; align-items: flex-start;
   }
-  .hero-stat { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; }
+  .hero-stat { display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; }
   .hero-stat-val {
-    font-family: 'Outfit', sans-serif !important; font-size: 48px !important; font-weight: 900 !important;
+    font-family: 'Outfit', sans-serif !important; font-size: 64px !important; font-weight: 900 !important;
     letter-spacing: -0.04em !important;
     color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
-    line-height: 1 !important; text-shadow: 0 2px 8px rgba(0,0,0,0.40) !important;
+    line-height: 0.95 !important; text-shadow: 0 3px 12px rgba(0,0,0,0.50) !important;
   }
   .hero-stat-label {
-    font-family: 'DM Sans', sans-serif !important; font-size: 13px !important; font-weight: 700 !important;
-    text-transform: uppercase !important; letter-spacing: .14em !important;
-    color: rgba(200,240,255,0.95) !important; -webkit-text-fill-color: rgba(200,240,255,0.95) !important;
+    font-family: 'DM Sans', sans-serif !important; font-size: 16px !important; font-weight: 800 !important;
+    text-transform: uppercase !important; letter-spacing: .16em !important;
+    color: rgba(230,250,255,0.98) !important; -webkit-text-fill-color: rgba(230,250,255,0.98) !important;
   }
-  .hero-stat-delta { font-size: 13px; font-weight: 700; }
-  .hero-stat-pos { color: #34D399 !important; -webkit-text-fill-color: #34D399 !important; }
-  .hero-stat-neg { color: #F87171 !important; -webkit-text-fill-color: #F87171 !important; }
+  .hero-stat-delta { font-size: 16px !important; font-weight: 800 !important; }
+  .hero-stat-pos { color: #34D399 !important; -webkit-text-fill-color: #34D399 !important; font-weight: 800 !important; }
+  .hero-stat-neg { color: #F87171 !important; -webkit-text-fill-color: #F87171 !important; font-weight: 800 !important; }
 
   /* ── Painted Heatmap (Giorgia Lupi / Long-Covid density style) ───────── */
   .painted-legend {
@@ -6994,13 +6994,13 @@ st.markdown(
     f'<div style="display:flex;align-items:center;gap:16px;margin-top:5px;flex-wrap:wrap;">'
     f'<div class="hero-subtitle">Destination Intelligence Platform &nbsp;·&nbsp; VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>'
     f'</div>'
-    f'<div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap;">'
-    f'<span style="font-size:12px;font-weight:700;color:#22D3EE;letter-spacing:.08em;'
-    f'text-transform:uppercase;background:rgba(34,211,238,0.20);border:1.5px solid rgba(34,211,238,0.50);'
-    f'padding:4px 14px;border-radius:24px;">⬤ LIVE</span>'
-    f'<span style="font-size:12px;color:rgba(220,245,255,0.95);font-weight:600;">{range_label} window</span>'
-    f'<span style="font-size:12px;color:rgba(255,255,255,0.50);">·</span>'
-    f'<span style="font-size:12px;color:rgba(220,245,255,0.95);font-weight:600;">Updated {last_upd}</span>'
+    f'<div style="display:flex;align-items:center;gap:16px;margin-top:16px;flex-wrap:wrap;">'
+    f'<span style="font-size:16px;font-weight:800;color:#22D3EE;letter-spacing:.10em;'
+    f'text-transform:uppercase;background:rgba(34,211,238,0.25);border:2px solid rgba(34,211,238,0.60);'
+    f'padding:6px 18px;border-radius:28px;">⬤ LIVE</span>'
+    f'<span style="font-size:15px;color:rgba(230,250,255,0.98);font-weight:700;">{range_label} window</span>'
+    f'<span style="font-size:15px;color:rgba(255,255,255,0.50);">·</span>'
+    f'<span style="font-size:15px;color:rgba(230,250,255,0.98);font-weight:700;">Updated {last_upd}</span>'
     f'</div>'
     f'<div class="hero-stats-row">'
     f'<div class="hero-stat">'
