@@ -2295,24 +2295,23 @@ st.markdown("""
     white-space: nowrap;
     border-right: 1px solid rgba(255,255,255,0.30);
     transition: all 0.2s ease;
-    filter: brightness(1.5);
-    text-shadow: 0 2px 8px rgba(0,0,0,0.60);
   }
-  .pulse-ticker-item:hover { color: #FFFFFF !important; filter: brightness(1.8); text-shadow: 0 2px 12px rgba(0,0,0,0.80); }
+  .pulse-ticker-item:hover { color: #FFFFFF !important; }
   .pulse-ticker-item:last-child { border-right: none; }
   .pulse-ticker-label {
     font-family: 'Syne', 'DM Sans', sans-serif !important;
-    font-size: 14px !important; font-weight: 900 !important; text-transform: uppercase !important;
-    letter-spacing: .20em !important; color: #FFFFFF !important;
-    opacity: 1 !important;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.60) !important;
+    font-size: 14px !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: .20em !important;
+    color: #FFFFFF !important;
   }
   .pulse-ticker-val {
     color: #FFFFFF !important;
     font-family: 'Outfit', sans-serif !important;
-    font-size: 32px !important; font-weight: 900 !important;
+    font-size: 34px !important;
+    font-weight: 900 !important;
     letter-spacing: -0.02em !important;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.60) !important;
   }
   .pulse-ticker-status {
     color: #22D3EE !important;
@@ -3402,14 +3401,6 @@ st.markdown("""
     color: #FFFFFF !important;
     font-weight: 900 !important;
     font-size: 21px !important;
-  }
-  /* Ticker values are sized separately */
-  .pulse-ticker-val {
-    font-family: 'Outfit', sans-serif !important;
-    font-size: 28px !important;
-    color: #FFFFFF !important;
-    font-weight: 900 !important;
-    letter-spacing: -0.02em !important;
   }
 
   /* ── Chart container glow (Railway pattern — teal instead of indigo) ── */
