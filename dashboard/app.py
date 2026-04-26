@@ -8516,55 +8516,63 @@ with tab_ov:
         _e_row2_1, _e_row2_2, _e_spacer = st.columns([1, 1, 1], gap="large")
 
         # Helper to render exploration card with enhanced design
-        def _render_explore_card(col, emoji, title, desc, tab_idx, accent_color):
+        def _render_explore_card(col, emoji, title, desc, tab_name, accent_color):
             with col:
+                if st.button(
+                    f"{emoji}\n\n**{title}**\n\n{desc}",
+                    key=f"explore_{tab_name}",
+                    use_container_width=True,
+                    help=f"Go to {title} tab"
+                ):
+                    st.session_state.active_tab = tab_name
+                    st.rerun()
+                # Fallback: Keep the card styling
                 st.markdown(
                     f"""<div style="
                     background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
-                    border: 1px solid #E2E8F0;
-                    border-top: 3px solid {accent_color};
+                    border: 2px solid {accent_color};
                     border-radius: 16px;
                     padding: 28px 24px;
                     text-align: center;
-                    cursor: pointer;
                     transition: all 0.3s cubic-bezier(0.28, 0, 0.49, 1);
-                    box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
-                    position: relative;
-                    overflow: hidden;
+                    box-shadow: 0 2px 8px rgba(15,23,42,0.12);
+                    margin-top: -60px;
+                    margin-left: -16px;
+                    margin-right: -16px;
                     "
-                    onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 12px rgba(15,23,42,0.15), 0 2px 4px rgba(15,23,42,0.10)';"
-                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24)';"
-                    onclick="document.querySelectorAll('[role=tab]')[{tab_idx}].click();">
+                    onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 20px rgba(15,23,42,0.15)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(15,23,42,0.12)';">
                     <div style="position: relative; z-index: 1;">
                     <div style="
-                    font-size: 42px;
+                    font-size: 48px;
                     margin-bottom: 16px;
                     display: inline-block;
                     ">{emoji}</div>
                     <h3 style="
                     font-family: 'Outfit', sans-serif;
-                    font-size: 18px;
-                    font-weight: 800;
-                    letter-spacing: -0.01em;
-                    color: #0F172A;
-                    margin: 0 0 10px 0;
+                    font-size: 20px;
+                    font-weight: 900;
+                    letter-spacing: -0.02em;
+                    color: {accent_color};
+                    margin: 0 0 12px 0;
                     ">{title}</h3>
                     <p style="
-                    font-size: 13px;
+                    font-size: 14px;
                     color: #334155;
-                    line-height: 1.6;
+                    line-height: 1.7;
                     margin: 0;
+                    font-weight: 500;
                     ">{desc}</p>
                     </div>
                     </div>""",
                     unsafe_allow_html=True,
                 )
 
-        _render_explore_card(_e_row1_1, "🏨", "Hotel Trends", "30-day & annual performance, rate trends", 1, "#38BDF8")
-        _render_explore_card(_e_row1_2, "👥", "Our Visitors", "Visitor volumes, origins, spending patterns", 3, "#34D399")
-        _render_explore_card(_e_row1_3, "🎉", "Event Impact", "Major events, occupancy lift analysis", 4, "#F5B940")
-        _render_explore_card(_e_row2_1, "📈", "Market Intel", "Competitive benchmarking & positioning", 7, "#818CF8")
-        _render_explore_card(_e_row2_2, "🗄️", "Data Health", "ETL status, source coverage, freshness", 8, "#A78BFA")
+        _render_explore_card(_e_row1_1, "🏨", "Hotel Trends", "30-day & annual performance, rate trends", "Hotel Trends", "#38BDF8")
+        _render_explore_card(_e_row1_2, "👥", "Our Visitors", "Visitor volumes, origins, spending patterns", "Our Visitors", "#34D399")
+        _render_explore_card(_e_row1_3, "🎉", "Event Impact", "Major events, occupancy lift analysis", "Event Impact", "#F5B940")
+        _render_explore_card(_e_row2_1, "📈", "Market Intel", "Competitive benchmarking & positioning", "Market Intel", "#818CF8")
+        _render_explore_card(_e_row2_2, "🗄️", "Data Health", "ETL status, source coverage, freshness", "Data Health", "#A78BFA")
 
     except Exception as e:
         _logger.debug(f"Failed to render exploration cards: {str(e)}")
