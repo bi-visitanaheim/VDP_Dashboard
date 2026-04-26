@@ -9406,15 +9406,15 @@ with tab_tr:
 
                 def _ri_metric(label, val, note, icon, color):
                     return (
-                        f'<div style="background:#1E3550;border-radius:10px;padding:14px 16px;'
-                        f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid {color};'
-                        f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
-                        f'<div style="font-size:18px;margin-bottom:4px;">{icon}</div>'
-                        f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;'
-                        f'letter-spacing:.08em;color:#5A7A95;margin-bottom:4px;">{label}</div>'
-                        f'<div style="font-family:\'Outfit\',sans-serif;font-size:20px;font-weight:800;'
-                        f'color:{color};letter-spacing:-.02em;">{val}</div>'
-                        f'<div style="font-size:11px;color:#5A7A95;margin-top:4px;line-height:1.5;">{note}</div>'
+                        f'<div style="background:linear-gradient(135deg,rgba(34,211,238,0.06) 0%,rgba(56,189,248,0.03) 100%);border-radius:12px;padding:18px 20px;'
+                        f'border:2px solid {color};border-top:3px solid {color};'
+                        f'box-shadow:0 2px 8px rgba({color.replace("#","0x")},0.08);">'
+                        f'<div style="font-size:22px;margin-bottom:8px;">{icon}</div>'
+                        f'<div style="font-size:11px;font-weight:800;text-transform:uppercase;'
+                        f'letter-spacing:.10em;color:{color};margin-bottom:6px;">{label}</div>'
+                        f'<div style="font-family:\'Outfit\',sans-serif;font-size:28px;font-weight:900;'
+                        f'color:#0F172A;letter-spacing:-.02em;margin-bottom:8px;">{val}</div>'
+                        f'<div style="font-size:12px;color:#334155;margin-top:6px;line-height:1.6;font-weight:500;">{note}</div>'
                         f'</div>'
                     )
 
@@ -9459,24 +9459,25 @@ with tab_tr:
                     _wf_tot  = _ri_tot12
                     _wf_total_public = _wf_tbid + _wf_tot
                     st.markdown(
-                        f'<div style="background:linear-gradient(135deg,#F0F7FF,#F5F3FF);'
-                        f'border-radius:12px;padding:16px 20px;border:1px solid rgba(5,103,200,0.12);">'
-                        f'<div style="font-family:\'Outfit\',sans-serif;font-size:12px;font-weight:800;'
-                        f'text-transform:uppercase;letter-spacing:.08em;color:#0567C8;margin-bottom:10px;">'
-                        f'📊 Public Revenue Derivation from 12-Month Room Revenue</div>'
-                        f'<div style="display:flex;gap:20px;flex-wrap:wrap;font-family:\'Inter\',sans-serif;font-size:13px;">'
-                        f'<div><span style="color:#5A7A95;">12-Mo Room Revenue</span><br>'
-                        f'<strong style="color:#EFF6FF;font-size:16px;">${_ri_rev12/1e6:.2f}M</strong></div>'
-                        f'<div style="color:#5A7A95;align-self:center;font-size:18px;">→</div>'
-                        f'<div><span style="color:#5A7A95;">TBID Assessment (1.25%)</span><br>'
-                        f'<strong style="color:#7C3AED;font-size:16px;">${_wf_tbid/1e3:,.0f}K</strong></div>'
-                        f'<div style="color:#5A7A95;align-self:center;font-size:18px;">+</div>'
-                        f'<div><span style="color:#5A7A95;">TOT (10%)</span><br>'
-                        f'<strong style="color:#059669;font-size:16px;">${_wf_tot/1e6:.2f}M</strong></div>'
-                        f'<div style="color:#5A7A95;align-self:center;font-size:18px;">=</div>'
-                        f'<div style="background:#0567C8;border-radius:8px;padding:8px 14px;">'
-                        f'<span style="color:rgba(255,255,255,0.8);font-size:10px;">Total Public Revenue</span><br>'
-                        f'<strong style="color:#FFFFFF;font-size:18px;">${_wf_total_public/1e6:.2f}M</strong></div>'
+                        f'<div style="background:linear-gradient(135deg,#F0F9FF 0%,#FFFFFF 100%);'
+                        f'border-radius:14px;padding:20px 24px;border:2px solid #0567C8;'
+                        f'box-shadow:0 4px 12px rgba(5,103,200,0.12);">'
+                        f'<div style="font-family:\'Outfit\',sans-serif;font-size:13px;font-weight:900;'
+                        f'text-transform:uppercase;letter-spacing:.10em;color:#0567C8;margin-bottom:16px;">'
+                        f'📊 Public Revenue Derivation</div>'
+                        f'<div style="display:flex;gap:16px;flex-wrap:wrap;font-family:\'Inter\',sans-serif;font-size:13px;align-items:center;">'
+                        f'<div><span style="color:#334155;font-weight:600;">12-Mo Room Revenue</span><br>'
+                        f'<strong style="color:#0F172A;font-size:18px;font-weight:900;">${_ri_rev12/1e6:.2f}M</strong></div>'
+                        f'<div style="color:#0567C8;font-size:20px;font-weight:900;">→</div>'
+                        f'<div><span style="color:#334155;font-weight:600;">TBID Assessment (1.25%)</span><br>'
+                        f'<strong style="color:#7C3AED;font-size:18px;font-weight:900;">${_wf_tbid/1e3:,.0f}K</strong></div>'
+                        f'<div style="color:#0567C8;font-size:20px;font-weight:900;">+</div>'
+                        f'<div><span style="color:#334155;font-weight:600;">TOT (10%)</span><br>'
+                        f'<strong style="color:#059669;font-size:18px;font-weight:900;">${_wf_tot/1e6:.2f}M</strong></div>'
+                        f'<div style="color:#0567C8;font-size:20px;font-weight:900;">=</div>'
+                        f'<div style="background:#0567C8;border-radius:10px;padding:12px 18px;">'
+                        f'<span style="color:#FFFFFF;font-size:11px;font-weight:700;">Total Public Revenue</span><br>'
+                        f'<strong style="color:#FFFFFF;font-size:20px;font-weight:900;">${_wf_total_public/1e6:.2f}M</strong></div>'
                         f'</div></div>',
                         unsafe_allow_html=True,
                     )
