@@ -2336,6 +2336,12 @@ st.markdown("""
   @keyframes ticker-right { 0%{transform:translateX(-33.333%)} 100%{transform:translateX(0)} }
   @keyframes ticker-pulse { 0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 6px rgba(34,211,238,0.60);} 50%{opacity:.4;transform:scale(.65);box-shadow:0 0 0 rgba(34,211,238,0);} }
 
+  /* ── Section Spacing Improvements ───────────────────────────────────── */
+  [data-testid="stMarkdownContainer"] { margin-bottom: 24px !important; }
+  [data-testid="stVerticalBlock"] > div:has([data-testid="stMarkdownContainer"]) { margin-bottom: 28px !important; }
+  .stHeading { margin-bottom: 16px !important; margin-top: 24px !important; }
+  h1, h2, h3 { line-height: 1.3 !important; }
+
   /* ── Scroll-Reveal Animations (byhook clip-path style) ───────────────── */
   .reveal-card {
     opacity: 0;
