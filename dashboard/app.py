@@ -2301,15 +2301,18 @@ st.markdown("""
   .pulse-ticker-item:last-child { border-right: none; }
   .pulse-ticker-label {
     font-family: 'Syne', 'DM Sans', sans-serif !important;
-    font-size: 12px !important; font-weight: 900 !important; text-transform: uppercase !important;
+    font-size: 13px !important; font-weight: 900 !important; text-transform: uppercase !important;
     letter-spacing: .20em !important; color: #FFFFFF !important;
     opacity: 1 !important;
   }
   .pulse-ticker-val {
     color: #FFFFFF !important;
     font-family: 'Outfit', sans-serif;
-    font-size: 21px; font-weight: 900;
+    font-size: 28px; font-weight: 900;
     letter-spacing: -0.02em;
+  }
+  .pulse-ticker-status {
+    color: #22D3EE !important;
   }
   .pulse-ticker-pos { color: #34D399; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
   .pulse-ticker-neg { color: #F87171; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; }
@@ -5888,15 +5891,16 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
     """Bloomberg/1ax-style dual-row KPI ticker with live data."""
     import math
 
-    def _item(label: str, val: str, delta: str = "", positive: bool | None = None) -> str:
+    def _item(label: str, val: str, delta: str = "", positive: bool | None = None, is_status: bool = False) -> str:
         delta_cls = ""
         if delta and positive is True:   delta_cls = "pulse-ticker-pos"
         elif delta and positive is False: delta_cls = "pulse-ticker-neg"
         delta_html = f'<span class="{delta_cls}">{delta}</span>' if delta else ""
+        status_cls = "pulse-ticker-status" if is_status else ""
         return (
-            f'<div class="pulse-ticker-item">'
-            f'<span class="pulse-ticker-label">{label}</span>'
-            f'<span class="pulse-ticker-val">{val}</span>'
+            f'<div class="pulse-ticker-item {status_cls}">'
+            f'<span class="pulse-ticker-label {status_cls}">{label}</span>'
+            f'<span class="pulse-ticker-val {status_cls}">{val}</span>'
             f'{delta_html}'
             f'</div>'
         )
@@ -5942,7 +5946,7 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
 
     # ── Build rows ─────────────────────────────────────────────────────────────
     row1_items = [
-        _item("⬤ LIVE", "DANA POINT PULSE"),
+        _item("⬤ LIVE", "DANA POINT PULSE", is_status=True),
         _item("OCCUPANCY", occ_val, occ_d, occ_pos),
         _item("ADR", adr_val, adr_d, adr_pos),
         _item("REVPAR", rvp_val, rvp_d, rvp_pos),
