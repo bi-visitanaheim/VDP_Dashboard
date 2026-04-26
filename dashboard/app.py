@@ -785,9 +785,9 @@ st.markdown("""
   }
   .kpi-label {
     font-family: 'Syne', 'DM Sans', 'Inter', sans-serif;
-    font-size: 9.5px; font-weight: 700;
+    font-size: 10px; font-weight: 800;
     text-transform: uppercase; letter-spacing: .15em;
-    color: var(--dp-text-3);
+    color: var(--dp-text-1) !important; -webkit-text-fill-color: var(--dp-text-1) !important;
   }
   .kpi-icon-svg { flex-shrink: 0; line-height: 0; opacity: 0.45; }
   .kpi-value {
@@ -8801,14 +8801,72 @@ with tab_ov:
                     type="primary",
                 )
 
-    # ── SUB-TAB 3: Goals ──────────────────────────────────────────────────────────
+    # ── SUB-TAB 3: Goals ──────────────────────────────────────────────────────
     with _ov_t3:
         st.markdown(sec_div("🎯 Strategic Goals & Progress"), unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background:linear-gradient(135deg,rgba(8,145,178,0.08) 0%,rgba(56,189,248,0.04) 100%);
+        padding:20px;border-radius:12px;border:1px solid rgba(8,145,178,0.20);margin-bottom:20px;">
+        <p style="font-size:14px;font-weight:600;color:#0F172A;margin:0 0 8px 0;">
+        💡 <strong>About Goals</strong>
+        </p>
+        <p style="font-size:13px;color:#334155;margin:0;line-height:1.5;">
+        Track revenue targets, occupancy goals, and strategic initiatives. Set ambitious but achievable KPIs for your portfolio.
+        Goals update monthly based on STR market performance and visitor economy data.
+        </p>
+        </div>
+        """, unsafe_allow_html=True)
+
         _strategy_goals = load_strategy_goals()
+
+        _goals_col1, _goals_col2 = st.columns([2, 1])
+        with _goals_col1:
+            st.subheader("Active Goals")
+        with _goals_col2:
+            if st.button("➕ Add Goal", key="add_goal_btn"):
+                st.session_state.show_goal_form = True
+
+        if st.session_state.get("show_goal_form", False):
+            with st.form("goal_form", border=True):
+                st.markdown("**Create New Goal**")
+                _g_title = st.text_input("Goal Title", placeholder="e.g., 'RevPAR Growth Q2'")
+                _g_category = st.selectbox("Category", ["Revenue", "Occupancy", "Market Position", "Operations", "Guest Experience"])
+                _g_target = st.number_input("Target Value", min_value=0.0, step=1.0)
+                _g_unit = st.selectbox("Unit", ["$", "%", "rooms", "nights", "index points"])
+                _g_deadline = st.date_input("Target Date")
+                _g_desc = st.text_area("Description (optional)", max_chars=200)
+
+                if st.form_submit_button("Save Goal", use_container_width=True):
+                    st.success("✅ Goal saved! Track progress below.")
+                    st.session_state.show_goal_form = False
+                    st.rerun()
+
         if not _strategy_goals.empty:
-            st.dataframe(_strategy_goals[["title", "category", "current_value", "target_value", "status"]], use_container_width=True, hide_index=True)
+            # Display goals as cards for better visibility
+            st.markdown("#### Current Progress")
+            _goals_display_cols = st.columns(min(3, len(_strategy_goals)))
+            for _gi, (_g_idx, _g_row) in enumerate(_strategy_goals.iterrows()):
+                with _goals_display_cols[_gi % len(_goals_display_cols)]:
+                    _g_status_color = {"Active": "#0891B2", "On Track": "#059669", "At Risk": "#EA580C", "Complete": "#0891B2"}.get(_g_row.get("status", "Active"), "#0891B2")
+                    st.markdown(f"""
+                    <div style="background:#FFFFFF;border:2px solid {_g_status_color};border-radius:10px;padding:16px;margin-bottom:12px;">
+                    <div style="font-size:12px;font-weight:700;color:{_g_status_color};text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
+                    {_g_row.get('category', 'Goal')}</div>
+                    <div style="font-size:15px;font-weight:800;color:#0F172A;margin-bottom:6px;">
+                    {_g_row.get('title', 'Unnamed Goal')}</div>
+                    <div style="font-size:11px;color:#64748B;margin-bottom:8px;line-height:1.4;">
+                    Current: <strong style="color:#0F172A;">{_g_row.get('current_value', '—')}</strong> |
+                    Target: <strong style="color:#0F172A;">{_g_row.get('target_value', '—')}</strong></div>
+                    <div style="width:100%;height:4px;background:#E2E8F0;border-radius:2px;margin-bottom:8px;overflow:hidden;">
+                    <div style="height:100%;background:{_g_status_color};width:{min(100, int((float(str(_g_row.get('current_value', '0')).split()[0] or 0) / float(str(_g_row.get('target_value', '1')).split()[0] or 1)) * 100))}%;"></div>
+                    </div>
+                    <div style="font-size:10px;color:#64748B;font-weight:600;">
+                    {_g_row.get('status', 'Active')} · Last updated {_g_row.get('updated_date', 'N/A')}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
         else:
-            st.info("No strategy goals configured. Add goals via the dashboard admin panel.")
+            st.info("📌 No goals yet. Click '➕ Add Goal' to set your first strategic target.")
+
 
     # ── SUB-TAB 4: AI Assistant ───────────────────────────────────────────────────
     with _ov_t4:
