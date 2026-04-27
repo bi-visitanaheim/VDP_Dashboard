@@ -8620,7 +8620,7 @@ with tab_ov:
         # Occupancy area chart
         with _h_row2_1:
             if not df_sel.empty and len(df_sel) > 1:
-                _occ_data = df_sel["occ_pct"].dropna().tail(20).tolist()
+                _occ_data = df_sel["occupancy"].dropna().tail(20).tolist()
                 if _occ_data:
                     _fig_occ = go.Figure(go.Scatter(x=list(range(len(_occ_data))), y=_occ_data, fill='tozeroy',
                         line=dict(color='#34D399', width=2), fillcolor='rgba(52,211,153,0.15)'))
