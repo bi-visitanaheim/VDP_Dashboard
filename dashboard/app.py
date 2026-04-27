@@ -53,6 +53,25 @@ def md_to_html(text: str) -> str:
     text = text.replace('\n', '<br>')
     return text
 
+def bold_key_data(text: str) -> str:
+    """Bold all key data points: percentages, dollar amounts, numbers with units, quarters, etc."""
+    if not text:
+        return text
+    # Dollar amounts: $X,XXX or $X.XX
+    text = _re.sub(r'(\$[\d,]+(?:\.\d{2})?)', r'<strong>\1</strong>', text)
+    # Percentages: X% (but not already bolded)
+    text = _re.sub(r'(?<!\*\*)(\d+(?:\.\d+)?%)', r'<strong>\1</strong>', text)
+    # Multipliers: X.XX×
+    text = _re.sub(r'(\d+(?:\.\d+)?×)', r'<strong>\1</strong>', text)
+    # Numbers with time units: X days, X weeks, X months, X years, X quarters, Q1-Q4
+    text = _re.sub(r'(\d+\s+(?:days?|weeks?|months?|years?|quarters?))', r'<strong>\1</strong>', text)
+    text = _re.sub(r'\b(Q[1-4])\b', r'<strong>\1</strong>', text)
+    # Large numbers: 1,000+ or .XXM/.XXK with context
+    text = _re.sub(r'(\d{1,3}(?:,\d{3})+(?:\.\d+)?(?:\s*[MK])?)', r'<strong>\1</strong>', text)
+    # Decimal multipliers not caught: X.XX
+    text = _re.sub(r'(?<![0-9])(\d+\.\d+)(?![×%])', r'<strong>\1</strong>', text)
+    return text
+
 # Load .env from the project root (one level above dashboard/)
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -5595,7 +5614,7 @@ def insight_card(title, body, kind="info", icon: str = "", date_label: str = "")
         f'style="display:flex;flex-direction:column;">'
         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
         f'{_badge}</div>'
-        f'<p class="insight-body" style="padding-left:0;flex:1;">{md_to_html(body)}</p>'
+        f'<p class="insight-body" style="padding-left:0;flex:1;">{bold_key_data(md_to_html(body))}</p>'
         f'{date_html}'
         f'<span class="dp-flip-hint">↩ flip back</span>'
         f'</div>'
@@ -6181,9 +6200,9 @@ def sec_intel(section_name: str, what_it_shows: str, key_insight: str,
         f'<div class="sec-intel-label">◈ Section Intelligence</div>'
         f'<div class="sec-intel-body">'
         f'<strong style="color:#E2E8F0;">{section_name}</strong> — {what_it_shows}.<br>'
-        f'<strong style="color:#E2E8F0;">Key Insight:</strong> {key_insight} &nbsp;'
-        f'<strong style="color:#E2E8F0;">Forward Implication:</strong> {forward_implication}<br>'
-        f'<span class="sec-intel-stat">▸ {key_stat}</span>'
+        f'<strong style="color:#E2E8F0;">Key Insight:</strong> {bold_key_data(key_insight)} &nbsp;'
+        f'<strong style="color:#E2E8F0;">Forward Implication:</strong> {bold_key_data(forward_implication)}<br>'
+        f'<span class="sec-intel-stat">▸ {bold_key_data(key_stat)}</span>'
         f'</div>'
         f'</div>'
     )
