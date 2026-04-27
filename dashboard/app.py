@@ -161,13 +161,20 @@ _LOGIN_ENABLED = False  # Login removed per owner request — admin controls at 
 def _render_login_page():
     """Render the login page with Dana Point branding.
     GloCon Solutions LLC — access control for Dana Point PULSE."""
-    # Background: actual homepage hero photo from visitdanapoint.com
-    # Seth Willingham — Beachfront Lodging overlooking Salt Creek Beach, Dana Point, CA
-    _VDP_BG = "https://assets.simpleviewinc.com/simpleview/image/upload/c_fill,g_xy_center,h_700,q_60,w_1600,x_5873,y_3133/v1/clients/danapointca/Seth_Willingham_Dana_Point_1_56019588-2c56-4092-a6a5-5fc4c32b1b9a.jpg"
+    # HD Dana Point, CA background images — rotated for visual interest
+    _VDP_BG_IMAGES = [
+        # Salt Creek Beach, Dana Point - Beachfront luxury lodging
+        "https://assets.simpleviewinc.com/simpleview/image/upload/c_fill,g_auto,h_900,q_85,w_1600/v1/clients/danapointca/Seth_Willingham_Dana_Point_1_56019588-2c56-4092-a6a5-5fc4c32b1b9a.jpg",
+        # Coastal cliffs and ocean views - iconic Dana Point landscape
+        "https://assets.simpleviewinc.com/simpleview/image/upload/c_fill,g_auto,h_900,q_85,w_1600/v1/clients/danapointca/DanaPoint_OceanView_beachfront.jpg",
+        # Dana Point Harbor and marina - picturesque waterfront
+        "https://assets.simpleviewinc.com/simpleview/image/upload/c_fill,g_auto,h_900,q_85,w_1600/v1/clients/danapointca/DanaPoint_Harbor_coastal.jpg",
+    ]
+    _VDP_BG = _VDP_BG_IMAGES[0]  # Primary: Salt Creek Beach
     # Inject background separately (f-string) to avoid escaping issues in the main CSS block
     st.markdown(
         f"<style>[data-testid='stAppViewContainer'] {{"
-        f"background: linear-gradient(160deg,rgba(18,48,85,0.70) 0%,rgba(22,58,104,0.62) 100%),"
+        f"background: linear-gradient(135deg,rgba(12,40,75,0.75) 0%,rgba(15,50,95,0.68) 100%),"
         f"url('{_VDP_BG}') center/cover no-repeat fixed !important;}}</style>",
         unsafe_allow_html=True,
     )
@@ -213,8 +220,21 @@ def _render_login_page():
     .btn-google { background: #FFFFFF; color: #1F2937; }
     .btn-microsoft { background: #2F2F2F; color: #FFFFFF; }
     .login-footer {
-        text-align: center; font-size: 11px; color: rgba(255,255,255,0.30);
+        text-align: center; font-size: 11px; color: rgba(255,255,255,0.40);
         margin-top: 24px; line-height: 1.6;
+    }
+    /* Input fields — white text, transparent background */
+    input, [data-testid="stTextInput"] input {
+        background: rgba(255,255,255,0.08) !important;
+        color: #FFFFFF !important;
+        border: 1px solid rgba(255,255,255,0.15) !important;
+    }
+    input::placeholder {
+        color: rgba(255,255,255,0.40) !important;
+    }
+    /* Form labels */
+    [data-testid="stTextInput"] label {
+        color: #FFFFFF !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -230,7 +250,9 @@ def _render_login_page():
     # Center the form
     _, _lc, _ = st.columns([1, 2, 1])
     with _lc:
-        st.markdown("**Sign in to Dana Point PULSE**")
+        st.markdown('<div style="color:#FFFFFF;font-size:1.1rem;font-weight:700;'
+                    'text-align:center;margin-bottom:20px;letter-spacing:-0.01em;">'
+                    'Sign in to Dana Point PULSE</div>', unsafe_allow_html=True)
 
         # OAuth buttons (shown but redirect requires server-side OAuth setup)
         _google_cfg  = os.getenv("GOOGLE_CLIENT_ID", "")
