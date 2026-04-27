@@ -3704,19 +3704,24 @@ st.markdown("""
 # ─── Branded loading splash — auto-dismisses via CSS after 3s, no JS loop ─────
 # NOTE: uses CSS animation-fill-mode:forwards + pointer-events:none after delay
 # so it never blocks content even if the div gets recreated on rerender.
-st.markdown("""
+_SPLASH_BG = "https://assets.simpleviewinc.com/simpleview/image/upload/c_fill,g_auto,h_900,q_85,w_1600/v1/clients/danapointca/Seth_Willingham_Dana_Point_1_56019588-2c56-4092-a6a5-5fc4c32b1b9a.jpg"
+st.markdown(f"""
 <style>
-  @keyframes splash-fade-out {
-    0%   { opacity: 1; pointer-events: auto; }
-    80%  { opacity: 1; pointer-events: none; }
-    100% { opacity: 0; pointer-events: none; visibility: hidden; }
-  }
-  @keyframes splash-bob {
-    0%,100% { transform: translateY(0) scale(1); }
-    50%      { transform: translateY(-7px) scale(1.05); }
-  }
-  @keyframes splash-spin { to { transform: rotate(360deg); } }
-  #pulse-splash {
+  @keyframes splash-fade-out {{
+    0%   {{ opacity: 1; pointer-events: auto; }}
+    80%  {{ opacity: 1; pointer-events: none; }}
+    100% {{ opacity: 0; pointer-events: none; visibility: hidden; }}
+  }}
+  @keyframes splash-bob {{
+    0%,100% {{ transform: translateY(0) scale(1); }}
+    50%      {{ transform: translateY(-7px) scale(1.05); }}
+  }}
+  @keyframes splash-spin {{ to {{ transform: rotate(360deg); }} }}
+  @keyframes splash-shimmer {{
+    0%, 100% {{ opacity: 1; }}
+    50% {{ opacity: 0.7; }}
+  }}
+  #pulse-splash {{
     position: fixed;
     inset: 0;
     z-index: 99999;
@@ -3725,48 +3730,131 @@ st.markdown("""
     align-items: center;
     justify-content: center;
     background:
-      radial-gradient(ellipse at 75% 10%, rgba(0,212,200,0.18) 0%, transparent 50%),
-      radial-gradient(ellipse at 10% 88%, rgba(56,189,248,0.12) 0%, transparent 45%),
-      linear-gradient(160deg, #0B1E38 0%, #1A3756 60%, #1E3D5E 100%);
+      linear-gradient(135deg, rgba(12,40,75,0.82) 0%, rgba(15,50,95,0.78) 100%),
+      url('{_SPLASH_BG}') center/cover no-repeat fixed;
     animation: splash-fade-out 0.6s ease-out 3s forwards;
-  }
-  .splash-wave {
-    font-size: 52px;
-    margin-bottom: 18px;
+  }}
+  .splash-wave {{
+    font-size: 64px;
+    margin-bottom: 24px;
     animation: splash-bob 1.8s ease-in-out infinite;
-    filter: drop-shadow(0 0 18px rgba(0,212,200,0.55));
-  }
-  .splash-title {
+    filter: drop-shadow(0 0 24px rgba(0,212,200,0.65));
+  }}
+  .splash-title {{
     font-family: 'Syne', 'Outfit', system-ui, sans-serif;
-    font-size: 26px; font-weight: 800;
-    color: #0F172A; letter-spacing: -0.03em; margin-bottom: 4px;
-  }
-  .splash-title span { color: #0891B2; }
-  .splash-sub {
+    font-size: 32px; font-weight: 800;
+    color: #FFFFFF; letter-spacing: -0.03em; margin-bottom: 8px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }}
+  .splash-title span {{ color: #00D9FF; text-shadow: 0 2px 12px rgba(0,217,255,0.5); }}
+  .splash-sub {{
     font-family: 'Inter', system-ui, sans-serif;
-    font-size: 13px; color: rgba(200,224,242,0.60);
-    letter-spacing: 0.04em; margin-bottom: 36px;
-  }
-  .splash-spinner {
-    width: 38px; height: 38px; border-radius: 50%;
-    border: 3px solid rgba(0,212,200,0.15);
-    border-top-color: #0891B2;
+    font-size: 14px; color: rgba(255,255,255,0.85);
+    letter-spacing: 0.04em; margin-bottom: 42px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }}
+  .splash-spinner {{
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 3px solid rgba(0,217,255,0.2);
+    border-top-color: #00D9FF;
     animation: splash-spin 0.9s linear infinite;
-    margin-bottom: 20px;
-  }
-  .splash-status {
+    margin-bottom: 24px;
+  }}
+  .splash-status {{
     font-family: 'Inter', system-ui, sans-serif;
-    font-size: 12px; color: rgba(200,224,242,0.45);
-    letter-spacing: 0.06em; text-transform: uppercase;
-  }
+    font-size: 12px; color: rgba(255,255,255,0.65);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    animation: splash-shimmer 2s ease-in-out infinite;
+  }}
 </style>
 <div id="pulse-splash">
   <div class="splash-wave">🌊</div>
   <div class="splash-title">Dana Point <span>PULSE</span></div>
   <div class="splash-sub">Destination Intelligence Platform</div>
   <div class="splash-spinner"></div>
-  <div class="splash-status">Loading intelligence</div>
+  <div class="splash-status">Loading Intelligence</div>
 </div>
+""", unsafe_allow_html=True)
+
+# ─── Global Responsive CSS — ensure all content displays without cutoff ─────────
+st.markdown("""
+<style>
+  /* ── Streamlit container responsive rules ── */
+  [data-testid="stAppViewContainer"] {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  [data-testid="stMainBlockContainer"] {
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+  [data-testid="stElementContainer"] {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  .main {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  [data-testid="column"] {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* ── Chart containers ── */
+  [data-testid="stPlotlyChart"] {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  [data-testid="stPlotlyChart"] iframe {
+    width: 100% !important;
+    min-width: 100% !important;
+    display: block !important;
+  }
+
+  /* ── Metric containers ── */
+  [data-testid="stMetric"] {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* ── Table containers ── */
+  [data-testid="stDataFrame"] {
+    width: 100% !important;
+    overflow: auto !important;
+  }
+
+  /* ── Column and expand containers ── */
+  [data-testid="column"] > div {
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* ── Responsive text wrapping ── */
+  .st-emotion-cache-1gv0re5, /* labels */
+  .st-emotion-cache-183lplj  /* values */ {
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* ── Ensure sidebar doesn't overlap ── */
+  [data-testid="stSidebarNav"] {
+    width: 100% !important;
+  }
+
+  /* ── Horizontal scrolling prevention ── */
+  html, body {
+    overflow-x: hidden !important;
+  }
+
+  @media (max-width: 1536px) {
+    [data-testid="stElementContainer"] { padding: 0 12px !important; }
+  }
+  @media (max-width: 768px) {
+    [data-testid="stMainBlockContainer"] { padding: 12px !important; }
+    [data-testid="stColumn"] { min-width: 100% !important; }
+  }
+</style>
 """, unsafe_allow_html=True)
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
