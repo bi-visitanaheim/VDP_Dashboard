@@ -8345,6 +8345,20 @@ _st_components.html("""
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
+# Check if user clicked an explore card to navigate to a specific tab
+_requested_tab_idx = None
+if 'tab_index_to_select' in st.session_state and st.session_state['tab_index_to_select'] is not None:
+    _requested_tab_idx = st.session_state['tab_index_to_select']
+    st.session_state['tab_index_to_select'] = None  # Clear after reading
+
+_requested_tab = st.query_params.get('tab_index')
+if _requested_tab:
+    _requested_tab_idx = int(_requested_tab)
+    try:
+        del st.query_params['tab_index']
+    except:
+        pass
+
 tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
     "🏠 Today's Overview",
     "🏨 Hotel Trends",
@@ -8356,6 +8370,21 @@ tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs
     "📈 Market Intel",
     "🗄️ Data & Downloads",
 ])
+
+# If a tab was requested, inject JavaScript to auto-click it
+if _requested_tab_idx is not None and 0 <= _requested_tab_idx < 9:
+    st.markdown(f"""
+    <script>
+    window.addEventListener('load', function() {{
+        setTimeout(() => {{
+            const tabs = document.querySelectorAll('[role="tab"]');
+            if (tabs.length > {_requested_tab_idx}) {{
+                tabs[{_requested_tab_idx}].click();
+            }}
+        }}, 100);
+    }});
+    </script>
+    """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # GloCon Solutions LLC — Dana Point PULSE
@@ -8612,15 +8641,15 @@ with tab_ov:
         _e_row2_1, _e_row2_2, _e_spacer = st.columns([1, 1, 1], gap="large")
 
         # Helper to render exploration card with enhanced design
-        def _render_explore_card(col, emoji, title, desc, tab_name, accent_color):
+        def _render_explore_card(col, emoji, title, desc, tab_index, accent_color):
             with col:
                 if st.button(
                     f"{emoji}\n\n**{title}**\n\n{desc}",
-                    key=f"explore_{tab_name}",
+                    key=f"explore_{title}",
                     use_container_width=True,
                     help=f"Go to {title} tab"
                 ):
-                    st.session_state.active_tab = tab_name
+                    st.session_state['tab_index_to_select'] = tab_index
                     st.rerun()
                 # Fallback: Keep the card styling
                 st.markdown(
@@ -8664,11 +8693,11 @@ with tab_ov:
                     unsafe_allow_html=True,
                 )
 
-        _render_explore_card(_e_row1_1, "🏨", "Hotel Trends", "30-day & annual performance, rate trends", "Hotel Trends", "#38BDF8")
-        _render_explore_card(_e_row1_2, "👥", "Our Visitors", "Visitor volumes, origins, spending patterns", "Our Visitors", "#34D399")
-        _render_explore_card(_e_row1_3, "🎉", "Event Impact", "Major events, occupancy lift analysis", "Event Impact", "#F5B940")
-        _render_explore_card(_e_row2_1, "📈", "Market Intel", "Competitive benchmarking & positioning", "Market Intel", "#818CF8")
-        _render_explore_card(_e_row2_2, "🗄️", "Data Health", "ETL status, source coverage, freshness", "Data Health", "#A78BFA")
+        _render_explore_card(_e_row1_1, "🏨", "Hotel Trends", "30-day & annual performance, rate trends", 1, "#38BDF8")
+        _render_explore_card(_e_row1_2, "👥", "Our Visitors", "Visitor volumes, origins, spending patterns", 3, "#34D399")
+        _render_explore_card(_e_row1_3, "🎉", "Event Impact", "Major events, occupancy lift analysis", 5, "#F5B940")
+        _render_explore_card(_e_row2_1, "📈", "Market Intel", "Competitive benchmarking & positioning", 7, "#818CF8")
+        _render_explore_card(_e_row2_2, "🗄️", "Data Health", "ETL status, source coverage, freshness", 8, "#A78BFA")
 
     except Exception as e:
         _logger.debug(f"Failed to render exploration cards: {str(e)}")
