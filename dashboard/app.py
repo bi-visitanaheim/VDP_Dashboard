@@ -7040,94 +7040,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Hero Stat Cards with Mini Charts ──────────────────────────────────────
-try:
-    _h_col1, _h_col2, _h_col3, _h_col4 = st.columns(4)
-
-    # RevPAR Chart
-    with _h_col1:
-        st.markdown(
-            f'<div style="background:linear-gradient(135deg,rgba(34,211,238,0.08) 0%,rgba(56,189,248,0.04) 100%);'
-            f'border:2px solid #0EA5E9;border-radius:12px;padding:16px;text-align:center;">'
-            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#0284C7;letter-spacing:.08em;margin-bottom:8px;">💰 RevPAR (30d)</div>'
-            f'<div style="font-size:28px;font-weight:900;color:#0F172A;margin-bottom:6px;">{_h_rvp_str}</div>'
-            f'<div style="font-size:12px;color:{("#059669" if _h_rvp_d >= 0 else "#DC2626")};font-weight:700;">{"▲" if _h_rvp_d >= 0 else "▼"} {abs(_h_rvp_d):+.1f}%</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-        if not df_sel.empty and len(df_sel) > 1:
-            _rvp_data = df_sel["revpar"].dropna().tail(20).tolist()
-            if _rvp_data:
-                _fig_rvp = go.Figure(go.Scatter(x=list(range(len(_rvp_data))), y=_rvp_data, fill='tozeroy',
-                    line=dict(color='#0EA5E9', width=2), fillcolor='rgba(14,165,233,0.15)'))
-                _fig_rvp.update_layout(height=120, margin=dict(l=10, r=10, t=10, b=10), showlegend=False,
-                    xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
-                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(_fig_rvp, use_container_width=True, config={'displayModeBar': False})
-
-    # ADR Chart
-    with _h_col2:
-        st.markdown(
-            f'<div style="background:linear-gradient(135deg,rgba(56,189,248,0.08) 0%,rgba(34,211,238,0.04) 100%);'
-            f'border:2px solid #38BDF8;border-radius:12px;padding:16px;text-align:center;">'
-            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#0284C7;letter-spacing:.08em;margin-bottom:8px;">🏨 ADR (30d)</div>'
-            f'<div style="font-size:28px;font-weight:900;color:#0F172A;margin-bottom:6px;">{_h_adr_str}</div>'
-            f'<div style="font-size:12px;color:#94A3B8;">30-day average</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-        if not df_sel.empty and len(df_sel) > 1:
-            _adr_data = df_sel["adr"].dropna().tail(20).tolist()
-            if _adr_data:
-                _fig_adr = go.Figure(go.Bar(x=list(range(len(_adr_data))), y=_adr_data, marker=dict(color='#38BDF8')))
-                _fig_adr.update_layout(height=120, margin=dict(l=10, r=10, t=10, b=10), showlegend=False,
-                    xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
-                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(_fig_adr, use_container_width=True, config={'displayModeBar': False})
-
-    # Occupancy Chart
-    with _h_col3:
-        st.markdown(
-            f'<div style="background:linear-gradient(135deg,rgba(5,150,105,0.08) 0%,rgba(34,197,94,0.04) 100%);'
-            f'border:2px solid #10B981;border-radius:12px;padding:16px;text-align:center;">'
-            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:.08em;margin-bottom:8px;">📊 Occupancy (30d)</div>'
-            f'<div style="font-size:28px;font-weight:900;color:#0F172A;margin-bottom:6px;">{_h_occ_str}</div>'
-            f'<div style="font-size:12px;color:{("#059669" if _h_occ_d >= 0 else "#DC2626")};font-weight:700;">{"▲" if _h_occ_d >= 0 else "▼"} {abs(_h_occ_d):+.1f}pp</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-        if not df_sel.empty and len(df_sel) > 1:
-            _occ_data = df_sel["occ_pct"].dropna().tail(20).tolist()
-            if _occ_data:
-                _fig_occ = go.Figure(go.Scatter(x=list(range(len(_occ_data))), y=_occ_data, fill='tozeroy',
-                    line=dict(color='#10B981', width=2), fillcolor='rgba(16,185,129,0.15)'))
-                _fig_occ.update_layout(height=120, margin=dict(l=10, r=10, t=10, b=10), showlegend=False,
-                    xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
-                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(_fig_occ, use_container_width=True, config={'displayModeBar': False})
-
-    # TBID Chart
-    with _h_col4:
-        st.markdown(
-            f'<div style="background:linear-gradient(135deg,rgba(168,85,247,0.08) 0%,rgba(139,92,246,0.04) 100%);'
-            f'border:2px solid #A78BFA;border-radius:12px;padding:16px;text-align:center;">'
-            f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#7C3AED;letter-spacing:.08em;margin-bottom:8px;">💳 TBID Monthly</div>'
-            f'<div style="font-size:28px;font-weight:900;color:#0F172A;margin-bottom:6px;">{_h_tbid_str}</div>'
-            f'<div style="font-size:11px;color:#64748B;">Blended 1.25%</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
-        if not df_kpi.empty and len(df_kpi) > 1:
-            _tbid_data = (df_kpi["revpar"].dropna() * 100 * 0.0125).tail(20).tolist()
-            if _tbid_data:
-                _fig_tbid = go.Figure(go.Bar(x=list(range(len(_tbid_data))), y=_tbid_data, marker=dict(color='#A78BFA')))
-                _fig_tbid.update_layout(height=120, margin=dict(l=10, r=10, t=10, b=10), showlegend=False,
-                    xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
-                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(_fig_tbid, use_container_width=True, config={'displayModeBar': False})
-except Exception as e:
-    _logger.debug(f"Hero stat charts failed: {str(e)}")
-
 # ── Live KPI Ticker (1ax / Bloomberg dual-row marquee) ─────────────────────
 try:
     st.markdown(
@@ -8620,9 +8532,54 @@ with tab_ov:
                 )
 
         _render_hero_metric(_h_row1_1, "💰", "RevPAR (30d)", f"${_exec_rvp:.0f}", _rvp_delta_str, _rvp_delta_cls, "#38BDF8")
+        # RevPAR sparkline chart
+        with _h_row1_1:
+            if not df_sel.empty and len(df_sel) > 1:
+                _rvp_data = df_sel["revpar"].dropna().tail(20).tolist()
+                if _rvp_data:
+                    _fig_rvp = go.Figure(go.Scatter(x=list(range(len(_rvp_data))), y=_rvp_data, fill='tozeroy',
+                        line=dict(color='#38BDF8', width=2), fillcolor='rgba(56,189,248,0.15)'))
+                    _fig_rvp.update_layout(height=100, margin=dict(l=5, r=5, t=5, b=5), showlegend=False,
+                        xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
+                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(_fig_rvp, use_container_width=True, config={'displayModeBar': False})
+
         _render_hero_metric(_h_row1_2, "🏨", "ADR (30d)", f"${_exec_adr:.0f}", _adr_delta_str, _adr_delta_cls, "#818CF8")
+        # ADR bar chart
+        with _h_row1_2:
+            if not df_sel.empty and len(df_sel) > 1:
+                _adr_data = df_sel["adr"].dropna().tail(20).tolist()
+                if _adr_data:
+                    _fig_adr = go.Figure(go.Bar(x=list(range(len(_adr_data))), y=_adr_data, marker=dict(color='#818CF8')))
+                    _fig_adr.update_layout(height=100, margin=dict(l=5, r=5, t=5, b=5), showlegend=False,
+                        xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
+                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(_fig_adr, use_container_width=True, config={'displayModeBar': False})
+
         _render_hero_metric(_h_row2_1, "📊", "Occupancy (30d)", f"{_exec_occ:.1f}%", _occ_delta_str, _occ_delta_cls, "#34D399")
+        # Occupancy area chart
+        with _h_row2_1:
+            if not df_sel.empty and len(df_sel) > 1:
+                _occ_data = df_sel["occ_pct"].dropna().tail(20).tolist()
+                if _occ_data:
+                    _fig_occ = go.Figure(go.Scatter(x=list(range(len(_occ_data))), y=_occ_data, fill='tozeroy',
+                        line=dict(color='#34D399', width=2), fillcolor='rgba(52,211,153,0.15)'))
+                    _fig_occ.update_layout(height=100, margin=dict(l=5, r=5, t=5, b=5), showlegend=False,
+                        xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
+                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(_fig_occ, use_container_width=True, config={'displayModeBar': False})
+
         _render_hero_metric(_h_row2_2, "💳", "TBID Monthly", f"${_exec_tbid:,.0f}", "Blended 1.25%", "neutral", "#A78BFA")
+        # TBID bar chart
+        with _h_row2_2:
+            if not df_kpi.empty and len(df_kpi) > 1:
+                _tbid_data = (df_kpi["revpar"].dropna() * 100 * 0.0125).tail(20).tolist()
+                if _tbid_data:
+                    _fig_tbid = go.Figure(go.Bar(x=list(range(len(_tbid_data))), y=_tbid_data, marker=dict(color='#A78BFA')))
+                    _fig_tbid.update_layout(height=100, margin=dict(l=5, r=5, t=5, b=5), showlegend=False,
+                        xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
+                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(_fig_tbid, use_container_width=True, config={'displayModeBar': False})
 
     except Exception as e:
         _logger.debug(f"Failed to render hero metrics: {str(e)}")
