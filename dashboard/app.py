@@ -1915,11 +1915,60 @@ st.markdown("""
     display: flex; align-items: center; gap: 12px;
     box-shadow: var(--dp-shadow);
   }
+  /* ── Form Elements: Visible Outlines ────────────────────────────────── */
+  .stSelectbox > div > div:first-child {
+    background: #FFFFFF !important;
+    border: 2px solid #0EA5E9 !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    color: var(--dp-text-1) !important;
+    box-shadow: 0 2px 8px rgba(14,165,233,0.15) !important;
+    cursor: pointer !important;
+  }
+  .stSelectbox > div > div:first-child:hover {
+    border-color: #0284C7 !important;
+    box-shadow: 0 4px 12px rgba(14,165,233,0.25) !important;
+  }
+  .stMultiSelect > div > div:first-child {
+    background: #FFFFFF !important;
+    border: 2px solid #10B981 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 8px rgba(16,185,129,0.15) !important;
+    cursor: pointer !important;
+  }
+  .stMultiSelect > div > div:first-child:hover {
+    border-color: #059669 !important;
+    box-shadow: 0 4px 12px rgba(16,185,129,0.25) !important;
+  }
+  .stRadio > div {
+    background: #FFFFFF !important;
+    border: 2px solid #A78BFA !important;
+    border-radius: 10px !important;
+    padding: 12px 14px !important;
+    box-shadow: 0 2px 8px rgba(167,139,250,0.15) !important;
+  }
+  .stRadio > div:hover {
+    border-color: #9333EA !important;
+    box-shadow: 0 4px 12px rgba(167,139,250,0.25) !important;
+  }
+  [data-baseweb="base-input"] {
+    background: #FFFFFF !important;
+    border: 2px solid #F59E0B !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 8px rgba(245,158,11,0.15) !important;
+  }
+  [data-baseweb="base-input"]:hover,
+  [data-baseweb="base-input"]:focus {
+    border-color: #D97706 !important;
+    box-shadow: 0 4px 12px rgba(245,158,11,0.25) !important;
+  }
   .filter-bar .stSelectbox > div > div {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.10) !important;
-    border-radius: 8px !important;
-    font-size: 13px !important; color: var(--dp-text-1) !important;
+    background: #FFFFFF !important;
+    border: 2px solid #0EA5E9 !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    color: var(--dp-text-1) !important;
+    box-shadow: 0 2px 8px rgba(14,165,233,0.15) !important;
   }
 
   /* ── Action Intelligence Panel ────────────────────────────────────────── */
@@ -9790,15 +9839,15 @@ with tab_fo:
 
     def _kfm_card(label, value, delta, delta_color="#718096"):
         return (
-            f'<div style="background:#1E3550;'
+            f'<div style="background:#FFFFFF;'
             f'border-radius:12px;padding:16px 18px;'
             f'border:1px solid rgba(0,0,0,0.08);border-left:4px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
             f'box-shadow:0 1px 4px rgba(0,0,0,0.08);">'
-            f'<div style="font-size:10px;color:#718096;font-weight:700;text-transform:uppercase;'
+            f'<div style="font-size:10px;color:#64748B;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:.10em;margin-bottom:6px;">{label}</div>'
             f'<div style="font-size:1.9rem;font-weight:900;letter-spacing:-0.04em;line-height:1.1;'
-            f'color:#0F172A;">{value}</div>'
+            f'color:#1A3756;">{value}</div>'
             f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:5px;">{delta}</div>'
             f'</div>'
         )
