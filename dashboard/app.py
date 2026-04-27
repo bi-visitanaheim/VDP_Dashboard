@@ -1831,9 +1831,16 @@ st.markdown("""
   }
 
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
-  .block-container { padding-top: 0 !important; overflow: visible !important; }
+  .block-container { padding-top: 0 !important; padding-left: 1rem !important; padding-right: 1rem !important; overflow: visible !important; }
   [data-testid="stAppViewContainer"] > section > div:first-child { padding-top: 0 !important; }
-  [data-testid="stMain"] { padding-top: 0 !important; }
+  [data-testid="stMain"] { padding-top: 0 !important; margin-top: 0 !important; }
+  [data-testid="stMainBlockContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
+  @media (max-width: 768px) {
+    .block-container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+  }
+  @media (max-width: 480px) {
+    .block-container { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+  }
   [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; width: 100% !important; }
   [data-testid="stPlotlyChart"] > div { width: 100% !important; }
   [data-testid="stPlotlyChart"] iframe { width: 100% !important; min-width: 100% !important; }
@@ -2259,7 +2266,7 @@ st.markdown("""
     background: linear-gradient(180deg, #1A3756 0%, #1E3D5E 100%);
     border-bottom: 1px solid rgba(0,212,200,0.20);
     box-shadow: 0 4px 28px rgba(0,0,0,0.40);
-    margin: 0 -1rem 1.5rem -1rem;
+    margin: 0 -1rem 0.8rem -1rem;
     padding: 0;
     position: relative;
     z-index: 998;
@@ -2335,6 +2342,27 @@ st.markdown("""
   @keyframes ticker-left  { 0%{transform:translateX(0)} 100%{transform:translateX(-33.333%)} }
   @keyframes ticker-right { 0%{transform:translateX(-33.333%)} 100%{transform:translateX(0)} }
   @keyframes ticker-pulse { 0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 6px rgba(34,211,238,0.60);} 50%{opacity:.4;transform:scale(.65);box-shadow:0 0 0 rgba(34,211,238,0);} }
+
+  /* ── Responsive Design: Desktop, Tablet, Mobile ────────────────────── */
+  @media (max-width: 1024px) {
+    .pulse-ticker-item { padding: 0 16px; font-size: 14px !important; }
+    .pulse-ticker-val { font-size: 28px !important; }
+    .pulse-ticker-label { font-size: 12px !important; }
+  }
+  @media (max-width: 768px) {
+    .pulse-ticker-wrap { margin: 0 -1rem 0.6rem -1rem; }
+    .pulse-ticker-item { padding: 0 12px; font-size: 12px !important; }
+    .pulse-ticker-val { font-size: 24px !important; }
+    .pulse-ticker-label { font-size: 10px !important; }
+    [data-testid="stTab"] button p { font-size: 13px !important; }
+  }
+  @media (max-width: 480px) {
+    .pulse-ticker-wrap { margin: 0 -0.5rem 0.5rem -0.5rem; }
+    .pulse-ticker-item { padding: 0 8px; font-size: 11px !important; }
+    .pulse-ticker-val { font-size: 20px !important; }
+    .pulse-ticker-label { font-size: 9px !important; }
+    [data-testid="stTab"] button p { font-size: 12px !important; }
+  }
 
   /* ── Scroll-Reveal Animations (byhook clip-path style) ───────────────── */
   .reveal-card {
@@ -2871,7 +2899,7 @@ st.markdown("""
     position: fixed;
     bottom: 0; left: 0; right: 0;
     z-index: 99998;
-    height: 36px;
+    height: 32px;
     background: rgba(10, 18, 32, 0.97);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
@@ -2901,7 +2929,13 @@ st.markdown("""
   #dp-fixed-footer .fp-right { font-size: 10px; opacity: 0.55; }
   /* Push page content up so fixed footer doesn't overlap bottom content */
   [data-testid="stMain"] > div:first-child,
-  .block-container { padding-bottom: 48px !important; }
+  .block-container { padding-bottom: 40px !important; }
+  /* Mobile responsive footer */
+  @media (max-width: 768px) {
+    #dp-fixed-footer { height: 28px; font-size: 10px; }
+    [data-testid="stMain"] > div:first-child,
+    .block-container { padding-bottom: 36px !important; }
+  }
   @media print { #dp-fixed-footer { display: none !important; } }
 </style>
 <div id="dp-fixed-footer">
