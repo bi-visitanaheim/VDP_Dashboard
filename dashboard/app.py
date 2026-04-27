@@ -9953,17 +9953,17 @@ with tab_fo:
         if not _q1_rows.empty:
             _fwd_q1_label = f"Q1 {_q1_rows.iloc[0]['quarter'][:4]}"
 
-    def _kfm_card(label, value, delta, delta_color="#718096"):
+    def _kfm_card(label, value, delta, delta_color="#94A3B8"):
         return (
             f'<div style="background:#1E3550;'
             f'border-radius:12px;padding:16px 18px;'
             f'border:1px solid rgba(0,0,0,0.08);border-left:4px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
             f'box-shadow:0 1px 4px rgba(0,0,0,0.08);">'
-            f'<div style="font-size:10px;color:#718096;font-weight:700;text-transform:uppercase;'
+            f'<div style="font-size:10px;color:#CBD5E1;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:.10em;margin-bottom:6px;">{label}</div>'
             f'<div style="font-size:1.9rem;font-weight:900;letter-spacing:-0.04em;line-height:1.1;'
-            f'color:#0F172A;">{value}</div>'
+            f'color:#F1F5F9;">{value}</div>'
             f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:5px;">{delta}</div>'
             f'</div>'
         )
