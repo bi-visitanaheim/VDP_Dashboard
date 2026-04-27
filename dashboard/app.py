@@ -72,6 +72,47 @@ def bold_key_data(text: str) -> str:
     text = _re.sub(r'(?<![0-9])(\d+\.\d+)(?![×%])', r'<strong>\1</strong>', text)
     return text
 
+def _build_metrics_grid(metric_basis_json: str | dict = None) -> str:
+    """Parse metric_basis JSON and render as a 2-column metric grid for flip card backs."""
+    if not metric_basis_json:
+        return ""
+    try:
+        if isinstance(metric_basis_json, str):
+            import json
+            metrics = json.loads(metric_basis_json)
+        else:
+            metrics = metric_basis_json
+        if not metrics or len(metrics) == 0:
+            return ""
+        items = []
+        for key, val in list(metrics.items())[:4]:
+            label = key.replace("_", " ").title()
+            if isinstance(val, float):
+                val_str = f"{val:,.1f}" if val > 100 else f"{val:.2f}"
+                if "pct" in key.lower() or "percent" in key.lower():
+                    val_str += "%"
+            elif isinstance(val, int):
+                val_str = f"{val:,}"
+            else:
+                val_str = str(val)
+            items.append(
+                f'<div style="padding:8px;border-radius:6px;background:rgba(0,0,0,0.03);">'
+                f'<div style="font-size:9px;color:var(--dp-text-3);text-transform:uppercase;'
+                f'letter-spacing:.05em;font-weight:600;">{label}</div>'
+                f'<div style="font-size:1.1rem;font-weight:800;color:var(--dp-text-1);margin-top:4px;">'
+                f'{val_str}</div></div>'
+            )
+        if items:
+            return (
+                f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;'
+                f'padding-bottom:12px;border-bottom:1px solid var(--dp-border);">'
+                + "".join(items) +
+                f'</div>'
+            )
+    except Exception as e:
+        _logger.debug(f"Error building metrics grid: {e}")
+    return ""
+
 # Load .env from the project root (one level above dashboard/)
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -5587,7 +5628,7 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
     )
 
 
-def insight_card(title, body, kind="info", icon: str = "", date_label: str = "") -> str:
+def insight_card(title, body, kind="info", icon: str = "", date_label: str = "", metrics: dict = None) -> str:
     svg_icon  = insight_icon_svg(kind, icon) if icon else ""
     icon_html = f'<span class="insight-icon">{svg_icon}</span>' if svg_icon else ""
     _kind_meta = {
@@ -5607,6 +5648,28 @@ def insight_card(title, body, kind="info", icon: str = "", date_label: str = "")
         f'color:{_clr};padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.06);'
         f'border:1px solid {_clr}44;">{_lbl}</span>'
     )
+
+    # Build metrics grid if metrics provided
+    metrics_html = ""
+    if metrics:
+        metrics_items = []
+        for key, val in metrics.items():
+            label = key.replace("_", " ").title()
+            val_str = f"{val:,.2f}" if isinstance(val, (int, float)) else str(val)
+            metrics_items.append(
+                f'<div style="padding:8px;border-radius:6px;background:rgba(0,0,0,0.03);">'
+                f'<div style="font-size:9px;color:var(--dp-text-3);text-transform:uppercase;'
+                f'letter-spacing:.05em;font-weight:600;">{label}</div>'
+                f'<div style="font-size:1.2rem;font-weight:800;color:var(--dp-text-1);margin-top:4px;">'
+                f'{val_str}</div></div>'
+            )
+        metrics_html = (
+            f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;'
+            f'padding-bottom:12px;border-bottom:1px solid var(--dp-border);">'
+            + "".join(metrics_items) +
+            f'</div>'
+        )
+
     return (
         # ── Flip card wrapper ──────────────────────────────────────────────
         f'<div class="dp-flip-card">'
@@ -5619,11 +5682,12 @@ def insight_card(title, body, kind="info", icon: str = "", date_label: str = "")
         f'<div class="insight-title">{icon_html}{md_to_html(title)}</div>'
         f'<span class="dp-flip-hint">↩ flip for details</span>'
         f'</div>'
-        # Back face — full body + date
+        # Back face — metrics + full body + date
         f'<div class="dp-flip-back insight-card insight-{kind}" '
         f'style="display:flex;flex-direction:column;">'
         f'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
         f'{_badge}</div>'
+        f'{metrics_html}'
         f'<p class="insight-body" style="padding-left:0;flex:1;">{bold_key_data(md_to_html(body))}</p>'
         f'{date_html}'
         f'<span class="dp-flip-hint">↩ flip back</span>'
@@ -10201,9 +10265,10 @@ with tab_fo:
                             f'{_meta_row}'
                             f'<span class="dp-flip-hint">↩ flip for full insight</span>'
                             f'</div>'
-                            # Back — full body + as_of
+                            # Back — metrics + body + as_of
                             f'<div class="dp-flip-back insight-card {style_cls}" '
                             f'style="display:flex;flex-direction:column;">'
+                            + _build_metrics_grid(row.get("metric_basis")) +
                             f'<p class="insight-body" style="padding-left:0;flex:1;font-size:13px;">'
                             f'{md_to_html(str(row["body"]))}</p>'
                             f'<div style="font-size:9.5px;color:var(--dp-text-4);margin-top:6px;">'
