@@ -744,7 +744,21 @@ st.markdown("""
     border: 1px solid var(--dp-border) !important;
     border-radius: var(--dp-radius-lg) !important;
   }
-  [data-testid="stExpander"] summary { color: var(--dp-text-1) !important; font-weight: 600 !important; }
+  [data-testid="stExpander"] summary {
+    color: var(--dp-text-1) !important;
+    font-weight: 600 !important;
+    background: linear-gradient(90deg, rgba(0,212,200,0.06) 0%, rgba(255,255,255,0) 100%) !important;
+    padding: 12px 14px !important;
+    border-radius: 8px !important;
+    transition: background 0.2s ease !important;
+  }
+  [data-testid="stExpander"] summary:hover {
+    background: linear-gradient(90deg, rgba(0,212,200,0.12) 0%, rgba(255,255,255,0) 100%) !important;
+  }
+  [data-testid="stExpander"][open] summary {
+    background: linear-gradient(90deg, rgba(0,212,200,0.15) 0%, rgba(255,255,255,0) 100%) !important;
+    color: var(--dp-teal) !important;
+  }
   [data-testid="stDataFrame"] { background: var(--dp-card) !important; }
   [data-baseweb="select"] > div,
   [data-baseweb="input"] > div,
@@ -874,6 +888,7 @@ st.markdown("""
     height: 210px;
     margin-bottom: 10px;
     position: relative;
+    pointer-events: auto;
   }
   .dp-flip-inner {
     position: relative;
@@ -2890,9 +2905,20 @@ st.markdown("""
   if (window.__dpFlipReady) return;
   window.__dpFlipReady = true;
   document.addEventListener('click', function(e) {
-    var card = e.target && e.target.closest && e.target.closest('.dp-flip-card');
-    if (card) { card.classList.toggle('is-flipped'); }
-  });
+    if (!e.target) return;
+    var card = e.target.closest ? e.target.closest('.dp-flip-card') : null;
+    if (!card) {
+      var parent = e.target.parentElement;
+      while (parent && !parent.classList.contains('dp-flip-card')) {
+        parent = parent.parentElement;
+      }
+      card = parent;
+    }
+    if (card) {
+      card.classList.toggle('is-flipped');
+      e.stopPropagation();
+    }
+  }, true);  // Use capture phase to ensure we catch clicks even in iframe contexts
 })();
 
 (function(){
@@ -3648,11 +3674,26 @@ st.markdown("""
     80%  { opacity: 1; pointer-events: none; }
     100% { opacity: 0; pointer-events: none; visibility: hidden; }
   }
-  @keyframes splash-bob {
-    0%,100% { transform: translateY(0) scale(1); }
-    50%      { transform: translateY(-7px) scale(1.05); }
+  @keyframes splash-float {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-12px) scale(1.08); }
   }
-  @keyframes splash-spin { to { transform: rotate(360deg); } }
+  @keyframes splash-glow {
+    0%, 100% { filter: drop-shadow(0 0 12px rgba(0,212,200,0.4)); }
+    50% { filter: drop-shadow(0 0 24px rgba(0,212,200,0.8)); }
+  }
+  @keyframes splash-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  @keyframes splash-shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+  }
+  @keyframes splash-orbit {
+    0% { transform: rotate(0deg) translateX(60px) rotate(0deg); }
+    100% { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
+  }
   #pulse-splash {
     position: fixed;
     inset: 0;
@@ -3661,48 +3702,107 @@ st.markdown("""
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background:
-      radial-gradient(ellipse at 75% 10%, rgba(0,212,200,0.18) 0%, transparent 50%),
-      radial-gradient(ellipse at 10% 88%, rgba(56,189,248,0.12) 0%, transparent 45%),
-      linear-gradient(160deg, #0B1E38 0%, #1A3756 60%, #1E3D5E 100%);
-    animation: splash-fade-out 0.6s ease-out 3s forwards;
+    background: linear-gradient(135deg, #0B1E38 0%, #1A3756 30%, #1E3D5E 60%, #16385E 100%);
+    backdrop-filter: blur(10px);
+    animation: splash-fade-out 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s forwards;
+  }
+  .splash-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .splash-orbits {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .splash-orbit {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    border-top-color: rgba(0,212,200,0.3);
+    border-right-color: rgba(0,212,200,0.15);
+    animation: splash-orbit 3s linear infinite;
+  }
+  .splash-orbit:nth-child(2) {
+    animation: splash-orbit 4.5s linear infinite reverse;
+    border-top-color: rgba(56,189,248,0.25);
+    border-right-color: rgba(56,189,248,0.10);
   }
   .splash-wave {
-    font-size: 52px;
-    margin-bottom: 18px;
-    animation: splash-bob 1.8s ease-in-out infinite;
-    filter: drop-shadow(0 0 18px rgba(0,212,200,0.55));
+    font-size: 64px;
+    margin-bottom: 24px;
+    animation: splash-float 2s cubic-bezier(0.4, 0, 0.2, 1) infinite, splash-glow 2s ease-in-out infinite;
+    filter: drop-shadow(0 4px 20px rgba(0,212,200,0.5));
+    position: relative;
+    z-index: 10;
   }
   .splash-title {
     font-family: 'Syne', 'Outfit', system-ui, sans-serif;
-    font-size: 26px; font-weight: 800;
-    color: #0F172A; letter-spacing: -0.03em; margin-bottom: 4px;
+    font-size: 42px; font-weight: 900;
+    color: #F8FAFC; letter-spacing: -0.04em; margin-bottom: 8px;
+    position: relative;
+    z-index: 10;
+    background: linear-gradient(120deg, #F8FAFC, #CBD5E1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
   .splash-title span { color: #0891B2; }
   .splash-sub {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 13px; color: rgba(200,224,242,0.60);
-    letter-spacing: 0.04em; margin-bottom: 36px;
+    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+    font-size: 14px; color: rgba(200,224,242,0.70);
+    letter-spacing: 0.04em; margin-bottom: 48px;
+    position: relative;
+    z-index: 10;
+    font-weight: 500;
   }
-  .splash-spinner {
-    width: 38px; height: 38px; border-radius: 50%;
-    border: 3px solid rgba(0,212,200,0.15);
-    border-top-color: #0891B2;
-    animation: splash-spin 0.9s linear infinite;
-    margin-bottom: 20px;
+  .splash-progress {
+    width: 160px;
+    height: 3px;
+    background: rgba(0,212,200,0.15);
+    border-radius: 2px;
+    margin-bottom: 32px;
+    overflow: hidden;
+    position: relative;
+    z-index: 10;
+  }
+  .splash-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #0891B2, #00D4C8, #0891B2);
+    background-size: 200% 100%;
+    border-radius: 2px;
+    width: 100%;
+    animation: splash-shimmer 2s ease-in-out infinite;
   }
   .splash-status {
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 12px; color: rgba(200,224,242,0.45);
-    letter-spacing: 0.06em; text-transform: uppercase;
+    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+    font-size: 12px; color: rgba(200,224,242,0.55);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    position: relative;
+    z-index: 10;
+    font-weight: 600;
   }
 </style>
 <div id="pulse-splash">
-  <div class="splash-wave">🌊</div>
-  <div class="splash-title">Dana Point <span>PULSE</span></div>
-  <div class="splash-sub">Destination Intelligence Platform</div>
-  <div class="splash-spinner"></div>
-  <div class="splash-status">Loading intelligence</div>
+  <div class="splash-orbits">
+    <div class="splash-orbit"></div>
+    <div class="splash-orbit"></div>
+  </div>
+  <div class="splash-container">
+    <div class="splash-wave">🌊</div>
+    <div class="splash-title">Dana Point <span>PULSE</span></div>
+    <div class="splash-sub">Destination Intelligence Platform</div>
+    <div class="splash-progress">
+      <div class="splash-progress-bar"></div>
+    </div>
+    <div class="splash-status">Loading Intelligence</div>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -9227,8 +9327,8 @@ with tab_tr:
             fig.update_layout(
                 yaxis_tickprefix=_tick_pfx, yaxis_ticksuffix=_tick_sfx,
                 showlegend=False, transition={"duration": 800},
-                margin=dict(t=40, b=40, l=50, r=50),
-                xaxis=dict(tickfont=dict(size=12)),
+                margin=dict(t=40, b=100, l=50, r=50),
+                xaxis=dict(tickfont=dict(size=11), tickangle=-45, automargin=True),
             )
             st.plotly_chart(style_fig(fig, height=420), use_container_width=True, config=PLOTLY_CONFIG)
         else:
@@ -9262,8 +9362,8 @@ with tab_tr:
             fig.update_layout(
                 yaxis_ticksuffix="%", showlegend=False,
                 transition={"duration": 800, "easing": "cubic-in-out"},
-                margin=dict(t=40, b=40, l=50, r=50),
-                xaxis=dict(tickfont=dict(size=12), tickangle=-45),
+                margin=dict(t=40, b=100, l=50, r=50),
+                xaxis=dict(tickfont=dict(size=11), tickangle=-45, automargin=True),
             )
             st.plotly_chart(style_fig(fig, height=420), use_container_width=True, config=PLOTLY_CONFIG)
 
@@ -9953,17 +10053,17 @@ with tab_fo:
         if not _q1_rows.empty:
             _fwd_q1_label = f"Q1 {_q1_rows.iloc[0]['quarter'][:4]}"
 
-    def _kfm_card(label, value, delta, delta_color="#718096"):
+    def _kfm_card(label, value, delta, delta_color="#94A3B8"):
         return (
-            f'<div style="background:#1E3550;'
+            f'<div style="background:linear-gradient(135deg, #1E3A52 0%, #2D4B67 100%);'
             f'border-radius:12px;padding:16px 18px;'
-            f'border:1px solid rgba(0,0,0,0.08);border-left:4px solid #0891B2;'
+            f'border:1px solid rgba(8,145,178,0.25);border-left:4px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
-            f'box-shadow:0 1px 4px rgba(0,0,0,0.08);">'
-            f'<div style="font-size:10px;color:#718096;font-weight:700;text-transform:uppercase;'
+            f'box-shadow:0 2px 8px rgba(0,0,0,0.15);">'
+            f'<div style="font-size:10px;color:#CBD5E1;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:.10em;margin-bottom:6px;">{label}</div>'
             f'<div style="font-size:1.9rem;font-weight:900;letter-spacing:-0.04em;line-height:1.1;'
-            f'color:#0F172A;">{value}</div>'
+            f'color:#F8FAFC;">{value}</div>'
             f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:5px;">{delta}</div>'
             f'</div>'
         )
@@ -12478,15 +12578,15 @@ with tab_ei:
         # Legend row
         st.markdown(
             f'<div style="display:flex;gap:20px;align-items:center;margin-top:4px;'
-            f'padding:8px 12px;background:rgba(22,27,34,0.6);border-radius:8px;'
-            f'border:1px solid rgba(0,0,0,0.07);">'
-            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#C9D1D9;">'
+            f'padding:8px 12px;background:linear-gradient(90deg, rgba(0,212,200,0.12) 0%, rgba(255,255,255,0.04) 100%);border-radius:8px;'
+            f'border:1px solid rgba(0,212,200,0.20);">'
+            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#F8FAFC;">'
             f'<span style="width:14px;height:14px;border-radius:3px;background:{TEAL};display:inline-block;"></span>'
             f'Major Event ({_total_major})</span>'
-            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#C9D1D9;">'
-            f'<span style="width:14px;height:14px;border-radius:3px;background:#4A5568;display:inline-block;"></span>'
+            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#F8FAFC;">'
+            f'<span style="width:14px;height:14px;border-radius:3px;background:#64748B;display:inline-block;"></span>'
             f'Standard Event ({_total_events - _total_major})</span>'
-            f'<span style="margin-left:auto;font-size:11px;color:#8B949E;">'
+            f'<span style="margin-left:auto;font-size:11px;color:#CBD5E1;">'
             f'{_total_events} events · Jan – Dec 2025 · Source: Visit Dana Point</span>'
             f'</div>',
             unsafe_allow_html=True,
@@ -15981,7 +16081,7 @@ with _gl2:
         st.markdown(_SOURCES_HTML, unsafe_allow_html=True)
 
 st.markdown(
-    '<div style="text-align:center;padding:24px 0 12px;border-top:1px solid rgba(0,0,0,0.07);">'
+    '<div style="text-align:center;padding:24px 0 48px;border-top:1px solid rgba(0,0,0,0.07);">'
     '<div style="font-size:13px;font-weight:700;letter-spacing:.02em;margin-bottom:4px;">'
     '🌊 Dana Point PULSE</div>'
     '<div style="font-size:11px;opacity:0.50;margin-bottom:6px;">'
