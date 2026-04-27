@@ -10060,10 +10060,10 @@ with tab_fo:
             f'border:1px solid rgba(8,145,178,0.25);border-left:4px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
             f'box-shadow:0 2px 8px rgba(0,0,0,0.15);">'
-            f'<div style="font-size:10px;color:#CBD5E1;font-weight:700;text-transform:uppercase;'
+            f'<div style="font-size:10px;color:#FFFFFF;font-weight:700;text-transform:uppercase;'
             f'letter-spacing:.10em;margin-bottom:6px;">{label}</div>'
             f'<div style="font-size:1.9rem;font-weight:900;letter-spacing:-0.04em;line-height:1.1;'
-            f'color:#F8FAFC;">{value}</div>'
+            f'color:#FFFFFF;">{value}</div>'
             f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:5px;">{delta}</div>'
             f'</div>'
         )
