@@ -5998,18 +5998,19 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
             ig_val = f"{int(float(_ig.get('followers',0))):,}" if _ig.get('followers') else "—"
         except Exception: pass
 
-    # ── Build rows ─────────────────────────────────────────────────────────────
-    row1_items = [
-        _item("⬤ LIVE", "DANA POINT PULSE", is_status=True),
-        _item("OCCUPANCY", occ_val, occ_d, occ_pos),
-        _item("ADR", adr_val, adr_d, adr_pos),
-        _item("REVPAR", rvp_val, rvp_d, rvp_pos),
-        _item("ANNUAL TRIPS", trips_val),
-        _item("OUT-OF-STATE", oos_val),
-        _item("MEDIA ROAS", roas_val),
-        _item("TOP FEEDER DMA", top_dma),
-        _item("IG FOLLOWING", ig_val),
-    ]
+    # ── Build rows (skip items with no data) ────────────────────────────────────
+    row1_items = []
+    if occ_val != "—": row1_items.append(_item("⬤ LIVE", "DANA POINT PULSE", is_status=True))
+    else: row1_items.append(_item("⬤ LIVE", "DANA POINT PULSE", is_status=True))  # Always show LIVE
+    if occ_val != "—": row1_items.append(_item("OCCUPANCY", occ_val, occ_d, occ_pos))
+    if adr_val != "—": row1_items.append(_item("ADR", adr_val, adr_d, adr_pos))
+    if rvp_val != "—": row1_items.append(_item("REVPAR", rvp_val, rvp_d, rvp_pos))
+    if trips_val != "—": row1_items.append(_item("ANNUAL TRIPS", trips_val))
+    if oos_val != "—": row1_items.append(_item("OUT-OF-STATE", oos_val))
+    if roas_val != "—": row1_items.append(_item("MEDIA ROAS", roas_val))
+    if top_dma != "—": row1_items.append(_item("TOP FEEDER DMA", top_dma))
+    if ig_val != "—": row1_items.append(_item("IG FOLLOWING", ig_val))
+
     row2_items = [
         _item("TBID BLEND", "1.25%"),
         _item("TOT RATE", "10%"),
