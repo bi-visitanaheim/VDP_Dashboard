@@ -8678,19 +8678,19 @@ with tab_ov:
                 )
 
         _render_hero_metric(_h_row1_1, "💰", "RevPAR (30d)", f"${_exec_rvp:.0f}", _rvp_delta_str, _rvp_delta_cls, "#38BDF8")
-        # RevPAR sparkline chart with data
+        # RevPAR sparkline chart with real data
         with _h_row1_1:
             if not df_sel.empty and len(df_sel) > 1:
-                _rvp_data = df_sel["revpar"].dropna().tail(20).tolist()
-                if _rvp_data:
+                _rvp_sel = df_sel[["as_of_date", "revpar"]].dropna().tail(20).copy()
+                if not _rvp_sel.empty:
                     _fig_rvp = go.Figure(go.Scatter(
-                        x=list(range(len(_rvp_data))), y=_rvp_data, fill='tozeroy',
+                        x=_rvp_sel["as_of_date"], y=_rvp_sel["revpar"], fill='tozeroy',
                         line=dict(color='#38BDF8', width=2.5), fillcolor='rgba(56,189,248,0.2)',
                         mode='lines+markers', marker=dict(size=5, color='#38BDF8'),
-                        hovertemplate='<b>Day %{x}</b><br>RevPAR: $%{y:,.0f}<extra></extra>'
+                        hovertemplate='<b>%{x|%b %d}</b><br>RevPAR: $%{y:,.0f}<extra></extra>'
                     ))
                     _fig_rvp.update_layout(height=120, margin=dict(l=8, r=8, t=8, b=8), showlegend=False,
-                        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, type='date'),
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.05)', showticklabels=True,
                                    tickfont=dict(size=10), tickprefix='$'),
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
@@ -8698,21 +8698,21 @@ with tab_ov:
                     st.plotly_chart(_fig_rvp, use_container_width=True, config={'displayModeBar': False})
 
         _render_hero_metric(_h_row1_2, "🏨", "ADR (30d)", f"${_exec_adr:.0f}", _adr_delta_str, _adr_delta_cls, "#818CF8")
-        # ADR bar chart with data labels
+        # ADR bar chart with real data
         with _h_row1_2:
             if not df_sel.empty and len(df_sel) > 1:
-                _adr_data = df_sel["adr"].dropna().tail(20).tolist()
-                if _adr_data:
+                _adr_sel = df_sel[["as_of_date", "adr"]].dropna().tail(20).copy()
+                if not _adr_sel.empty:
                     _fig_adr = go.Figure(go.Bar(
-                        x=list(range(len(_adr_data))), y=_adr_data,
+                        x=_adr_sel["as_of_date"], y=_adr_sel["adr"],
                         marker=dict(color='#818CF8', line=dict(width=0)),
-                        hovertemplate='<b>Day %{x}</b><br>ADR: $%{y:,.0f}<extra></extra>',
-                        text=[f'${v:.0f}' for v in _adr_data],
+                        hovertemplate='<b>%{x|%b %d}</b><br>ADR: $%{y:,.0f}<extra></extra>',
+                        text=[f'${v:.0f}' for v in _adr_sel["adr"]],
                         textposition='outside',
                         textfont=dict(size=8, color='#64748B')
                     ))
                     _fig_adr.update_layout(height=140, margin=dict(l=8, r=8, t=20, b=8), showlegend=False,
-                        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, type='date'),
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.05)', showticklabels=True,
                                    tickfont=dict(size=10), tickprefix='$'),
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
@@ -8720,19 +8720,19 @@ with tab_ov:
                     st.plotly_chart(_fig_adr, use_container_width=True, config={'displayModeBar': False})
 
         _render_hero_metric(_h_row2_1, "📊", "Occupancy (30d)", f"{_exec_occ:.1f}%", _occ_delta_str, _occ_delta_cls, "#34D399")
-        # Occupancy area chart with data
+        # Occupancy area chart with real data
         with _h_row2_1:
             if not df_sel.empty and len(df_sel) > 1:
-                _occ_data = df_sel["occ_pct"].dropna().tail(20).tolist()
-                if _occ_data:
+                _occ_sel = df_sel[["as_of_date", "occ_pct"]].dropna().tail(20).copy()
+                if not _occ_sel.empty:
                     _fig_occ = go.Figure(go.Scatter(
-                        x=list(range(len(_occ_data))), y=_occ_data, fill='tozeroy',
+                        x=_occ_sel["as_of_date"], y=_occ_sel["occ_pct"], fill='tozeroy',
                         line=dict(color='#34D399', width=2.5), fillcolor='rgba(52,211,153,0.2)',
                         mode='lines+markers', marker=dict(size=5, color='#34D399'),
-                        hovertemplate='<b>Day %{x}</b><br>Occupancy: %{y:.1f}%<extra></extra>'
+                        hovertemplate='<b>%{x|%b %d}</b><br>Occupancy: %{y:.1f}%<extra></extra>'
                     ))
                     _fig_occ.update_layout(height=120, margin=dict(l=8, r=8, t=8, b=8), showlegend=False,
-                        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, type='date'),
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.05)', showticklabels=True,
                                    tickfont=dict(size=10), ticksuffix='%', range=[0, 100]),
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
@@ -8740,21 +8740,22 @@ with tab_ov:
                     st.plotly_chart(_fig_occ, use_container_width=True, config={'displayModeBar': False})
 
         _render_hero_metric(_h_row2_2, "💳", "TBID Monthly", f"${_exec_tbid:,.0f}", "Blended 1.25%", "neutral", "#A78BFA")
-        # TBID bar chart with data labels
+        # TBID bar chart with real data
         with _h_row2_2:
             if not df_kpi.empty and len(df_kpi) > 1:
-                _tbid_data = (df_kpi["revpar"].dropna() * 100 * 0.0125).tail(20).tolist()
-                if _tbid_data:
+                _tbid_sel = df_kpi[["as_of_date", "revpar"]].dropna().tail(20).copy()
+                if not _tbid_sel.empty:
+                    _tbid_amounts = (df_kpi["revpar"].dropna() * 100 * 0.0125).tail(20)
                     _fig_tbid = go.Figure(go.Bar(
-                        x=list(range(len(_tbid_data))), y=_tbid_data,
+                        x=_tbid_sel["as_of_date"], y=_tbid_amounts,
                         marker=dict(color='#A78BFA', line=dict(width=0)),
-                        hovertemplate='<b>Day %{x}</b><br>TBID: $%{y:,.0f}<extra></extra>',
-                        text=[f'${v:.0f}' for v in _tbid_data],
+                        hovertemplate='<b>%{x|%b %d}</b><br>TBID: $%{y:,.0f}<extra></extra>',
+                        text=[f'${v:.0f}' for v in _tbid_amounts],
                         textposition='outside',
                         textfont=dict(size=8, color='#64748B')
                     ))
                     _fig_tbid.update_layout(height=140, margin=dict(l=8, r=8, t=20, b=8), showlegend=False,
-                        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+                        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False, type='date'),
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='rgba(0,0,0,0.05)', showticklabels=True,
                                    tickfont=dict(size=10), tickprefix='$'),
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
