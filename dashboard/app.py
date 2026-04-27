@@ -2342,8 +2342,26 @@ st.markdown("""
     color: #22D3EE !important;
     -webkit-text-fill-color: #22D3EE !important;
   }
-  .pulse-ticker-pos { color: #34D399; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
-  .pulse-ticker-neg { color: #F87171; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+  .pulse-ticker-pos {
+    color: #10B981 !important;
+    -webkit-text-fill-color: #10B981 !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    display: block !important;
+    margin-top: 2px !important;
+  }
+  .pulse-ticker-neg {
+    color: #EF4444 !important;
+    -webkit-text-fill-color: #EF4444 !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.05em !important;
+    text-transform: uppercase !important;
+    display: block !important;
+    margin-top: 2px !important;
+  }
   .pulse-ticker-dot {
     width: 6px; height: 6px; border-radius: 50%;
     background: #22D3EE;
