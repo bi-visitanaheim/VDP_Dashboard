@@ -1495,20 +1495,20 @@ st.markdown("""
   }
   .chart-header {
     font-family: 'Syne', 'Outfit', sans-serif;
-    font-size: 17px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 5px;
-    color: var(--dp-text-1); -webkit-text-fill-color: var(--dp-text-1);
+    font-size: 18px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px;
+    color: #0F172A; -webkit-text-fill-color: #0F172A;
     display: flex; align-items: center; gap: 8px;
-    padding-left: 10px; position: relative;
+    padding-left: 12px; position: relative;
   }
   .chart-header::before {
     content: ''; position: absolute; left: 0; top: 2px; bottom: 2px;
-    width: 3px; border-radius: 2px;
-    background: linear-gradient(180deg, var(--dp-teal), #38BDF8);
+    width: 4px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--dp-teal), #00D4C8);
   }
   .chart-caption {
     font-family: 'DM Sans', sans-serif;
-    font-size: 13px; color: var(--dp-text-3); font-weight: 500; margin-bottom: 12px;
-    letter-spacing: 0.01em; padding-left: 10px;
+    font-size: 13px; color: #475569; font-weight: 500; margin-bottom: 14px;
+    letter-spacing: 0em; padding-left: 12px;
   }
 
   /* ── Sidebar Brand ───────────────────────────────────────────────────── */
@@ -1911,13 +1911,19 @@ st.markdown("""
   [data-testid="stSelectbox"] > div,
   [data-testid="stDateInput"] > div {
     background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(255,255,255,0.10) !important;
+    border: 2px solid rgba(0,212,200,0.35) !important;
     border-radius: 8px !important; color: var(--dp-text-1) !important;
+    transition: border-color 0.2s ease !important;
   }
   [data-testid="stSelectbox"] [data-baseweb="select"] > div {
     background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(255,255,255,0.10) !important;
+    border: 2px solid rgba(0,212,200,0.35) !important;
     color: var(--dp-text-1) !important;
+    transition: border-color 0.2s ease !important;
+  }
+  [data-testid="stSelectbox"]:hover > div,
+  [data-testid="stSelectbox"]:focus-within > div {
+    border-color: rgba(0,212,200,0.65) !important;
   }
 
   /* ── Expander ────────────────────────────────────────────────────────── */
@@ -1943,9 +1949,13 @@ st.markdown("""
   }
   .filter-bar .stSelectbox > div > div {
     background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.10) !important;
+    border: 2px solid rgba(0,212,200,0.40) !important;
     border-radius: 8px !important;
     font-size: 13px !important; color: var(--dp-text-1) !important;
+    transition: border-color 0.2s ease !important;
+  }
+  .filter-bar .stSelectbox:hover > div > div {
+    border-color: rgba(0,212,200,0.70) !important;
   }
 
   /* ── Action Intelligence Panel ────────────────────────────────────────── */
@@ -2016,16 +2026,16 @@ st.markdown("""
     display: flex !important; align-items: center !important; gap: 12px !important;
     padding: 13px 20px !important; border-radius: 10px !important;
     margin: 28px 0 14px 0 !important;
-    background: rgba(255,255,255,0.07) !important;
-    border: 1px solid rgba(255,255,255,0.14) !important;
+    background: linear-gradient(135deg, rgba(0,212,200,0.08) 0%, rgba(2,132,199,0.06) 100%) !important;
+    border: 1px solid rgba(0,212,200,0.2) !important;
     border-left: 4px solid var(--sh-accent, #0891B2) !important;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.25) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08) !important;
     transition: box-shadow 0.22s ease, transform 0.22s ease !important;
   }
   .sh-block:hover {
-    box-shadow: var(--dp-shadow-hover) !important;
-    transform: translateY(-1px) !important;
-    background: var(--dp-card-hover) !important;
+    box-shadow: 0 4px 20px rgba(0,212,200,0.12) !important;
+    transform: translateY(-2px) !important;
+    background: linear-gradient(135deg, rgba(0,212,200,0.14) 0%, rgba(2,132,199,0.12) 100%) !important;
   }
   .sh-icon {
     font-size: 18px !important; line-height: 1 !important; flex-shrink: 0 !important;
@@ -2035,7 +2045,7 @@ st.markdown("""
     font-family: 'Syne', 'Outfit', sans-serif !important;
     font-size: 14px !important; font-weight: 700 !important;
     letter-spacing: -.015em !important; line-height: 1.2 !important;
-    color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+    color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
   }
   .sh-tag {
     margin-left: auto !important; font-size: 10px !important;
@@ -5545,7 +5555,7 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
         back_html = (
             f'<div style="font-size:10px;font-weight:800;color:#0891B2;text-transform:uppercase;'
             f'letter-spacing:.08em;margin-bottom:10px;">{label}</div>'
-            f'<div style="font-size:22px;font-weight:800;color:#E2E8F0;margin-bottom:6px;">{value}</div>'
+            f'<div style="font-size:22px;font-weight:800;color:#0F172A;margin-bottom:6px;">{value}</div>'
             f'<div style="font-size:12px;color:{_trend_color};font-weight:700;margin-bottom:8px;">'
             f'{trend_icon} Trending {_trend_word}: {delta}</div>'
             + (f'<div style="font-size:11px;color:#64748B;">{date_label}</div>' if date_label else '')
@@ -6199,9 +6209,9 @@ def sec_intel(section_name: str, what_it_shows: str, key_insight: str,
         f'<div class="sec-intel">'
         f'<div class="sec-intel-label">◈ Section Intelligence</div>'
         f'<div class="sec-intel-body">'
-        f'<strong style="color:#E2E8F0;">{section_name}</strong> — {what_it_shows}.<br>'
-        f'<strong style="color:#E2E8F0;">Key Insight:</strong> {bold_key_data(key_insight)} &nbsp;'
-        f'<strong style="color:#E2E8F0;">Forward Implication:</strong> {bold_key_data(forward_implication)}<br>'
+        f'<strong style="color:#0F4C75; font-weight:700;">{section_name}</strong> — {what_it_shows}.<br>'
+        f'<strong style="color:#0F4C75; font-weight:700;">Key Insight:</strong> {bold_key_data(key_insight)} &nbsp;'
+        f'<strong style="color:#0F4C75; font-weight:700;">Forward Implication:</strong> {bold_key_data(forward_implication)}<br>'
         f'<span class="sec-intel-stat">▸ {bold_key_data(key_stat)}</span>'
         f'</div>'
         f'</div>'
@@ -8900,14 +8910,20 @@ with tab_ov:
                 st.session_state.show_goal_form = True
 
         if st.session_state.get("show_goal_form", False):
+            st.markdown(callout(
+                "📋", "How to Create a Goal",
+                "Set a <strong>measurable target</strong> with a deadline. Examples: 'Grow RevPAR 8% by Q2', "
+                "'Reach 82% occupancy by summer', 'Increase TBID revenue $50K by year-end'. "
+                "Goals are tracked live against actual performance data.",
+            ), unsafe_allow_html=True)
             with st.form("goal_form", border=True):
                 st.markdown("**Create New Goal**")
-                _g_title = st.text_input("Goal Title", placeholder="e.g., 'RevPAR Growth Q2'")
-                _g_category = st.selectbox("Category", ["Revenue", "Occupancy", "Market Position", "Operations", "Guest Experience"])
-                _g_target = st.number_input("Target Value", min_value=0.0, step=1.0)
-                _g_unit = st.selectbox("Unit", ["$", "%", "rooms", "nights", "index points"])
-                _g_deadline = st.date_input("Target Date")
-                _g_desc = st.text_area("Description (optional)", max_chars=200)
+                _g_title = st.text_input("Goal Title", placeholder="e.g., 'RevPAR Growth Q2'", help="Short, specific title")
+                _g_category = st.selectbox("Category", ["Revenue", "Occupancy", "Market Position", "Operations", "Guest Experience"], help="Pick the performance area")
+                _g_target = st.number_input("Target Value", min_value=0.0, step=1.0, help="What's the number you want to hit?")
+                _g_unit = st.selectbox("Unit", ["$", "%", "rooms", "nights", "index points"], help="How is this measured?")
+                _g_deadline = st.date_input("Target Date", help="When should this be achieved?")
+                _g_desc = st.text_area("Description (optional)", max_chars=200, help="Why this goal matters or how to achieve it", placeholder="e.g., 'Rate strategy focus + market demand recovery'")
 
                 if st.form_submit_button("Save Goal", use_container_width=True):
                     st.success("✅ Goal saved! Track progress below.")
@@ -9198,18 +9214,23 @@ with tab_tr:
                 x=monthly["month_label"], y=monthly[_main_col],
                 marker=dict(color=_bar_clrs, line_width=0, cornerradius=6,
                             line=dict(width=0)),
+                text=[f"{_tick_pfx}{v:.1f}{_tick_sfx}" for v in monthly[_main_col]],
+                textposition="outside",
+                textfont=dict(size=10, family="Syne, DM Sans, sans-serif", color="#0F172A"),
                 hovertemplate=f"<b>%{{x}}</b><br>{_str_metric_label}: {_tick_pfx}%{{y:.1f}}{_tick_sfx}<extra></extra>",
             ))
             fig.add_hline(y=_avg_main, line_dash="dash",
-                          line_color="rgba(167,169,169,0.45)",
+                          line_color="rgba(0,212,200,0.35)",
                           annotation_text=f"avg {_tick_pfx}{_avg_main:.1f}{_tick_sfx}",
                           annotation_position="top right",
-                          annotation_font=dict(size=11, color="rgba(127,127,127,0.80)"))
+                          annotation_font=dict(size=11, color="#00D4C8"))
             fig.update_layout(
                 yaxis_tickprefix=_tick_pfx, yaxis_ticksuffix=_tick_sfx,
                 showlegend=False, transition={"duration": 800},
+                margin=dict(t=40, b=40, l=50, r=50),
+                xaxis=dict(tickfont=dict(size=12)),
             )
-            st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
+            st.plotly_chart(style_fig(fig, height=420), use_container_width=True, config=PLOTLY_CONFIG)
         else:
             st.markdown(empty_state(
                 "📊", f"No data for {_str_metric_label}.",
@@ -9233,14 +9254,18 @@ with tab_tr:
                 marker=dict(color=bar_colors, line_width=0, cornerradius=6),
                 text=[f"{v:+.1f}%" for v in yoy[_yoy_metric_col]],
                 textposition="outside",
-                textfont=dict(size=10, family="Syne, DM Sans, sans-serif"),
+                textfont=dict(size=11, family="Syne, DM Sans, sans-serif", color="#0F172A"),
                 hovertemplate=(
                     f"<b>%{{x}}</b><br>YOY {_str_metric_label}: %{{y:+.1f}}%<extra></extra>"
                 ),
             ))
-            fig.update_layout(yaxis_ticksuffix="%", showlegend=False,
-                              transition={"duration": 800, "easing": "cubic-in-out"})
-            st.plotly_chart(style_fig(fig, height=380), use_container_width=True, config=PLOTLY_CONFIG)
+            fig.update_layout(
+                yaxis_ticksuffix="%", showlegend=False,
+                transition={"duration": 800, "easing": "cubic-in-out"},
+                margin=dict(t=40, b=40, l=50, r=50),
+                xaxis=dict(tickfont=dict(size=12), tickangle=-45),
+            )
+            st.plotly_chart(style_fig(fig, height=420), use_container_width=True, config=PLOTLY_CONFIG)
 
         st.markdown("---")
         c1, c2 = st.columns(2)
