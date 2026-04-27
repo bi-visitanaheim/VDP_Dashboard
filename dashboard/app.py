@@ -2039,26 +2039,26 @@ st.markdown("""
     display: flex !important; align-items: center !important; gap: 12px !important;
     padding: 13px 20px !important; border-radius: 10px !important;
     margin: 28px 0 14px 0 !important;
-    background: rgba(255,255,255,0.07) !important;
-    border: 1px solid rgba(255,255,255,0.14) !important;
+    background: linear-gradient(135deg, #F0F9FF 0%, #F8FAFC 100%) !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
     border-left: 4px solid var(--sh-accent, #0891B2) !important;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.25) !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08) !important;
     transition: box-shadow 0.22s ease, transform 0.22s ease !important;
   }
   .sh-block:hover {
-    box-shadow: var(--dp-shadow-hover) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
     transform: translateY(-1px) !important;
-    background: var(--dp-card-hover) !important;
+    background: linear-gradient(135deg, #E0F2FE 0%, #F0F8FC 100%) !important;
   }
   .sh-icon {
     font-size: 18px !important; line-height: 1 !important; flex-shrink: 0 !important;
-    opacity: 0.85 !important;
+    opacity: 0.9 !important;
   }
   .sh-title {
     font-family: 'Syne', 'Outfit', sans-serif !important;
     font-size: 14px !important; font-weight: 700 !important;
     letter-spacing: -.015em !important; line-height: 1.2 !important;
-    color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+    color: #0F172A !important; -webkit-text-fill-color: #0F172A !important;
   }
   .sh-tag {
     margin-left: auto !important; font-size: 10px !important;
@@ -9389,15 +9389,15 @@ with tab_tr:
 
                 def _ri_metric(label, val, note, icon, color):
                     return (
-                        f'<div style="background:#1E3550;border-radius:10px;padding:14px 16px;'
+                        f'<div style="background:#FFFFFF;border-radius:10px;padding:14px 16px;'
                         f'border:1px solid rgba(15,28,46,0.07);border-top:3px solid {color};'
                         f'box-shadow:0 1px 4px rgba(15,28,46,0.06);">'
                         f'<div style="font-size:18px;margin-bottom:4px;">{icon}</div>'
                         f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;'
-                        f'letter-spacing:.08em;color:#5A7A95;margin-bottom:4px;">{label}</div>'
+                        f'letter-spacing:.08em;color:#64748B;margin-bottom:4px;">{label}</div>'
                         f'<div style="font-family:\'Outfit\',sans-serif;font-size:20px;font-weight:800;'
                         f'color:{color};letter-spacing:-.02em;">{val}</div>'
-                        f'<div style="font-size:11px;color:#5A7A95;margin-top:4px;line-height:1.5;">{note}</div>'
+                        f'<div style="font-size:11px;color:#64748B;margin-top:4px;line-height:1.5;">{note}</div>'
                         f'</div>'
                     )
 
@@ -12047,15 +12047,15 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                 _hom_v = f"${int(_hom.iloc[0]):,}" if not _hom.empty else "—"
                 short_geo = geo.replace(" County, CA", "").replace(" County", "")
                 st.markdown(
-                    f'<div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
+                    f'<div style="background:#FFFFFF;border:1px solid rgba(15,23,42,0.08);border-radius:12px;'
                     f'border-top:3px solid #7C3AED;padding:14px 18px;">'
-                    f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7A95;margin-bottom:6px;">{short_geo}</div>'
+                    f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748B;margin-bottom:6px;">{short_geo}</div>'
                     f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
-                    f'<div style="font-size:11px;color:#5A7A95;">Population</div>'
+                    f'<div style="font-size:11px;color:#64748B;">Population</div>'
                     f'<div style="font-size:14px;font-weight:700;color:#0F172A;margin-top:6px;">{_inc_v}</div>'
-                    f'<div style="font-size:11px;color:#5A7A95;">Median HH Income</div>'
+                    f'<div style="font-size:11px;color:#64748B;">Median HH Income</div>'
                     f'<div style="font-size:13px;font-weight:600;color:#0F172A;margin-top:4px;">{_hom_v}</div>'
-                    f'<div style="font-size:11px;color:#5A7A95;">Median Home Value</div>'
+                    f'<div style="font-size:11px;color:#64748B;">Median Home Value</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -15816,31 +15816,31 @@ _GLOSSARY_TERMS = {
 
 _SOURCES_HTML = """
 <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(15,23,42,0.08);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">STR</div>
     <div style="color:#64748B;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
   </div>
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(15,23,42,0.08);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Datafy</div>
     <div style="color:#64748B;">Visitor economy platform · trips, spend, DMA attribution</div>
   </div>
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(15,23,42,0.08);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">CoStar</div>
     <div style="color:#64748B;">Market data · comp set, pipeline, profitability</div>
   </div>
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(15,23,42,0.08);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Visit California</div>
     <div style="color:#64748B;">State forecasts · lodging, travel volume, airport traffic</div>
   </div>
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid rgba(15,23,42,0.08);
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Zartico</div>
