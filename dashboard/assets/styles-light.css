@@ -252,11 +252,33 @@
     margin-top: 8px; line-height: 1.6;
   }
 
-  /* ── Responsive Mobile ────────────────────────────────────────────────── */
+  /* ── Responsive — Tablet (≤ 768px) ────────────────────────────────────── */
   @media (max-width: 768px) {
     [data-testid="stMetricValue"] { font-size: 1.5rem !important; }
-    .hero-metric-value { font-size: 24px; }
+    .hero-metric-value   { font-size: 24px; }
+    .hero-metric-card    { padding: 16px 14px; }
+    .headline-insight    { padding: 18px 20px; margin-bottom: 18px; }
     .headline-insight-text { font-size: 18px; }
-    .explore-title { font-size: 13px; }
+    .insight-card        { padding: 14px; margin-bottom: 10px; }
+    .insight-title       { font-size: 13px; }
+    .insight-body        { font-size: 12px; }
+    .explore-card        { padding: 16px; }
+    .explore-title       { font-size: 13px; }
+    .explore-icon        { font-size: 24px; margin-bottom: 8px; }
+  }
+
+  /* ── Responsive — Mobile (≤ 480px) ────────────────────────────────────── */
+  @media (max-width: 480px) {
+    [data-testid="stMetricValue"] { font-size: 1.25rem !important; }
+    .hero-metric-value   { font-size: 20px; }
+    .hero-metric-card    { padding: 14px 12px; }
+    .headline-insight    { padding: 14px 16px; margin-bottom: 12px; }
+    .headline-insight-text { font-size: 16px; }
+    .insight-card        { padding: 12px; margin-bottom: 8px; }
+    .insight-title       { font-size: 12px; padding-left: 10px; }
+    .insight-body        { font-size: 11.5px; padding-left: 10px; }
+    .explore-card        { padding: 12px; }
+    .explore-title       { font-size: 12px; }
+    .explore-desc        { font-size: 11px; }
   }
 </style>

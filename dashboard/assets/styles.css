@@ -489,4 +489,41 @@
     margin-top: 6px;
     line-height: 1.5;
   }
+
+  /* ── Responsive — Tablet (≤ 768px) ────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .kpi-card         { padding: 16px 16px 14px 16px; }
+    .kpi-value        { font-size: 28px; }
+    .hero-metric-value { font-size: 26px; }
+    .hero-metric-card { padding: 16px 14px; }
+    .headline-insight { padding: 16px 18px; margin-bottom: 16px; }
+    .headline-insight-text { font-size: 16px; }
+    .insight-card     { padding: 14px 16px; }
+    .insight-title    { font-size: 14px; }
+    .insight-body     { font-size: 13.5px; }
+    .explore-card     { padding: 14px; }
+    .explore-icon     { font-size: 26px; margin-bottom: 6px; }
+    .explore-title    { font-size: 14px; }
+    .event-stat       { padding: 16px 12px; }
+    .event-val        { font-size: 24px; }
+  }
+
+  /* ── Responsive — Mobile (≤ 480px) ────────────────────────────────────── */
+  @media (max-width: 480px) {
+    .kpi-card         { padding: 14px 14px 12px 14px; }
+    .kpi-value        { font-size: 24px; }
+    .hero-metric-value { font-size: 22px; }
+    .hero-metric-card { padding: 14px 12px; }
+    .headline-insight { padding: 14px 16px; margin-bottom: 12px; }
+    .headline-insight-text { font-size: 14px; }
+    .insight-card     { padding: 12px 14px; margin-bottom: 8px; }
+    .insight-title    { font-size: 13px; padding-left: 10px; }
+    .insight-body     { font-size: 12.5px; padding-left: 10px; }
+    .explore-card     { padding: 12px; }
+    .explore-title    { font-size: 13px; }
+    .explore-desc     { font-size: 11px; }
+    .event-stat       { padding: 12px 10px; }
+    .event-val        { font-size: 22px; }
+    .dp-flip-card     { height: 180px; }
+  }
 </style>
