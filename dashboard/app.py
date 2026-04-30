@@ -4693,6 +4693,9 @@ def build_metrics_context(
         "weekend_occ":    float(weekend["occupancy"].mean()) if not weekend.empty else 0.0,
         "midweek_occ":    float(midweek["occupancy"].mean()) if not midweek.empty else 0.0,
         "tbid_monthly":   float(r30["revenue"].sum()) * 0.0125,
+        "tbid_ytd":       0.0,
+        "tbid_ytd_prior": 0.0,
+        "tbid_ytd_yoy":   0.0,
         "revpar_mean":    rvp_mean,
         "revpar_std":     rvp_std,
         "n_spikes":       int((df["revpar"] > rvp_mean + 2 * rvp_std).sum()),
@@ -4726,6 +4729,23 @@ def build_metrics_context(
             ctx["adr_yoy_12m"]    = pct_delta(ctx["adr_12m"],    float(m_pri["adr"].mean()))
             if _occ_col:
                 ctx["occ_yoy_12m"] = pct_delta(ctx["occ_12m"], float(m_pri[_occ_col].mean()))
+
+    # ── TBID YTD (calendar year-to-date vs. same period last year) ──────────
+    try:
+        _now        = datetime.now()
+        _this_yr    = _now.year
+        _doy        = _now.timetuple().tm_yday
+        _ytd_mask   = df["as_of_date"].dt.year == _this_yr
+        _prior_mask = (df["as_of_date"].dt.year == _this_yr - 1) & (
+            df["as_of_date"].dt.dayofyear <= _doy
+        )
+        _ytd_rev    = float(df.loc[_ytd_mask, "revenue"].sum()) if _ytd_mask.any() else 0.0
+        _prior_rev  = float(df.loc[_prior_mask, "revenue"].sum()) if _prior_mask.any() else 0.0
+        ctx["tbid_ytd"]       = _ytd_rev  * 0.0125
+        ctx["tbid_ytd_prior"] = _prior_rev * 0.0125
+        ctx["tbid_ytd_yoy"]   = pct_delta(_ytd_rev, _prior_rev) if _prior_rev > 0 else 0.0
+    except Exception:
+        pass
 
         # Best month by RevPAR in the last 12 months
         best_idx = m12["revpar"].idxmax()
@@ -8626,7 +8646,9 @@ with tab_ov:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
         _exec_adr   = m.get("adr_30", 0.0) if m else 0.0
         _exec_occ   = m.get("occ_30", 0.0) if m else 0.0
-        _exec_tbid  = m.get("tbid_monthly", 0.0) if m else 0.0
+        _exec_tbid      = m.get("tbid_monthly", 0.0) if m else 0.0
+        _exec_tbid_ytd  = m.get("tbid_ytd", 0.0) if m else 0.0
+        _exec_tbid_yoy  = m.get("tbid_ytd_yoy", 0.0) if m else 0.0
         _exec_rvp_d = m.get("revpar_delta", 0.0) if m else 0.0
         _exec_adr_d = m.get("adr_delta", 0.0) if m else 0.0
         _exec_occ_d = m.get("occ_delta", 0.0) if m else 0.0
@@ -8730,12 +8752,16 @@ with tab_ov:
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(_fig_occ, use_container_width=True, config={'displayModeBar': False})
 
-        _render_hero_metric(_h_row2_2, "💳", "TBID Monthly", f"${_exec_tbid:,.0f}", "Blended 1.25%", "neutral", "#A78BFA")
-        # TBID bar chart
+        _tbid_ytd_str = f"${_exec_tbid_ytd/1e6:.2f}M" if _exec_tbid_ytd >= 1e6 else f"${_exec_tbid_ytd:,.0f}"
+        _tbid_yoy_str, _tbid_yoy_cls = format_metric_delta(_exec_tbid_yoy)
+        _render_hero_metric(_h_row2_2, "💳", "TBID YTD", _tbid_ytd_str, _tbid_yoy_str, _tbid_yoy_cls, "#A78BFA")
+        # TBID YTD bar chart (current-year daily revenue × 1.25%)
         with _h_row2_2:
-            if not df_kpi.empty and len(df_kpi) > 1:
-                _tbid_data = (df_kpi["revpar"].dropna() * 100 * 0.0125).tail(20).tolist()
-                if _tbid_data:
+            if not df_sel.empty:
+                _this_yr = datetime.now().year
+                _ytd_df = df_sel[df_sel["as_of_date"].dt.year == _this_yr].copy()
+                if len(_ytd_df) > 1:
+                    _tbid_data = (_ytd_df["revenue"].fillna(0) * 0.0125).tolist()
                     _fig_tbid = go.Figure(go.Bar(x=list(range(len(_tbid_data))), y=_tbid_data, marker=dict(color='#A78BFA')))
                     _fig_tbid.update_layout(height=100, margin=dict(l=5, r=5, t=5, b=5), showlegend=False,
                         xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
@@ -8746,6 +8772,45 @@ with tab_ov:
         _logger.debug(f"Failed to render hero metrics: {str(e)}")
 
     st.markdown("<div style='height: 32px;'></div>", unsafe_allow_html=True)
+
+    # ── HIDDEN SIGNALS: Cross-Dataset Intelligence ────────────────────────────────
+    try:
+        _cross_df = df_insights[df_insights["audience"] == "cross"].copy() if not df_insights.empty else pd.DataFrame()
+        if not _cross_df.empty:
+            _cross_df = _cross_df.sort_values("priority")
+            _cross_rows = _cross_df.to_dict("records")
+            _sig_cards = ""
+            _sig_colors = {"feeder_value_gap": "#F59E0B", "daytrip_conversion": "#10B981",
+                           "weekday_los_gap": "#38BDF8", "campaign_seasonality": "#A78BFA",
+                           "oos_adr_premium": "#FB923C", "compression_daytrip": "#EF4444"}
+            for _sig in _cross_rows:
+                _cat  = _sig.get("category", "")
+                _col  = _sig_colors.get(_cat, "#0891B2")
+                _hl   = _sig.get("headline", "")
+                _body = _sig.get("body", "")
+                _sig_cards += (
+                    f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-left:4px solid {_col};'
+                    f'border-radius:10px;padding:14px 18px;margin-bottom:10px;'
+                    f'box-shadow:0 1px 3px rgba(15,23,42,0.08);">'
+                    f'<div style="font-size:12px;font-weight:800;color:{_col};text-transform:uppercase;'
+                    f'letter-spacing:.08em;margin-bottom:4px;">{_hl}</div>'
+                    f'<div style="font-size:13px;color:#334155;line-height:1.55;">{_body}</div>'
+                    f'</div>'
+                )
+            st.markdown(
+                f'<div style="background:linear-gradient(135deg,rgba(239,68,68,0.04) 0%,rgba(167,139,250,0.06) 100%);'
+                f'border:1px solid rgba(239,68,68,0.18);border-radius:14px;padding:20px 22px;margin-bottom:32px;">'
+                f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">'
+                f'<span style="font-size:22px;">⚡</span>'
+                f'<div><div style="font-family:\'Outfit\',sans-serif;font-size:16px;font-weight:800;color:#0F172A;">Hidden Signals</div>'
+                f'<div style="font-size:11px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">'
+                f'Cross-dataset intelligence · STR + Datafy combined</div></div></div>'
+                f'{_sig_cards}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+    except Exception as e:
+        _logger.debug(f"Failed to render hidden signals: {str(e)}")
 
     # ── EXPLORE SECTION: Large Exploration Cards with Better Spacing ──────────────
 
@@ -11351,193 +11416,57 @@ with tab_ev:
                         _disp = f"{float(_av):,.0f}" if isinstance(_av, (int,float)) else str(_av)
                         st.metric(_ak.replace("_"," ").title(), _disp)
 
-        # ── Social Media Command Center (Later.com) ───────────────────────────────
-        st.markdown(_sh("📲", "Social Media Command Center", "purple", "LATER.COM"), unsafe_allow_html=True)
-        st.caption("Source: Later.com Analytics Export · Instagram · Facebook · TikTok · Layer 2.5 Social Performance")
+        # ── Social Media Summary (Later.com) ─────────────────────────────────────
+        st.markdown(_sh("📲", "Social Media Overview", "purple", "LATER.COM"), unsafe_allow_html=True)
+        st.caption("Source: Later.com Analytics Export · Instagram · Facebook · TikTok · Layer 2.5")
 
-        _smc_c1, _smc_c2, _smc_c3 = st.columns(3)
+        try:
+            _ig_followers, _ig_delta30, _ig_eng = 0, 0, 0.0
+            _fb_followers, _fb_delta30 = 0, 0
+            _tk_followers, _tk_delta30 = 0, 0
 
-        # IG follower trend
-        with _smc_c1:
-            st.markdown('<div class="chart-header">Instagram — Follower Growth</div>', unsafe_allow_html=True)
             if not df_later_ig_profile.empty and "followers" in df_later_ig_profile.columns:
-                _ig_p = df_later_ig_profile.sort_values("data_date").tail(30).copy()
-                _ig_vals = _ig_p["followers"].dropna()
-                _ig_cur = int(_ig_vals.iloc[-1]) if len(_ig_vals) else 0
-                _ig_prev = int(_ig_vals.iloc[0]) if len(_ig_vals) else _ig_cur
-                _ig_delta = _ig_cur - _ig_prev
-                st.metric("Followers", f"{_ig_cur:,}", delta=f"{_ig_delta:+,} (30d)")
-                fig_ig = go.Figure(go.Scatter(
-                    x=_ig_p["data_date"], y=_ig_p["followers"],
-                    mode="lines", fill="tozeroy",
-                    line=dict(color="#E1306C", width=2.5, shape="spline", smoothing=0.8),
-                    fillcolor="rgba(225,48,108,0.12)",
-                    hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
-                ))
-                fig_ig.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
-                    xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
-                    yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    showlegend=False)
-                st.plotly_chart(fig_ig, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_followers")
-            else:
-                st.info("No Instagram profile data.")
+                _ig_s = df_later_ig_profile.sort_values("data_date").tail(30)["followers"].dropna()
+                _ig_followers = int(_ig_s.iloc[-1]) if len(_ig_s) else 0
+                _ig_delta30   = _ig_followers - (int(_ig_s.iloc[0]) if len(_ig_s) else _ig_followers)
 
-        # FB follower trend
-        with _smc_c2:
-            st.markdown('<div class="chart-header">Facebook — Follower Growth</div>', unsafe_allow_html=True)
             if not df_later_fb_profile.empty and "page_followers" in df_later_fb_profile.columns:
-                _fb_p = df_later_fb_profile.sort_values("data_date").tail(30).copy()
-                _fb_vals = _fb_p["page_followers"].dropna()
-                _fb_cur = int(_fb_vals.iloc[-1]) if len(_fb_vals) else 0
-                _fb_prev = int(_fb_vals.iloc[0]) if len(_fb_vals) else _fb_cur
-                _fb_delta = _fb_cur - _fb_prev
-                st.metric("Followers", f"{_fb_cur:,}", delta=f"{_fb_delta:+,} (30d)")
-                fig_fb = go.Figure(go.Scatter(
-                    x=_fb_p["data_date"], y=_fb_p["page_followers"],
-                    mode="lines", fill="tozeroy",
-                    line=dict(color="#1877F2", width=2.5, shape="spline", smoothing=0.8),
-                    fillcolor="rgba(24,119,242,0.12)",
-                    hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
-                ))
-                fig_fb.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
-                    xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
-                    yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    showlegend=False)
-                st.plotly_chart(fig_fb, use_container_width=True, config=PLOTLY_CONFIG, key="social_fb_followers")
-            else:
-                st.info("No Facebook profile data.")
+                _fb_s = df_later_fb_profile.sort_values("data_date").tail(30)["page_followers"].dropna()
+                _fb_followers = int(_fb_s.iloc[-1]) if len(_fb_s) else 0
+                _fb_delta30   = _fb_followers - (int(_fb_s.iloc[0]) if len(_fb_s) else _fb_followers)
 
-        # TikTok follower trend
-        with _smc_c3:
-            st.markdown('<div class="chart-header">TikTok — Follower Growth</div>', unsafe_allow_html=True)
             if not df_later_tk_profile.empty and "followers" in df_later_tk_profile.columns:
-                _tk_p = df_later_tk_profile.sort_values("data_date").tail(30).copy()
-                _tk_vals = _tk_p["followers"].dropna()
-                _tk_cur = int(_tk_vals.iloc[-1]) if len(_tk_vals) else 0
-                _tk_prev = int(_tk_vals.iloc[0]) if len(_tk_vals) else _tk_cur
-                _tk_delta = _tk_cur - _tk_prev
-                st.metric("Followers", f"{_tk_cur:,}", delta=f"{_tk_delta:+,} (30d)")
-                fig_tk = go.Figure(go.Scatter(
-                    x=_tk_p["data_date"], y=_tk_p["followers"],
-                    mode="lines", fill="tozeroy",
-                    line=dict(color="#010101", width=2.5, shape="spline", smoothing=0.8),
-                    fillcolor="rgba(1,1,1,0.10)",
-                    hovertemplate="<b>%{x}</b><br>Followers: %{y:,}<extra></extra>",
-                ))
-                fig_tk.update_layout(height=160, margin=dict(l=0,r=0,t=4,b=20),
-                    xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)),
-                    yaxis=dict(showgrid=True, gridcolor="rgba(0,0,0,0.06)"),
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    showlegend=False)
-                st.plotly_chart(fig_tk, use_container_width=True, config=PLOTLY_CONFIG, key="social_tk_followers")
-            else:
-                st.info("No TikTok profile data.")
+                _tk_s = df_later_tk_profile.sort_values("data_date").tail(30)["followers"].dropna()
+                _tk_followers = int(_tk_s.iloc[-1]) if len(_tk_s) else 0
+                _tk_delta30   = _tk_followers - (int(_tk_s.iloc[0]) if len(_tk_s) else _tk_followers)
 
-        # IG Post Engagement chart
-        if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns:
-            st.markdown('<div class="chart-header">Instagram — Post Engagement Rate (Last 30 Posts)</div>', unsafe_allow_html=True)
-            _igp = df_later_ig_posts.head(30).copy()
-            _igp["label"] = pd.to_datetime(_igp["posted_at"], errors="coerce").dt.strftime("%b %d")
-            _igp["eng_num"] = pd.to_numeric(_igp["engagement_rate"], errors="coerce")
-            _igp = _igp.dropna(subset=["eng_num"]).sort_values("posted_at")
-            if not _igp.empty:
-                _avg_eng = _igp["eng_num"].mean()
-                _eng_colors = ["#E1306C" if v >= _avg_eng else "rgba(225,48,108,0.4)" for v in _igp["eng_num"]]
-                fig_eng = go.Figure(go.Bar(
-                    x=_igp["label"], y=_igp["eng_num"],
-                    marker=dict(color=_eng_colors, cornerradius=5),
-                    hovertemplate="<b>%{x}</b><br>Engagement Rate: %{y:.1f}%<extra></extra>",
-                ))
-                fig_eng.add_hline(y=_avg_eng, line_dash="dot", line_color="rgba(0,0,0,0.3)",
-                                  annotation_text=f"Avg {_avg_eng:.1f}%", annotation_position="top right")
-                fig_eng.update_layout(height=240, margin=dict(l=0,r=0,t=20,b=40),
-                    yaxis_title="Engagement Rate %",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    xaxis=dict(showgrid=False, tickangle=-30, tickfont=dict(size=9)))
-                st.plotly_chart(style_fig(fig_eng, height=240), use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_eng_rate")
+            if not df_later_ig_posts.empty and "engagement_rate" in df_later_ig_posts.columns:
+                _eng_vals = pd.to_numeric(df_later_ig_posts["engagement_rate"], errors="coerce").dropna()
+                _ig_eng = float(_eng_vals.mean()) if len(_eng_vals) else 0.0
 
-        # FB Reach vs IG Reach comparison
-        _smc2_c1, _smc2_c2 = st.columns(2)
-        with _smc2_c1:
-            st.markdown('<div class="chart-header">Facebook — Reach Trend (90d)</div>', unsafe_allow_html=True)
-            if not df_later_fb_profile.empty and "reach" in df_later_fb_profile.columns:
-                _fbr = df_later_fb_profile.sort_values("data_date").tail(90).copy()
-                fig_fbr = go.Figure(go.Scatter(
-                    x=_fbr["data_date"], y=_fbr["reach"],
-                    mode="lines", fill="tozeroy",
-                    line=dict(color="#1877F2", width=1.8),
-                    fillcolor="rgba(24,119,242,0.10)",
-                    hovertemplate="<b>%{x}</b><br>Reach: %{y:,}<extra></extra>",
-                ))
-                fig_fbr.update_layout(height=200, margin=dict(l=0,r=0,t=4,b=20),
-                    yaxis_title="Reach",
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
-                st.plotly_chart(style_fig(fig_fbr, height=200), use_container_width=True, config=PLOTLY_CONFIG, key="social_fb_reach")
-            else:
-                st.info("No Facebook reach data.")
+            _total_followers = _ig_followers + _fb_followers + _tk_followers
+            _soc_c1, _soc_c2, _soc_c3 = st.columns(3)
+            with _soc_c1:
+                st.metric("📸 Instagram", f"{_ig_followers:,}", delta=f"{_ig_delta30:+,} (30d)")
+            with _soc_c2:
+                st.metric("👥 Facebook", f"{_fb_followers:,}", delta=f"{_fb_delta30:+,} (30d)")
+            with _soc_c3:
+                st.metric("🎵 TikTok", f"{_tk_followers:,}", delta=f"{_tk_delta30:+,} (30d)")
 
-        with _smc2_c2:
-            st.markdown('<div class="chart-header">TikTok — Video Views Trend</div>', unsafe_allow_html=True)
-            if not df_later_tk_profile.empty and "video_views" in df_later_tk_profile.columns:
-                _tkv = df_later_tk_profile.sort_values("data_date").tail(90).copy()
-                _tkv_clean = _tkv.dropna(subset=["video_views"])
-                if not _tkv_clean.empty:
-                    fig_tkv = go.Figure(go.Bar(
-                        x=_tkv_clean["data_date"], y=_tkv_clean["video_views"],
-                        marker=dict(color="#010101", opacity=0.75, cornerradius=3),
-                        hovertemplate="<b>%{x}</b><br>Video Views: %{y:,}<extra></extra>",
-                    ))
-                    fig_tkv.update_layout(height=200, margin=dict(l=0,r=0,t=4,b=20),
-                        yaxis_title="Video Views",
-                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                        xaxis=dict(tickangle=-30, tickfont=dict(size=9)))
-                    st.plotly_chart(style_fig(fig_tkv, height=200), use_container_width=True, config=PLOTLY_CONFIG, key="social_tk_views")
-                else:
-                    st.info("No TikTok video view data available.")
-            else:
-                st.info("No TikTok profile data.")
-
-        # IG Demographics
-        if not df_later_ig_demo.empty:
-            st.markdown('<div class="chart-header">Instagram — Audience Demographics</div>', unsafe_allow_html=True)
-            _dem_c1, _dem_c2 = st.columns(2)
-            with _dem_c1:
-                # Gender pie
-                _gd = df_later_ig_demo[["gender","total_pct"]].dropna()
-                if not _gd.empty:
-                    fig_gd = go.Figure(go.Pie(
-                        labels=_gd["gender"], values=_gd["total_pct"],
-                        hole=0.45,
-                        marker=dict(colors=["#E1306C","#833AB4","#FD1D1D"]),
-                        textinfo="label+percent",
-                        hovertemplate="<b>%{label}</b><br>%{percent}<extra></extra>",
-                    ))
-                    fig_gd.update_layout(height=220, margin=dict(l=0,r=0,t=20,b=0),
-                        paper_bgcolor="rgba(0,0,0,0)", showlegend=True)
-                    st.plotly_chart(fig_gd, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_gender")
-            with _dem_c2:
-                # Age breakdown stacked bar
-                _age_cols = [c for c in df_later_ig_demo.columns if c.startswith("age_")]
-                if _age_cols:
-                    _age_labels = [c.replace("age_","").replace("_"," ").replace("plus","65+") for c in _age_cols]
-                    _female = df_later_ig_demo[df_later_ig_demo["gender"].str.lower()=="female"]
-                    _male   = df_later_ig_demo[df_later_ig_demo["gender"].str.lower()=="male"]
-                    fig_age = go.Figure()
-                    if not _female.empty:
-                        fig_age.add_trace(go.Bar(name="Female", x=_age_labels,
-                            y=[float(_female.iloc[0].get(c, 0) or 0) for c in _age_cols],
-                            marker_color="#E1306C"))
-                    if not _male.empty:
-                        fig_age.add_trace(go.Bar(name="Male", x=_age_labels,
-                            y=[float(_male.iloc[0].get(c, 0) or 0) for c in _age_cols],
-                            marker_color="#833AB4"))
-                    fig_age.update_layout(barmode="group", height=220, margin=dict(l=0,r=0,t=20,b=0),
-                        yaxis_title="% of Audience",
-                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-                    st.plotly_chart(fig_age, use_container_width=True, config=PLOTLY_CONFIG, key="social_ig_age")
+            st.markdown(
+                f'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;'
+                f'padding:14px 20px;margin-top:10px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">'
+                f'<span style="font-size:13px;color:#334155;"><strong style="color:#0F172A;">'
+                f'{_total_followers:,}</strong> total followers across all platforms</span>'
+                f'<span style="font-size:13px;color:#334155;"><strong style="color:#E1306C;">'
+                f'{_ig_eng:.1f}%</strong> avg IG engagement rate</span>'
+                f'<span style="font-size:11px;color:#94A3B8;">Source: Later.com · no industry benchmark available</span>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+        except Exception as e:
+            _logger.debug(f"Failed to render social summary: {str(e)}")
+            st.info("Social media summary not available.")
 
         st.markdown("---")
 
@@ -12679,12 +12608,58 @@ with tab_ei:
         },
         {
             "name": "Dana Point Whale Festival",
-            "dates": "Mar 1, 2026",
-            "start": "2026-03-01", "end": "2026-03-01",
+            "dates": "Mar 1–2, 2026",
+            "start": "2026-03-01", "end": "2026-03-02",
             "baseline_month": "2026-02",
             "category": "Festival",
             "tier": "SILVER",
             "note": "Q1 shoulder driver · gray whale migration season",
+        },
+        # ── 2026 Upcoming Events ─────────────────────────────────────────────
+        {
+            "name": "OC Marathon 2026",
+            "dates": "May 3, 2026",
+            "start": "2026-05-03", "end": "2026-05-03",
+            "baseline_month": "2026-05",
+            "category": "Race/Sport",
+            "tier": "SILVER",
+            "note": "Finishing at Harbor · pre/post nights stronger than race day · UPCOMING",
+        },
+        {
+            "name": "July 4th Holiday 2026",
+            "dates": "Jul 3–5, 2026",
+            "start": "2026-07-03", "end": "2026-07-05",
+            "baseline_month": "2026-07",
+            "category": "Holiday",
+            "tier": "PLATINUM",
+            "note": "Peak ADR compression period · book early · UPCOMING",
+        },
+        {
+            "name": "Doheny Days 2026",
+            "dates": "Sep 12–13, 2026",
+            "start": "2026-09-12", "end": "2026-09-13",
+            "baseline_month": "2026-09",
+            "category": "Music Festival",
+            "tier": "GOLD",
+            "note": "Rock festival · strong Sat ADR compression · UPCOMING",
+        },
+        {
+            "name": "Ohana Fest 2026",
+            "dates": "Sep 25–27, 2026",
+            "start": "2026-09-25", "end": "2026-09-27",
+            "baseline_month": "2026-09",
+            "category": "Music/Surf Festival",
+            "tier": "PLATINUM",
+            "note": "Signature compression event · 2025 benchmark: $14.6M spend, 68% OOS · UPCOMING",
+        },
+        {
+            "name": "Tall Ships Festival 2026",
+            "dates": "Oct 2–4, 2026",
+            "start": "2026-10-02", "end": "2026-10-04",
+            "baseline_month": "2026-10",
+            "category": "Heritage Festival",
+            "tier": "GOLD",
+            "note": "Strong shoulder-season compression · Dana Point Harbor · UPCOMING",
         },
     ]
 
