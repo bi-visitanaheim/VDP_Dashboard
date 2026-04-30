@@ -2229,7 +2229,7 @@ st.markdown("""
       font-size: 11px !important; padding: 5px 9px !important;
       min-width: 0 !important;
     }
-    .hero-banner { padding: 16px 14px !important; }
+    .hero-banner { padding: 16px 14px !important; margin: -0.75rem -0.75rem 0 -0.75rem !important; }
     .hero-title  { font-size: 1.35rem !important; }
     .hero-subtitle { font-size: 11px !important; }
     .sh-block  { padding: 9px 12px !important; }
@@ -2268,6 +2268,7 @@ st.markdown("""
   }
   @media screen and (max-width: 480px) {
     .hero-title { font-size: 1.15rem !important; }
+    .hero-banner { margin: -0.5rem -0.5rem 0 -0.5rem !important; padding: 14px 12px !important; }
     .main .block-container { padding: 0 0.5rem 2rem 0.5rem !important; }
     .sh-tag { display: none !important; }
     [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
