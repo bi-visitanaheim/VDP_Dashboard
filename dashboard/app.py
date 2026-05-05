@@ -589,6 +589,19 @@ CRITICAL: NEVER present Zartico as current data. Use only for historical trend c
 - `google_trends_weekly` — Google search demand trends for Dana Point and competing destinations.
 - `census_demographics` — US Census ACS demographics for feeder market MSAs.
 - `vdp_events` — Known major Dana Point events (event_name, event_date, event_type, is_major flag).
+- `ticketmaster_events` — Forward 90-day calendar of regional ticketed events within 50 mi of Dana Point \
+  (event_id, event_date, venue_name, venue_city, distance_miles, segment, genre, price_min/max, status, url). \
+  Concerts, sports, theatre, family. Use to anticipate event-driven compression and time campaigns. \
+  Honda Center, Angel Stadium, Pacific Amphitheatre, Segerstrom, OC Fair, City National Grove all in radius.
+- `wikipedia_pageviews_daily` — Daily English Wikipedia pageviews for Dana Point destination cluster: \
+  Dana Point CA, Doheny State Beach, Mission San Juan Capistrano, Salt Creek Beach, Dana Point Harbor, \
+  Laguna Beach, San Clemente. Visitor awareness/intent leading indicator (4–6 weeks ahead of bookings).
+- `noaa_tides_daily` — Daily tide predictions for Dana Point Harbor reference station (NOAA 9410660): \
+  hi/lo tide times and heights, daily tide_range_ft, has_negative_low flag, water_temp_f_avg. \
+  Affects whale watching, sportfishing, tidepool tourism, and beach width / capacity.
+- `airnow_aqi_daily` — EPA AirNow daily AQI for South OC ZIPs (92629 Dana Point, 92651 Laguna, 92675 SJC, \
+  92672 San Clemente, 92660 Newport): zip_code, parameter (PM2.5/OZONE), aqi, category_name. \
+  AQI > 100 softens beach demand; AQI > 150 raises outdoor-event cancellation risk.
 
 **Intelligence Tables (Generated Daily):**
 - `insights_daily` — Forward-looking insights for 5 audiences (dmo, city, visitor, resident, cross). \
@@ -4546,6 +4559,70 @@ def load_tsa_checkpoint() -> pd.DataFrame:
         return pd.DataFrame()
 
 
+@st.cache_data(ttl=1800)
+def load_ticketmaster_events() -> pd.DataFrame:
+    """Ticketmaster Discovery events within 50 mi of Dana Point — forward demand signal."""
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM ticketmaster_events ORDER BY event_date ASC", conn
+        )
+        if not df.empty:
+            df["date"] = pd.to_datetime(df["event_date"], errors="coerce")
+        return df
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=1800)
+def load_wikipedia_pageviews() -> pd.DataFrame:
+    """Wikipedia daily pageviews for Dana Point destination cluster — awareness signal."""
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM wikipedia_pageviews_daily ORDER BY as_of_date ASC", conn
+        )
+        if not df.empty:
+            df["date"] = pd.to_datetime(df["as_of_date"], errors="coerce")
+        return df
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=3600)
+def load_noaa_tides() -> pd.DataFrame:
+    """NOAA daily tide predictions + water temp for Dana Point Harbor reference station."""
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM noaa_tides_daily ORDER BY as_of_date ASC", conn
+        )
+        if not df.empty:
+            df["date"] = pd.to_datetime(df["as_of_date"], errors="coerce")
+        return df
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=1800)
+def load_airnow_aqi() -> pd.DataFrame:
+    """EPA AirNow daily AQI for South OC ZIPs — visitor outdoor experience risk."""
+    conn = get_connection()
+    try:
+        df = pd.read_sql_query(
+            "SELECT * FROM airnow_aqi_daily ORDER BY as_of_date ASC, zip_code ASC", conn
+        )
+        if not df.empty:
+            df["date"] = pd.to_datetime(df["as_of_date"], errors="coerce")
+        return df
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
+        return pd.DataFrame()
+
+
 @st.cache_data(ttl=300)
 def get_table_counts() -> dict:
     conn = get_connection()
@@ -4613,6 +4690,11 @@ def get_table_counts() -> dict:
         "weather_monthly",
         "noaa_marine_monthly",
         "census_demographics",
+        # New event + visitor-impact sources (added 2026-05-05)
+        "ticketmaster_events",
+        "wikipedia_pageviews_daily",
+        "noaa_tides_daily",
+        "airnow_aqi_daily",
     ]:
         try:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()

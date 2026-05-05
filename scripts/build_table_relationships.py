@@ -633,6 +633,79 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("events_insights",          "events_promotion_analysis",    "enriches",      "event_id",
      "Promotion effectiveness and recommended spend insights derived from events_promotion_analysis"),
+
+    # ── Ticketmaster Events (regional event demand pipeline) ───────────────
+    ("ticketmaster_events",      "vdp_events",                   "cross_ref",     "event_date",
+     "Regional Ticketmaster events (50-mi radius) cross-referenced with local VDP-curated events on shared dates"),
+
+    ("ticketmaster_events",      "kpi_daily_summary",            "context",       "as_of_date",
+     "Concert/sports demand on event_date contextualizes hotel occupancy spikes in kpi_daily_summary"),
+
+    ("ticketmaster_events",      "kpi_compression_quarterly",    "context",       "event_date→quarter",
+     "Concentration of regional events per quarter helps explain compression-day clustering"),
+
+    ("ticketmaster_events",      "datafy_overview_dma",          "cross_ref",     "venue_market",
+     "Event venues align with Datafy DMA feeder markets — campaign timing follow-through"),
+
+    ("ticketmaster_events",      "google_trends_weekly",         "cross_ref",     "event_date→week",
+     "Search interest peaks should precede regional event dates by 2–6 weeks"),
+
+    ("ticketmaster_events",      "insights_daily",               "derived_from",  "event_date",
+     "compute_insights.py uses ticketmaster_events to forecast event-driven compression and ROI"),
+
+    ("ticketmaster_events",      "events_economic_impact",       "cross_ref",     "event_date",
+     "Major regional events cross-referenced with local event economic impact for spillover analysis"),
+
+    # ── Wikipedia Pageviews (awareness / intent signal) ────────────────────
+    ("wikipedia_pageviews_daily","google_trends_weekly",         "cross_platform","time_period",
+     "Wikipedia pageviews and Google Trends together triangulate organic visitor interest"),
+
+    ("wikipedia_pageviews_daily","kpi_daily_summary",            "context",       "as_of_date",
+     "Pageviews on Dana Point articles 4–6 weeks ahead correlate with downstream occupancy"),
+
+    ("wikipedia_pageviews_daily","datafy_attribution_website_kpis","cross_ref",   "time_period",
+     "Wikipedia awareness signal pairs with Datafy website attribution to model intent → visit funnel"),
+
+    ("wikipedia_pageviews_daily","datafy_attribution_website_dma","cross_ref",    "time_period",
+     "Awareness lift broken down by DMA via cross-reference with Datafy attribution by feeder market"),
+
+    ("wikipedia_pageviews_daily","insights_daily",               "derived_from",  "as_of_date",
+     "compute_insights.py reads pageview spikes to flag emerging interest in Dana Point articles"),
+
+    ("wikipedia_pageviews_daily","vdp_events",                   "cross_ref",     "event_date",
+     "Pageviews lift around major events validates earned-media reach"),
+
+    # ── NOAA Tides (Dana Point Harbor visitor capacity) ────────────────────
+    ("noaa_tides_daily",         "kpi_daily_summary",            "context",       "as_of_date",
+     "Tide range and negative-low days affect beach width and harbor visitor capacity"),
+
+    ("noaa_tides_daily",         "vdp_events",                   "context",       "event_date",
+     "Harbor / tidepool / Festival of Whales events sensitive to tide cycle — tide context per event date"),
+
+    ("noaa_tides_daily",         "ticketmaster_events",          "context",       "event_date",
+     "Boat-based and waterfront ticketed events cross-referenced with daily tide forecast"),
+
+    ("noaa_tides_daily",         "noaa_marine_monthly",          "enriches",      "month",
+     "Daily Dana Point tide and water-temp detail enriches the monthly NOAA marine summary"),
+
+    ("noaa_tides_daily",         "weather_monthly",              "cross_ref",     "month",
+     "Tide / water-temp data complements coastal weather for visitor-experience modeling"),
+
+    # ── AirNow AQI (visitor outdoor experience / event cancellation risk) ─
+    ("airnow_aqi_daily",         "kpi_daily_summary",            "context",       "as_of_date",
+     "AQI > 100 days correlate with softer leisure demand even when weather is clear"),
+
+    ("airnow_aqi_daily",         "vdp_events",                   "context",       "event_date",
+     "AQI > 150 raises outdoor-event cancellation risk; tracked per event date"),
+
+    ("airnow_aqi_daily",         "ticketmaster_events",          "context",       "event_date",
+     "Outdoor concerts (Pacific Amphitheatre, Doheny Blues) screened against AQI by event date"),
+
+    ("airnow_aqi_daily",         "weather_monthly",              "cross_ref",     "month",
+     "AQI joins coastal weather to give a complete visitor-experience risk panel"),
+
+    ("airnow_aqi_daily",         "insights_daily",               "derived_from",  "as_of_date",
+     "compute_insights.py flags AQI risk windows for residents/visitors audience cards"),
 ]
 
 

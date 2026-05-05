@@ -33,8 +33,12 @@ Pipeline steps:
   17. fetch_tsa_data.py           — TSA checkpoint throughput   → tsa_checkpoint_daily (skip-safe)
   18. fetch_noaa_marine.py        — NOAA ocean buoy data        → noaa_marine_monthly (skip-safe)
   19. fetch_census_acs.py         — US Census ACS demographics  → census_demographics (skip-safe)
-  20. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
-  21. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
+  20. fetch_ticketmaster_events.py — Ticketmaster Discovery API → ticketmaster_events (skip-safe, demo seeds without key)
+  21. fetch_wikipedia_pageviews.py — Wikipedia awareness signal → wikipedia_pageviews_daily (skip-safe, no key)
+  22. fetch_noaa_tides.py         — NOAA tide predictions       → noaa_tides_daily (skip-safe, no key)
+  23. fetch_airnow_aqi.py         — EPA AirNow AQI              → airnow_aqi_daily (skip-safe, demo seeds without key)
+  24. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
+  25. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
 
 Steps 1, 2, 3, 6 are FAIL-FAST (abort on failure). All others are skip-safe.
 Each step is logged to logs/pipeline.log:
@@ -93,6 +97,13 @@ STEPS = [
     ("fetch_tsa",         os.path.join(BASE_DIR, "fetch_tsa_data.py"),          False),
     ("fetch_noaa_marine", os.path.join(BASE_DIR, "fetch_noaa_marine.py"),         False),
     ("fetch_census_acs",  os.path.join(BASE_DIR, "fetch_census_acs.py"),         False),
+    # New event + visitor-impact sources (added 2026-05-05)
+    # Events are the #1 forward demand signal; awareness, tides, and AQI all
+    # directly affect visitor experience and event-day capacity.
+    ("fetch_ticketmaster",   os.path.join(BASE_DIR, "fetch_ticketmaster_events.py"), False),
+    ("fetch_wiki_pageviews", os.path.join(BASE_DIR, "fetch_wikipedia_pageviews.py"), False),
+    ("fetch_noaa_tides",     os.path.join(BASE_DIR, "fetch_noaa_tides.py"),          False),
+    ("fetch_airnow_aqi",     os.path.join(BASE_DIR, "fetch_airnow_aqi.py"),          False),
     # Strategy goal progress — refresh current_value for all active goals from live data
     ("strategy_progress", os.path.join(BASE_DIR, "compute_strategy_progress.py"), False),
     # Design inspiration — no DB writes; saves to data/design/godly_inspiration.json
