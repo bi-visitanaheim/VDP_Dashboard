@@ -23,7 +23,8 @@ Pipeline steps:
    8. fetch_vdp_events.py         — VDP event calendar scraper  → vdp_events (skip-safe)
    9. load_visit_ca.py            — Visit California Excel      → 4 visit_ca_* tables (skip-safe)
   10. load_later_reports.py       — Later.com social CSVs       → 14 later_* tables (skip-safe)
-  11. audit_data.py               — data-quality audit; stdout summary (skip-safe)
+  11. fetch_event_analytics.py    — Event impact analysis       → 5 events_* tables (skip-safe)
+  12. audit_data.py               — data-quality audit; stdout summary (skip-safe)
   12. fetch_fred_data.py          — FRED macro indicators       → fred_economic_indicators (skip-safe, needs FRED_API_KEY)
   13. fetch_google_trends.py      — Google search demand        → google_trends_weekly (skip-safe)
   14. fetch_weather_data.py       — Open-Meteo coastal weather  → weather_monthly (skip-safe)
@@ -81,6 +82,7 @@ STEPS = [
     ("fetch_vdp_events",  os.path.join(BASE_DIR, "fetch_vdp_events.py"),        False),
     ("load_visit_ca",     os.path.join(BASE_DIR, "load_visit_ca.py"),           False),
     ("load_later",        os.path.join(BASE_DIR, "load_later_reports.py"),      False),
+    ("fetch_event_analytics", os.path.join(BASE_DIR, "fetch_event_analytics.py"), False),
     ("audit_data",        os.path.join(BASE_DIR, "audit_data.py"),              False),
     # External live data — skip-safe, run last so core pipeline is never blocked
     ("fetch_fred",        os.path.join(BASE_DIR, "fetch_fred_data.py"),         False),
