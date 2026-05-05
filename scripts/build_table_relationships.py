@@ -566,6 +566,73 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("strategy_goals",           "insights_daily",               "enriches",      "as_of_date",
      "Strategy goal progress informs and contextualizes daily AI insights for all audiences"),
+
+    # ── Event Analytics (May 2026 Event Impact Initiative) ──────────────────
+    ("vdp_events",               "events_metrics",               "enriches",      "event_id",
+     "Event base data enriched with estimated attendance, web interest, and promotion channels"),
+
+    ("vdp_events",               "events_economic_impact",       "derived_from",  "event_id",
+     "Economic impact analysis computed from event dates correlated with STR occupancy/ADR periods"),
+
+    ("vdp_events",               "events_promotion_analysis",    "derived_from",  "event_id",
+     "Promotion effectiveness analyzed from Later.com social posts and Google Trends search volume"),
+
+    ("vdp_events",               "events_visitor_mix",           "enriches",      "event_id",
+     "Visitor demographics during event periods estimated from Datafy overview KPIs baseline"),
+
+    ("vdp_events",               "events_insights",              "derived_from",  "event_id",
+     "Pre-computed event ROI/promotion insights cached for dashboard display"),
+
+    ("events_metrics",           "events_economic_impact",       "enriches",      "event_id",
+     "Event attendance estimates inform economic impact revenue-per-attendee calculations"),
+
+    ("events_metrics",           "later_ig_posts",               "cross_ref",     "event_date",
+     "Event social promotion metrics aggregated from Later.com Instagram posts during event window"),
+
+    ("events_metrics",           "later_fb_posts",               "cross_ref",     "event_date",
+     "Event social promotion metrics aggregated from Later.com Facebook posts during event window"),
+
+    ("events_metrics",           "google_trends_weekly",         "cross_ref",     "event_date",
+     "Event web interest tracked via Google Trends search volume spikes for event keywords"),
+
+    ("events_economic_impact",   "kpi_daily_summary",            "cross_ref",     "event_date",
+     "Event-period occupancy/ADR/RevPAR compared against baseline kpi_daily_summary periods"),
+
+    ("events_economic_impact",   "fact_str_metrics",             "cross_ref",     "event_date",
+     "Event economic impact correlated with STR daily/monthly metrics for the same property/market"),
+
+    ("events_economic_impact",   "insights_daily",               "enriches",      "event_date",
+     "Economic impact metrics enrich AI-generated event ROI insights for all audiences"),
+
+    ("events_promotion_analysis","later_ig_posts",              "cross_ref",     "event_date",
+     "Promotion effectiveness sourced from Instagram post count/engagement during event window"),
+
+    ("events_promotion_analysis","later_fb_posts",              "cross_ref",     "event_date",
+     "Promotion effectiveness sourced from Facebook post count/engagement during event window"),
+
+    ("events_promotion_analysis","later_tk_profile_growth",     "cross_ref",     "event_date",
+     "TikTok audience growth tracking during event promotion period"),
+
+    ("events_promotion_analysis","google_trends_weekly",         "cross_ref",     "event_date",
+     "Hashtag/keyword volume and sentiment proxied via Google Trends search interest peaks"),
+
+    ("events_visitor_mix",       "datafy_overview_kpis",         "derived_from",  "report_period",
+     "Event visitor demographics (age, HHI, LOS) estimated from Datafy overview KPIs baseline"),
+
+    ("events_visitor_mix",       "datafy_overview_dma",          "cross_ref",     "report_period",
+     "Event top origin markets estimated from Datafy DMA feeder market breakdown"),
+
+    ("events_visitor_mix",       "datafy_overview_demographics", "enriches",      "report_period",
+     "Event visitor age/income segments estimated from Datafy demographic distribution"),
+
+    ("events_insights",          "vdp_events",                   "enriches",      "event_id",
+     "Pre-computed event insights (ROI, promotion effectiveness, visitor value) ready for dashboard"),
+
+    ("events_insights",          "events_economic_impact",       "enriches",      "event_id",
+     "ROI and revenue per attendee insights derived from events_economic_impact calculations"),
+
+    ("events_insights",          "events_promotion_analysis",    "enriches",      "event_id",
+     "Promotion effectiveness and recommended spend insights derived from events_promotion_analysis"),
 ]
 
 
