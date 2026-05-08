@@ -1227,6 +1227,35 @@ st.markdown("""
     text-transform: uppercase;
   }
 
+  /* ── LIVE / window / updated row ────────────────────────────────────── */
+  .hero-live-row {
+    display: flex; align-items: center; gap: 16px;
+    margin-top: 16px; flex-wrap: wrap; position: relative; z-index: 10;
+  }
+  /* Force white on every child — class selector beats Streamlit theme !important */
+  .hero-live-row span,
+  .hero-live-badge,
+  .hero-live-text,
+  .hero-live-dot {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+  }
+  .hero-live-badge {
+    font-size: 16px; font-weight: 800; letter-spacing: .10em;
+    text-transform: uppercase;
+    background: rgba(34,211,238,0.25);
+    border: 2px solid rgba(34,211,238,0.60);
+    padding: 8px 20px; border-radius: 28px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
+  .hero-live-text {
+    font-size: 16px; font-weight: 800; letter-spacing: .05em;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .hero-live-dot {
+    font-size: 16px; opacity: 0.8;
+  }
+
   /* ── Home button title ───────────────────────────────────────────────── */
   .home-title a {
     text-decoration: none; color: inherit;
@@ -7352,13 +7381,11 @@ st.markdown(
     f'<div style="display:flex;align-items:center;gap:16px;margin-top:5px;flex-wrap:wrap;">'
     f'<div class="hero-subtitle">Destination Intelligence Platform &nbsp;·&nbsp; VDP Select Portfolio &nbsp;·&nbsp; 12 Properties</div>'
     f'</div>'
-    f'<div style="display:flex;align-items:center;gap:16px;margin-top:16px;flex-wrap:wrap;position:relative;z-index:10;">'
-    f'<span style="font-size:16px;font-weight:800;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;letter-spacing:.10em;text-shadow:0 1px 3px rgba(0,0,0,0.4);'
-    f'text-transform:uppercase;background:rgba(34,211,238,0.25);border:2px solid rgba(34,211,238,0.60);'
-    f'padding:8px 20px;border-radius:28px;">⬤ LIVE</span>'
-    f'<span style="font-size:16px;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:800;letter-spacing:.05em;text-shadow:0 1px 2px rgba(0,0,0,0.3);">{range_label} window</span>'
-    f'<span style="font-size:16px;color:#FFFFFF !important;opacity:0.8;">·</span>'
-    f'<span style="font-size:16px;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:800;letter-spacing:.05em;text-shadow:0 1px 2px rgba(0,0,0,0.3);">Updated {last_upd}</span>'
+    f'<div class="hero-live-row">'
+    f'<span class="hero-live-badge">⬤ LIVE</span>'
+    f'<span class="hero-live-text">{range_label} window</span>'
+    f'<span class="hero-live-dot">·</span>'
+    f'<span class="hero-live-text">Updated {last_upd}</span>'
     f'</div>'
     f'</div>',
     unsafe_allow_html=True,
