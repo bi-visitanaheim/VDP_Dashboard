@@ -9,7 +9,10 @@ PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 # STR raw exports live in data/str/  (legacy path: downloads/str_daily.xlsx)
 STR_DIR = os.path.join(PROJECT_ROOT, "data", "str")
-DAILY_FILE = os.path.join(STR_DIR, "str_daily.xlsx")
+# Prefer str_daily_latest.xlsx (latest export); fall back to str_daily.xlsx
+_DAILY_LATEST = os.path.join(STR_DIR, "str_daily_latest.xlsx")
+_DAILY_LEGACY = os.path.join(STR_DIR, "str_daily.xlsx")
+DAILY_FILE = _DAILY_LATEST if os.path.exists(_DAILY_LATEST) else _DAILY_LEGACY
 
 
 def get_connection():

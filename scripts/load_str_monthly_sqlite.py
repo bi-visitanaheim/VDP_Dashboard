@@ -8,7 +8,10 @@ PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 # STR raw exports live in data/str/  (legacy path: downloads/str_monthly.xlsx)
 STR_DIR = os.path.join(PROJECT_ROOT, "data", "str")
-MONTHLY_FILE = os.path.join(STR_DIR, "str_monthly.xlsx")
+# Prefer str_monthly_latest.xlsx (latest export); fall back to str_monthly.xlsx
+_MONTHLY_LATEST = os.path.join(STR_DIR, "str_monthly_latest.xlsx")
+_MONTHLY_LEGACY = os.path.join(STR_DIR, "str_monthly.xlsx")
+MONTHLY_FILE = _MONTHLY_LATEST if os.path.exists(_MONTHLY_LATEST) else _MONTHLY_LEGACY
 
 
 def get_connection() -> sqlite3.Connection:

@@ -739,6 +739,38 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("correlations_str_context", "fact_str_metrics",             "derived_from",  "hotel_metric",
      "Underlying STR daily metrics feed kpi_daily_summary which drives correlation computation"),
+
+    # ── New Datafy overview tables (added 2026-05-08) ──────────────────────
+    # WeekdayVsWeekend, LengthOfStay, StateMap, VisitationByYear, DailyTrend,
+    # Advanced Spending — all parsed from new Datafy exports.
+    ("datafy_overview_weekday_weekend",   "datafy_overview_kpis",             "enriches",    "report_period_start",
+     "Weekday vs weekend visitation pattern breakdown — supplements main overview KPIs"),
+    ("datafy_overview_weekday_weekend",   "kpi_daily_summary",                "cross_ref",   "as_of_date ~ report_period_start",
+     "Day-of-week visitation split maps onto STR daily compression calendar"),
+    ("datafy_overview_length_of_stay",    "datafy_overview_kpis",             "enriches",    "report_period_start",
+     "LOS bucket distribution — supplements avg_los in overview KPIs with full distribution"),
+    ("datafy_overview_length_of_stay",    "zartico_lodging_kpis",             "cross_ref",   "report_period_start",
+     "Datafy LOS buckets cross-reference Zartico lodging LOS for YOY trend comparison"),
+    ("datafy_overview_state_map",         "datafy_overview_dma",              "enriches",    "report_period_start",
+     "State-level visitor origin map — DMA table has finer grain, state map shows broad geography"),
+    ("datafy_overview_state_map",         "datafy_overview_top_markets",      "enriches",    "report_period_start",
+     "State map complements top-markets DMA list with geographic visualization data"),
+    ("datafy_overview_visitation_by_year","datafy_overview_kpis",             "enriches",    "report_period_start",
+     "Multi-year visitation trend — puts current period KPIs in historical context"),
+    ("datafy_overview_visitation_by_year","zartico_overnight_trend",          "cross_ref",   "year ~ month_str",
+     "Annual visitation YOY from Datafy cross-references Zartico monthly overnight trend"),
+    ("datafy_overview_daily_trend",       "kpi_daily_summary",                "cross_ref",   "as_of_date ~ bucket",
+     "Datafy daily visitor buckets cross-reference STR daily KPIs for compression-day validation"),
+    ("datafy_overview_daily_trend",       "datafy_overview_kpis",             "enriches",    "report_period_start",
+     "Daily trend buckets provide day-level texture to annual overview KPIs"),
+    ("datafy_spending_advanced",          "datafy_overview_spending_by_market","enriches",   "report_period_start",
+     "Advanced spending exports extend the spending-by-market table with LOS, repeat, day-of-week cuts"),
+    ("datafy_spending_advanced",          "datafy_overview_spending_by_category","enriches", "report_period_start",
+     "Advanced spending exports extend category spending with additional segmentation dimensions"),
+    ("datafy_spending_advanced",          "datafy_overview_kpis",             "enriches",    "report_period_start",
+     "Advanced spending insights augment main overview KPIs with spending behavior analytics"),
+    ("datafy_spending_advanced",          "correlations_str_context",         "context",     "hotel_metric",
+     "Spending pattern data can inform future correlation analysis of spend vs hotel ADR/RevPAR"),
 ]
 
 

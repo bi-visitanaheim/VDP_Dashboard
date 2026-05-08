@@ -458,6 +458,73 @@ SCHEMAS: dict[str, str] = {
             loaded_at           TEXT DEFAULT (datetime('now'))
         );""",
 
+    "datafy_overview_weekday_weekend": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_weekday_weekend (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            day_type            TEXT,
+            metric_name         TEXT,
+            metric_value        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_length_of_stay": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_length_of_stay (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            los_bucket          TEXT,
+            share_pct           REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_state_map": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_state_map (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            state               TEXT,
+            metric_name         TEXT,
+            metric_value        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_visitation_by_year": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_visitation_by_year (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            year                INTEGER,
+            metric_name         TEXT,
+            metric_value        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_daily_trend": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_daily_trend (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            bucket              TEXT,
+            metric_name         TEXT,
+            metric_value        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_spending_advanced": """
+        CREATE TABLE IF NOT EXISTS datafy_spending_advanced (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            export_type         TEXT,
+            dimension           TEXT,
+            segment             TEXT,
+            metric_name         TEXT,
+            metric_value        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
     "datafy_attribution_polygons": """
         CREATE TABLE IF NOT EXISTS datafy_attribution_polygons (
             id                              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -781,6 +848,263 @@ def resolve_table(subfolder: str, file_prefix: str) -> str | None:
 
 
 # ─── New-format parser functions ──────────────────────────────────────────────
+
+def _parse_generic_kv(csv_path: str, cur, table: str, ps: str, pe: str,
+                       dim_col: str, seg_col: str | None, val_col: str,
+                       export_type: str = "") -> int:
+    """
+    Generic key-value parser: reads (dim_col, [seg_col,] val_col) rows and
+    stores them in a flexible metric table.  Used for spending advanced exports.
+    """
+    _delete_period(cur, table, ps, pe)
+    rows_inserted = 0
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        cols = reader.fieldnames or []
+        if not cols:
+            return 0
+        for row in reader:
+            dim   = str(row.get(dim_col, "")).strip()
+            seg   = str(row.get(seg_col, "")).strip() if seg_col and seg_col in cols else ""
+            raw   = str(row.get(val_col, "")).strip()
+            val   = _clean_pct_or_num(raw)
+            if not dim:
+                continue
+            cur.execute(
+                f"INSERT INTO {table} "
+                "(report_period_start,report_period_end,export_type,dimension,segment,metric_name,metric_value,loaded_at) "
+                "VALUES (?,?,?,?,?,?,?,?)",
+                (ps, pe, export_type, dim, seg, val_col, val, NOW),
+            )
+            rows_inserted += 1
+    return rows_inserted
+
+
+def _clean_pct_or_num(s: str) -> float | None:
+    """Strip %, commas, currency symbols; return float or None."""
+    s = s.replace("%", "").replace(",", "").replace("$", "").strip()
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return None
+
+
+def parse_weekday_weekend(csv_path: str, cur, ps: str, pe: str) -> int:
+    """WeekdayVsWeekend_Export*.csv → datafy_overview_weekday_weekend (flexible)"""
+    table = "datafy_overview_weekday_weekend"
+    _delete_period(cur, table, ps, pe)
+    rows_inserted = 0
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        cols = [c.strip() for c in (reader.fieldnames or [])]
+        if not cols:
+            return 0
+        numeric_cols = [c for c in cols if c not in ("Day Type", "Metric", "Category", "")]
+        day_col = cols[0]
+        for row in reader:
+            day_type = str(row.get(day_col, "")).strip()
+            if not day_type:
+                continue
+            for metric in numeric_cols:
+                raw = str(row.get(metric, "")).strip()
+                val = _clean_pct_or_num(raw)
+                if val is None and raw:
+                    val = None
+                cur.execute(
+                    "INSERT INTO datafy_overview_weekday_weekend "
+                    "(report_period_start,report_period_end,day_type,metric_name,metric_value,loaded_at) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (ps, pe, day_type, metric, val, NOW),
+                )
+                rows_inserted += 1
+    return rows_inserted
+
+
+def parse_length_of_stay(csv_path: str, cur, ps: str, pe: str) -> int:
+    """LengthOfStayDonut_Export*.csv → datafy_overview_length_of_stay"""
+    table = "datafy_overview_length_of_stay"
+    _delete_period(cur, table, ps, pe)
+    rows_inserted = 0
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        cols = [c.strip() for c in (reader.fieldnames or [])]
+        if not cols:
+            return 0
+        bucket_col = cols[0]
+        val_col    = cols[1] if len(cols) > 1 else None
+        if not val_col:
+            return 0
+        for row in reader:
+            bucket = str(row.get(bucket_col, "")).strip()
+            raw    = str(row.get(val_col, "")).strip()
+            val    = _clean_pct_or_num(raw)
+            if not bucket:
+                continue
+            cur.execute(
+                "INSERT INTO datafy_overview_length_of_stay "
+                "(report_period_start,report_period_end,los_bucket,share_pct,loaded_at) "
+                "VALUES (?,?,?,?,?)",
+                (ps, pe, bucket, val, NOW),
+            )
+            rows_inserted += 1
+    return rows_inserted
+
+
+def parse_state_map(csv_path: str, cur, ps: str, pe: str) -> int:
+    """StateMap_Export*.csv → datafy_overview_state_map"""
+    table = "datafy_overview_state_map"
+    _delete_period(cur, table, ps, pe)
+    rows_inserted = 0
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        cols = [c.strip() for c in (reader.fieldnames or [])]
+        if not cols:
+            return 0
+        state_col = cols[0]
+        metric_cols = cols[1:]
+        for row in reader:
+            state = str(row.get(state_col, "")).strip()
+            if not state:
+                continue
+            for mc in metric_cols:
+                raw = str(row.get(mc, "")).strip()
+                val = _clean_pct_or_num(raw)
+                cur.execute(
+                    "INSERT INTO datafy_overview_state_map "
+                    "(report_period_start,report_period_end,state,metric_name,metric_value,loaded_at) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (ps, pe, state, mc, val, NOW),
+                )
+                rows_inserted += 1
+    return rows_inserted
+
+
+def parse_visitation_by_year(csv_path: str, cur, ps: str, pe: str) -> int:
+    """VisitationByYear_Export*.csv → datafy_overview_visitation_by_year"""
+    table = "datafy_overview_visitation_by_year"
+    _delete_period(cur, table, ps, pe)
+    rows_inserted = 0
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        cols = [c.strip() for c in (reader.fieldnames or [])]
+        if not cols:
+            return 0
+        year_col   = cols[0]
+        metric_cols = cols[1:]
+        for row in reader:
+            raw_year = str(row.get(year_col, "")).strip()
+            try:
+                year = int(float(raw_year))
+            except (ValueError, TypeError):
+                continue
+            for mc in metric_cols:
+                raw = str(row.get(mc, "")).strip()
+                val = _clean_pct_or_num(raw)
+                cur.execute(
+                    "INSERT INTO datafy_overview_visitation_by_year "
+                    "(report_period_start,report_period_end,year,metric_name,metric_value,loaded_at) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (ps, pe, year, mc, val, NOW),
+                )
+                rows_inserted += 1
+    return rows_inserted
+
+
+def parse_daily_trend_buckets(csv_path: str, cur, ps: str, pe: str) -> int:
+    """DailyVisitorsTrendDashboard Buckets_Export*.csv → datafy_overview_daily_trend"""
+    table = "datafy_overview_daily_trend"
+    _delete_period(cur, table, ps, pe)
+    rows_inserted = 0
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        cols = [c.strip() for c in (reader.fieldnames or [])]
+        if not cols:
+            return 0
+        bucket_col  = cols[0]
+        metric_cols = cols[1:]
+        for row in reader:
+            bucket = str(row.get(bucket_col, "")).strip()
+            if not bucket:
+                continue
+            for mc in metric_cols:
+                raw = str(row.get(mc, "")).strip()
+                val = _clean_pct_or_num(raw)
+                cur.execute(
+                    "INSERT INTO datafy_overview_daily_trend "
+                    "(report_period_start,report_period_end,bucket,metric_name,metric_value,loaded_at) "
+                    "VALUES (?,?,?,?,?,?)",
+                    (ps, pe, bucket, mc, val, NOW),
+                )
+                rows_inserted += 1
+    return rows_inserted
+
+
+def parse_visitation_export(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Visitation_Export*.csv → datafy_overview_total_kpis (supplements OverallNumbers)"""
+    table = "datafy_overview_total_kpis"
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        cols = [c.strip() for c in (reader.fieldnames or [])]
+        if not cols:
+            return 0
+        data: dict[str, float | None] = {}
+        for row in reader:
+            metric = str(row.get(cols[0], "")).strip()
+            val_raw = str(row.get(cols[1], "")).strip() if len(cols) > 1 else ""
+            val_str = val_raw.split()[0] if val_raw else ""
+            val     = _clean_pct_or_num(val_str)
+            if metric:
+                data[metric] = val
+        if not data:
+            return 0
+        # Upsert: only insert if this period doesn't already have rows
+        count = cur.execute(
+            "SELECT COUNT(*) FROM datafy_overview_total_kpis WHERE report_period_start=? AND report_period_end=?",
+            (ps, pe),
+        ).fetchone()[0]
+        if count > 0:
+            return 0  # already loaded from OverallNumbers; skip
+        cur.execute(
+            "INSERT INTO datafy_overview_total_kpis (report_period_start,report_period_end,total_trips,visitor_days,avg_los_days,loaded_at) "
+            "VALUES (?,?,?,?,?,?)",
+            (ps, pe, data.get("Total Trips"), data.get("Visitor Days"), data.get("Avg Length of Stay"), NOW),
+        )
+        return 1
+
+
+def parse_spending_advanced(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Advanced/Enhanced Spending export CSVs → datafy_spending_advanced (generic store)"""
+    table      = "datafy_spending_advanced"
+    fname      = os.path.basename(csv_path)
+    export_type = fname.rsplit(".", 1)[0]  # use filename as export type label
+    rows_inserted = 0
+    # Delete rows with same period AND export_type to allow re-runs
+    cur.execute(
+        "DELETE FROM datafy_spending_advanced WHERE report_period_start=? AND report_period_end=? AND export_type=?",
+        (ps, pe, export_type),
+    )
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        cols = [c.strip() for c in (reader.fieldnames or [])]
+        if not cols:
+            return 0
+        for row in reader:
+            dim_val = str(row.get(cols[0], "")).strip()
+            if not dim_val:
+                continue
+            for col in cols[1:]:
+                raw = str(row.get(col, "")).strip()
+                val = _clean_pct_or_num(raw)
+                seg_val = col.strip()
+                cur.execute(
+                    "INSERT INTO datafy_spending_advanced "
+                    "(report_period_start,report_period_end,export_type,dimension,segment,metric_name,metric_value,loaded_at) "
+                    "VALUES (?,?,?,?,?,?,?,?)",
+                    (ps, pe, export_type, dim_val, seg_val, seg_val, val, NOW),
+                )
+                rows_inserted += 1
+    return rows_inserted
+
 
 def parse_overall_numbers(csv_path: str, cur, ps: str, pe: str) -> int:
     """OverallNumbers_Export*.csv → datafy_overview_total_kpis"""
@@ -1484,9 +1808,25 @@ def parse_popular_pages_new(csv_path: str, cur, ps: str, pe: str) -> int:
 
 NEW_FILE_HANDLERS: list[tuple[str, str, object]] = [
     # ── Overview ──────────────────────────────────────────────────────────────
+    # ── Overview — specific patterns FIRST (prevents shorter substring false-matches) ──
     ("overallnumbers_export",                                  "datafy_overview_total_kpis",                     parse_overall_numbers),
+    # Advanced / Enhanced Spending exports — must come before generic visitation handler
+    ("advanced spending",                                      "datafy_spending_advanced",                       parse_spending_advanced),
+    ("avgspendpervisitor",                                     "datafy_spending_advanced",                       parse_spending_advanced),
+    ("correlationrings",                                       "datafy_spending_advanced",                       parse_spending_advanced),
     ("enhanced spending insights-top markets",                 "datafy_overview_spending_by_category",           parse_spending_by_category),
     ("enhanced spending insights-market visitation",           "datafy_overview_spending_by_market",             parse_spending_by_market),
+    ("enhanced spending insights",                             "datafy_spending_advanced",                       parse_spending_advanced),
+    # New overview exports
+    ("weekdayvsweekend_export",                                "datafy_overview_weekday_weekend",                parse_weekday_weekend),
+    ("lengthofsaydonut_export",                                "datafy_overview_length_of_stay",                 parse_length_of_stay),
+    ("lengthofstaydonut_export",                               "datafy_overview_length_of_stay",                 parse_length_of_stay),
+    ("statemap_export",                                        "datafy_overview_state_map",                      parse_state_map),
+    ("visitationbyyear_export",                                "datafy_overview_visitation_by_year",             parse_visitation_by_year),
+    ("dailyvisitostrend",                                      "datafy_overview_daily_trend",                    parse_daily_trend_buckets),
+    ("dailyvisitorstrend",                                     "datafy_overview_daily_trend",                    parse_daily_trend_buckets),
+    # Visitation_Export comes AFTER enhanced-spending so it doesn't match market-visitation files
+    ("visitation_export",                                      "datafy_overview_total_kpis",                     parse_visitation_export),
     ("topdemographics_export",                                 "datafy_overview_demographics",                   parse_top_demographics),
     ("topmarkets_export",                                      "datafy_overview_top_markets",                    parse_top_markets),
     ("marketanalysis-marketanalysistopmarkets_export",         "datafy_overview_top_markets",                    parse_top_markets),

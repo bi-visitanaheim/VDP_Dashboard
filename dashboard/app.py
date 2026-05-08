@@ -603,6 +603,28 @@ CRITICAL: NEVER present Zartico as current data. Use only for historical trend c
   92672 San Clemente, 92660 Newport): zip_code, parameter (PM2.5/OZONE), aqi, category_name. \
   AQI > 100 softens beach demand; AQI > 150 raises outdoor-event cancellation risk.
 
+**New Datafy Overview + Spending Tables (added 2026-05-08):**
+- `datafy_overview_weekday_weekend` — Weekday vs weekend visitation pattern breakdown. \
+  Columns: report_period_start/end, day_type, metric_name, metric_value. \
+  Use to understand if visitor behavior is concentrated on Fri-Sun vs Mon-Thu.
+- `datafy_overview_length_of_stay` — Full LOS bucket distribution (1-night, 2-night, 3+ night, etc.). \
+  Columns: report_period_start/end, los_bucket, share_pct. \
+  Extends avg_los in datafy_overview_kpis with the complete distribution.
+- `datafy_overview_state_map` — State-level visitor origin heatmap data. \
+  Columns: report_period_start/end, state, metric_name, metric_value. \
+  Broader geographic view complementing DMA-level data in datafy_overview_dma.
+- `datafy_overview_visitation_by_year` — Multi-year visitation trend. \
+  Columns: report_period_start/end, year, metric_name, metric_value. \
+  Use to show YOY growth trajectory over multiple years.
+- `datafy_overview_daily_trend` — Daily visitor count trend by bucket/segment. \
+  Columns: report_period_start/end, bucket, metric_name, metric_value. \
+  Granular day-level visitor volume for correlation with STR compression days.
+- `datafy_spending_advanced` — Advanced and Enhanced Spending insight exports (17 export types). \
+  Columns: report_period_start/end, export_type (filename stem), dimension, segment, metric_name, metric_value. \
+  Covers: spending by year, local vs visitor, in vs out of state, top hotel markets, peak insights, \
+  correlation rings, avg spend per visitor, LOS spend, repeat spenders, spend by day. \
+  Use export_type to filter to a specific cut.
+
 **Intelligence Tables (Generated Daily):**
 - `insights_daily` — Forward-looking insights for 5 audiences (dmo, city, visitor, resident, cross). \
   Columns: as_of_date, audience, category, headline, body, metric_basis (JSON), priority, horizon_days, data_sources.
@@ -4711,6 +4733,13 @@ def get_table_counts() -> dict:
         "airnow_aqi_daily",
         # Cross-signal correlations (computed by compute_correlations.py)
         "correlations_str_context",
+        # New Datafy overview + spending tables (added 2026-05-08)
+        "datafy_overview_weekday_weekend",
+        "datafy_overview_length_of_stay",
+        "datafy_overview_state_map",
+        "datafy_overview_visitation_by_year",
+        "datafy_overview_daily_trend",
+        "datafy_spending_advanced",
     ]:
         try:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
