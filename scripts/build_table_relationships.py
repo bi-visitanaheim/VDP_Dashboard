@@ -706,6 +706,39 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("airnow_aqi_daily",         "insights_daily",               "derived_from",  "as_of_date",
      "compute_insights.py flags AQI risk windows for residents/visitors audience cards"),
+
+    # ── Signal Intelligence: correlations_str_context (added 2026-05-08) ─────
+    # Computed by scripts/compute_correlations.py — Pearson lag analysis of
+    # all external signals vs hotel KPIs. One row per (indicator × metric × lag).
+    ("correlations_str_context", "kpi_daily_summary",            "derived_from",  "hotel_metric",
+     "Pearson r computed by aggregating kpi_daily_summary to monthly and joining with external indicators"),
+
+    ("correlations_str_context", "eia_gas_prices",               "derived_from",  "indicator_source=eia_gas",
+     "Gas price signal rows computed from monthly EIA CA gas price averages vs hotel occ/ADR/RevPAR"),
+
+    ("correlations_str_context", "weather_monthly",              "derived_from",  "indicator_source=weather",
+     "Beach day score and temp signal rows: weather_monthly vs kpi_daily_summary aggregated monthly"),
+
+    ("correlations_str_context", "bls_employment_monthly",       "derived_from",  "indicator_source=bls",
+     "CA and US hospitality employment lag correlations vs hotel occ and ADR"),
+
+    ("correlations_str_context", "fred_economic_indicators",     "derived_from",  "indicator_source=fred",
+     "FRED macro series (CPI lodging, consumer sentiment, unemployment, disposable income) vs hotel metrics"),
+
+    ("correlations_str_context", "google_trends_weekly",         "derived_from",  "indicator_source=google_trends",
+     "Search demand (dana point hotel/beach/visit terms) vs hotel occupancy — booking-intent lead indicator"),
+
+    ("correlations_str_context", "tsa_checkpoint_daily",         "derived_from",  "indicator_source=tsa",
+     "TSA air travel throughput vs hotel occ — fly-market demand proxy"),
+
+    ("correlations_str_context", "noaa_marine_monthly",          "derived_from",  "indicator_source=noaa",
+     "Ocean beach activity score and water temp vs hotel occupancy — coastal visitor experience driver"),
+
+    ("correlations_str_context", "insights_daily",               "context",       "hotel_metric",
+     "Signal Intelligence correlations inform AI insight generation for demand forecasting narrative"),
+
+    ("correlations_str_context", "fact_str_metrics",             "derived_from",  "hotel_metric",
+     "Underlying STR daily metrics feed kpi_daily_summary which drives correlation computation"),
 ]
 
 

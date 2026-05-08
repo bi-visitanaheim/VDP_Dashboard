@@ -38,7 +38,8 @@ Pipeline steps:
   22. fetch_noaa_tides.py         — NOAA tide predictions       → noaa_tides_daily (skip-safe, no key)
   23. fetch_airnow_aqi.py         — EPA AirNow AQI              → airnow_aqi_daily (skip-safe, demo seeds without key)
   24. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
-  25. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
+  25. compute_correlations.py      — Pearson lag correlations: external signals × hotel KPIs → correlations_str_context (skip-safe)
+  26. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
 
 Steps 1, 2, 3, 6 are FAIL-FAST (abort on failure). All others are skip-safe.
 Each step is logged to logs/pipeline.log:
@@ -108,6 +109,9 @@ STEPS = [
     ("strategy_progress", os.path.join(BASE_DIR, "compute_strategy_progress.py"), False),
     # Design inspiration — no DB writes; saves to data/design/godly_inspiration.json
     ("fetch_godly_design", os.path.join(BASE_DIR, "fetch_godly_design.py"),      False),
+    # Cross-signal correlations — Pearson lag analysis: external signals × hotel KPIs
+    # Runs after all fetch steps so it has the freshest data available.
+    ("compute_correlations", os.path.join(BASE_DIR, "compute_correlations.py"), False),
     # ALWAYS LAST — rebuilds all table relationships after every pipeline run
     # Add new relationship entries to build_table_relationships.py when adding new data sources
     ("build_relationships", os.path.join(BASE_DIR, "build_table_relationships.py"), False),

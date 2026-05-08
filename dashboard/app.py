@@ -606,6 +606,11 @@ CRITICAL: NEVER present Zartico as current data. Use only for historical trend c
 **Intelligence Tables (Generated Daily):**
 - `insights_daily` — Forward-looking insights for 5 audiences (dmo, city, visitor, resident, cross). \
   Columns: as_of_date, audience, category, headline, body, metric_basis (JSON), priority, horizon_days, data_sources.
+- `correlations_str_context` — Pre-computed Pearson lag correlations between external signals and hotel KPIs. \
+  Columns: indicator_source, indicator_name, display_name, hotel_metric (occ_pct/adr/revpar/occ_pct_yoy_pp/adr_yoy_pct), \
+  lag_months (0–3), pearson_r, p_value, significance, n_observations, direction, signal_strength, interpretation. \
+  Use to identify which external factors (gas prices, weather, employment, consumer sentiment, search demand) predict hotel performance \
+  and how far in advance. Refreshed on every pipeline run by compute_correlations.py.
 - `table_relationships` — 125+ documented cross-table joins and derivations.
 - `load_log` — ETL pipeline audit trail (source, grain, file_name, rows_inserted, run_at).
 - `strategy_goals` — VDP destination strategy goals with live progress tracking. \
@@ -4452,6 +4457,15 @@ def load_datafy_clusters() -> pd.DataFrame:
 
 # ─── New External Data Loaders ────────────────────────────────────────────────
 
+@st.cache_data(ttl=1800)
+def load_correlations() -> pd.DataFrame:
+    """Load pre-computed Pearson correlations from correlations_str_context."""
+    return _sql(
+        "SELECT * FROM correlations_str_context ORDER BY abs(pearson_r) DESC",
+        "load_correlations",
+    )
+
+
 @st.cache_data(ttl=300)
 def load_fred_indicators() -> pd.DataFrame:
     return _sql("SELECT * FROM fred_economic_indicators ORDER BY data_date ASC", "load_fred_indicators")
@@ -4695,6 +4709,8 @@ def get_table_counts() -> dict:
         "wikipedia_pageviews_daily",
         "noaa_tides_daily",
         "airnow_aqi_daily",
+        # Cross-signal correlations (computed by compute_correlations.py)
+        "correlations_str_context",
     ]:
         try:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
@@ -6699,6 +6715,7 @@ df_eia_gas   = load_eia_gas()           # EIA CA weekly gas prices (drive-market
 df_tsa       = load_tsa_checkpoint()   # TSA checkpoint throughput (air travel demand)
 df_noaa      = load_noaa_marine()      # NOAA buoy ocean conditions (coastal demand driver)
 df_census    = load_census_demo()      # Census ACS feeder market demographics
+df_corr      = load_correlations()     # Pearson lag correlations: external signals × hotel KPIs
 
 # Global Plotly chart config — drill-down ready
 PLOTLY_CONFIG = {
@@ -14944,6 +14961,244 @@ with tab_cs:
 
     # ── External Signals → sub-tab 2 ──────────────────────────────────────────
     with _cs_t2:
+        # ══════════════════════════════════════════════════════════════════════════
+        # SIGNAL INTELLIGENCE — Correlation Matrix (correlations_str_context)
+        # Shows which external indicators most strongly predict hotel performance.
+        # Computed by scripts/compute_correlations.py on every pipeline run.
+        # ══════════════════════════════════════════════════════════════════════════
+        st.markdown(sec_div("🔗 Signal Intelligence — What Drives Hotel Performance"), unsafe_allow_html=True)
+        st.markdown(_sh("🔗", "Signal Intelligence — External × Hotel Correlations", "teal", "COMPUTED · PEARSON LAG ANALYSIS"), unsafe_allow_html=True)
+        st.markdown(
+            sec_intel(
+                "Signal Intelligence",
+                "statistical relationships between external economic/environmental signals and Dana Point hotel performance",
+                "These Pearson correlations identify which external data sources most reliably predict occupancy, ADR, and RevPAR. "
+                "Lag 0 = concurrent; Lag 1 = indicator leads hotel metric by 1 month; Lag 3 = 3-month lead signal.",
+                "Use leading indicators (Lag > 0) to anticipate demand shifts before they appear in hotel data — "
+                "activate campaigns when strong positive signals appear, protect rate when negative pressure builds.",
+                "Run pipeline to refresh (compute_correlations.py runs automatically after all data fetch steps)",
+            ),
+            unsafe_allow_html=True,
+        )
+        if not df_corr.empty:
+            # ── Metric selector ───────────────────────────────────────────────────
+            _corr_metric_opts = {
+                "occ_pct":        "Occupancy %",
+                "adr":            "ADR ($/night)",
+                "revpar":         "RevPAR ($/available)",
+                "occ_pct_yoy_pp": "Occupancy YoY (pp)",
+                "adr_yoy_pct":    "ADR YoY %",
+            }
+            _corr_c1, _corr_c2, _corr_c3 = st.columns([2, 2, 4])
+            with _corr_c1:
+                _sel_metric = st.selectbox(
+                    "Hotel Metric",
+                    list(_corr_metric_opts.keys()),
+                    format_func=lambda k: _corr_metric_opts[k],
+                    key="corr_metric_sel",
+                )
+            with _corr_c2:
+                _sel_lag = st.selectbox(
+                    "Signal Lag",
+                    [0, 1, 2, 3],
+                    format_func=lambda l: f"Lag {l}mo " + ("(concurrent)" if l == 0 else f"(indicator leads {l}mo)"),
+                    key="corr_lag_sel",
+                )
+
+            _corr_filtered = df_corr[
+                (df_corr["hotel_metric"] == _sel_metric) &
+                (df_corr["lag_months"]   == _sel_lag)
+            ].copy()
+
+            if not _corr_filtered.empty:
+                _corr_filtered = _corr_filtered.sort_values("pearson_r", ascending=False)
+
+                # ── Horizontal bar chart ──────────────────────────────────────────
+                _cf_disp = _corr_filtered[_corr_filtered["pearson_r"].notna()].copy()
+                _cf_disp["bar_color"] = _cf_disp["pearson_r"].apply(
+                    lambda r: (
+                        "#0567C8" if r >= 0.45 else
+                        "#22D3EE" if r >= 0.20 else
+                        "#CBD5E1" if abs(r) < 0.20 else
+                        "#F87171" if r >= -0.45 else
+                        "#DC2626"
+                    )
+                )
+                _cf_disp["sig_label"] = _cf_disp.apply(
+                    lambda row: "✓" if (pd.notna(row.get("p_value")) and row["p_value"] < 0.05) else "",
+                    axis=1,
+                )
+                fig_corr = go.Figure(go.Bar(
+                    x=_cf_disp["pearson_r"],
+                    y=_cf_disp["display_name"],
+                    orientation="h",
+                    marker_color=_cf_disp["bar_color"],
+                    text=[f"r={r:+.2f}{s}" for r, s in zip(_cf_disp["pearson_r"], _cf_disp["sig_label"])],
+                    textposition="outside",
+                    hovertemplate=(
+                        "<b>%{y}</b><br>"
+                        "Pearson r: %{x:+.3f}<br>"
+                        "<extra></extra>"
+                    ),
+                ))
+                fig_corr.add_vline(x=0, line_color="#94A3B8", line_width=1)
+                fig_corr.add_vline(x=0.45,  line_dash="dot", line_color="#0567C8", line_width=1,
+                                   annotation_text="Strong +", annotation_position="top")
+                fig_corr.add_vline(x=-0.45, line_dash="dot", line_color="#DC2626", line_width=1,
+                                   annotation_text="Strong −", annotation_position="top")
+                _metric_label = _corr_metric_opts.get(_sel_metric, _sel_metric)
+                fig_corr.update_layout(
+                    title=f"Signal Strength vs {_metric_label} · Lag {_sel_lag} Month(s)",
+                    xaxis=dict(title="Pearson r (−1 = inverse · 0 = none · +1 = direct)", range=[-1.1, 1.1],
+                               tickformat="+.2f"),
+                    yaxis=dict(title=""),
+                    margin=dict(l=180, r=80),
+                )
+                st.plotly_chart(style_fig(fig_corr, height=max(280, len(_cf_disp) * 32 + 60)),
+                                use_container_width=True, config=PLOTLY_CONFIG)
+                st.caption(
+                    "✓ = statistically significant (p<0.05). "
+                    "Blue = positive correlation · Red = inverse · Grey = negligible. "
+                    "Lag 0 = concurrent; Lag 1+ = indicator leads hotel metric by that many months."
+                )
+
+                # ── Top signals insight cards ─────────────────────────────────────
+                _top_pos = _corr_filtered[(_corr_filtered["pearson_r"] >= 0.30) & (_corr_filtered["signal_strength"].isin(["Strong","Moderate"]))].head(3)
+                _top_neg = _corr_filtered[(_corr_filtered["pearson_r"] <= -0.30) & (_corr_filtered["signal_strength"].isin(["Strong","Moderate"]))].head(2)
+
+                if not _top_pos.empty or not _top_neg.empty:
+                    st.markdown("---")
+                    st.markdown("**Key Signals for This View**")
+                    _sig_cols = st.columns(min(5, len(_top_pos) + len(_top_neg)))
+                    _sig_i = 0
+                    for _, _sr in _top_pos.iterrows():
+                        if _sig_i >= len(_sig_cols):
+                            break
+                        with _sig_cols[_sig_i]:
+                            _r_disp = f"{_sr['pearson_r']:+.2f}"
+                            _lag_disp = f"Lead: {_sr['lag_months']}mo" if _sr['lag_months'] > 0 else "Concurrent"
+                            st.markdown(
+                                f'<div style="background:rgba(5,103,200,0.07);border-radius:10px;padding:14px;'
+                                f'border-left:4px solid #0567C8;">'
+                                f'<div style="font-size:11px;font-weight:700;color:#0567C8;text-transform:uppercase;">'
+                                f'{_sr["signal_strength"]} POSITIVE · {_lag_disp}</div>'
+                                f'<div style="font-size:18px;font-weight:900;color:#0F172A;margin:6px 0;">{_r_disp}</div>'
+                                f'<div style="font-size:12px;font-weight:600;color:#1E293B;">{_sr["display_name"]}</div>'
+                                f'<div style="font-size:11px;color:#475569;margin-top:6px;line-height:1.5;">'
+                                f'{_sr["interpretation"][:120]}...</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                        _sig_i += 1
+                    for _, _sr in _top_neg.iterrows():
+                        if _sig_i >= len(_sig_cols):
+                            break
+                        with _sig_cols[_sig_i]:
+                            _r_disp = f"{_sr['pearson_r']:+.2f}"
+                            _lag_disp = f"Lead: {_sr['lag_months']}mo" if _sr['lag_months'] > 0 else "Concurrent"
+                            st.markdown(
+                                f'<div style="background:rgba(220,38,38,0.07);border-radius:10px;padding:14px;'
+                                f'border-left:4px solid #DC2626;">'
+                                f'<div style="font-size:11px;font-weight:700;color:#DC2626;text-transform:uppercase;">'
+                                f'{_sr["signal_strength"]} INVERSE · {_lag_disp}</div>'
+                                f'<div style="font-size:18px;font-weight:900;color:#0F172A;margin:6px 0;">{_r_disp}</div>'
+                                f'<div style="font-size:12px;font-weight:600;color:#1E293B;">{_sr["display_name"]}</div>'
+                                f'<div style="font-size:11px;color:#475569;margin-top:6px;line-height:1.5;">'
+                                f'{_sr["interpretation"][:120]}...</div>'
+                                f'</div>',
+                                unsafe_allow_html=True,
+                            )
+                        _sig_i += 1
+
+                # ── Full correlation table ────────────────────────────────────────
+                with st.expander("📋 Full Correlation Table — All Indicators", expanded=False):
+                    _tbl_display = _corr_filtered[[
+                        "display_name", "indicator_source", "pearson_r", "p_value",
+                        "significance", "n_observations", "direction", "signal_strength",
+                    ]].copy()
+                    _tbl_display.columns = [
+                        "Indicator", "Source", "Pearson r", "p-value",
+                        "Significance", "Obs", "Direction", "Strength",
+                    ]
+                    _tbl_display["Pearson r"] = _tbl_display["Pearson r"].map("{:+.3f}".format)
+                    _tbl_display["p-value"]   = _tbl_display["p-value"].map("{:.4f}".format)
+                    st.dataframe(_tbl_display, use_container_width=True, hide_index=True)
+                    st.download_button(
+                        "⬇️ Download Correlation Table CSV",
+                        _tbl_display.to_csv(index=False).encode(),
+                        f"signal_correlations_{_sel_metric}_lag{_sel_lag}.csv",
+                        "text/csv",
+                        key=f"dl_corr_{_sel_metric}_{_sel_lag}",
+                    )
+
+                # ── Lag sweep: best lag per indicator ─────────────────────────────
+                st.markdown("---")
+                st.markdown("**Optimal Lead Time — Which Lag Produces Strongest Signal?**")
+                st.caption(
+                    "For each indicator, the bar shows the absolute correlation strength at the lag "
+                    "that produces the highest signal. Use this to identify how far in advance "
+                    "each external factor predicts hotel performance."
+                )
+                _lag_sweep = (
+                    df_corr[df_corr["hotel_metric"] == _sel_metric]
+                    .copy()
+                    .assign(abs_r=lambda d: d["pearson_r"].abs())
+                )
+                _best_lag = (
+                    _lag_sweep.sort_values("abs_r", ascending=False)
+                    .groupby("display_name")
+                    .first()
+                    .reset_index()
+                    .sort_values("abs_r", ascending=False)
+                    .head(15)
+                )
+                if not _best_lag.empty:
+                    _bl_colors = [
+                        "#0567C8" if r > 0 else "#DC2626"
+                        for r in _best_lag["pearson_r"]
+                    ]
+                    fig_lag = go.Figure(go.Bar(
+                        x=_best_lag["abs_r"],
+                        y=_best_lag["display_name"],
+                        orientation="h",
+                        marker_color=_bl_colors,
+                        text=[
+                            f"r={r:+.2f} @ Lag {l}mo"
+                            for r, l in zip(_best_lag["pearson_r"], _best_lag["lag_months"])
+                        ],
+                        textposition="outside",
+                        hovertemplate=(
+                            "<b>%{y}</b><br>"
+                            "Best |r|: %{x:.3f}<br>"
+                            "<extra></extra>"
+                        ),
+                    ))
+                    fig_lag.update_layout(
+                        title=f"Best Signal Strength per Indicator vs {_metric_label}",
+                        xaxis=dict(title="Absolute Pearson |r|", range=[0, 1.15]),
+                        yaxis=dict(title=""),
+                        margin=dict(l=180, r=100),
+                    )
+                    st.plotly_chart(style_fig(fig_lag, height=max(240, len(_best_lag) * 30 + 60)),
+                                    use_container_width=True, config=PLOTLY_CONFIG)
+            else:
+                st.info(f"No correlation data for {_corr_metric_opts.get(_sel_metric, _sel_metric)} at Lag {_sel_lag}. Run the pipeline.")
+        else:
+            st.markdown(
+                '<div class="empty-card">'
+                '<div class="empty-icon">🔗</div>'
+                '<div class="empty-title">Signal Intelligence Not Yet Computed</div>'
+                '<div class="empty-body">'
+                'Run <code>python scripts/run_pipeline.py</code> to compute correlations between '
+                'external signals and hotel performance.<br>'
+                'The <code>compute_correlations.py</code> step runs automatically after all data fetch steps.'
+                '</div>'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("---")
+
         # ── FRED Economic Climate ─────────────────────────────────────────────────
         st.markdown(sec_div("📉 Economic Climate Indicators"), unsafe_allow_html=True)
         st.markdown(_sh("📉", "Economic Climate Indicators", "indigo", "FRED · Federal Reserve"), unsafe_allow_html=True)
