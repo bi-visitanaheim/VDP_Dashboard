@@ -1207,6 +1207,18 @@ st.markdown("""
     0%   { background-position: 0% center; }
     100% { background-position: 200% center; }
   }
+  /* ── Force all non-title hero content to be white ─────────────────────── */
+  /* Streamlit's base theme can inherit dark body color into these spans */
+  .hero-banner div,
+  .hero-banner > div span {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+  }
+  /* Gradient PULSE word — keep transparent fill so gradient shows */
+  .hero-title span {
+    -webkit-text-fill-color: transparent !important;
+    color: #0891B2 !important;
+  }
   .hero-subtitle {
     font-family: 'DM Sans', 'Inter', sans-serif;
     font-size: 12px; font-weight: 600;
