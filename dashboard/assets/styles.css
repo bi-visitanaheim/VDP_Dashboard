@@ -61,19 +61,20 @@
     background-image: none !important;
   }
   .stApp {
-    height: 100vh !important;
-    overflow: hidden !important;
+    min-height: 100vh !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
   }
   [data-testid="stAppViewContainer"] {
-    height: 100% !important;
-    overflow: hidden !important;
+    min-height: 100% !important;
+    overflow: visible !important;
     display: flex !important;
   }
   [data-testid="stMain"],
   [data-testid="stMainBlockContainer"] {
-    overflow-y: auto !important;
+    overflow-y: visible !important;
     overflow-x: hidden !important;
-    height: 100% !important;
+    height: auto !important;
     -webkit-overflow-scrolling: touch !important;
   }
   .block-container {

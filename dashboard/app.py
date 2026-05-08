@@ -701,21 +701,22 @@ st.markdown("""
     background-color: var(--dp-bg) !important;
     background-image: none !important;
   }
-  /* ── Scroll — stApp fills viewport, stMain scrolls the content ───────── */
+  /* ── Scroll — page scrolls naturally; no viewport-lock ───────────────── */
   .stApp {
-    height: 100vh !important;
-    overflow: hidden !important;
+    min-height: 100vh !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
   }
   [data-testid="stAppViewContainer"] {
-    height: 100% !important;
-    overflow: hidden !important;
+    min-height: 100% !important;
+    overflow: visible !important;
     display: flex !important;
   }
   [data-testid="stMain"],
   [data-testid="stMainBlockContainer"] {
-    overflow-y: auto !important;
+    overflow-y: visible !important;
     overflow-x: hidden !important;
-    height: 100% !important;
+    height: auto !important;
     -webkit-overflow-scrolling: touch !important;
   }
   .block-container {
@@ -1042,7 +1043,7 @@ st.markdown("""
   }
 
   /* ── Inner containers: must NOT clip so sticky tabs can work ────────── */
-  /* stMain/stMainBlockContainer are scroll containers — set above        */
+  /* stMain/stMainBlockContainer scroll naturally — overflow visible       */
   .main > div,
   [data-testid="stVerticalBlock"],
   [data-testid="stVerticalBlockBorderWrapper"] {
@@ -1051,6 +1052,20 @@ st.markdown("""
   .block-container {
     overflow: visible !important;
     max-width: 100% !important;
+    width: 100% !important;
+  }
+  /* Horizontal blocks don't overflow the viewport */
+  [data-testid="stHorizontalBlock"] {
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+  /* Global box model */
+  *, *::before, *::after { box-sizing: border-box; }
+  /* Text safety — content wraps, never bleeds */
+  p, li, td, th, h1, h2, h3, h4, h5, label,
+  [data-testid="stMarkdownContainer"] * {
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   /* ── Custom Scrollbar ────────────────────────────────────────────────── */
@@ -1878,19 +1893,28 @@ st.markdown("""
   }
 
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
-  .block-container { padding-top: 0 !important; padding-left: 1rem !important; padding-right: 1rem !important; overflow: visible !important; }
+  .block-container {
+    padding-top: 0 !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    padding-bottom: 4rem !important;
+    overflow: visible !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
   [data-testid="stAppViewContainer"] > section > div:first-child { padding-top: 0 !important; }
-  [data-testid="stMain"] { padding-top: 0 !important; margin-top: 0 !important; }
-  [data-testid="stMainBlockContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
+  [data-testid="stMain"] { padding-top: 0 !important; margin-top: 0 !important; width: 100% !important; }
+  [data-testid="stMainBlockContainer"] { padding-top: 0 !important; margin-top: 0 !important; width: 100% !important; }
   @media (max-width: 768px) {
     .block-container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
   }
   @media (max-width: 480px) {
     .block-container { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
   }
-  [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; width: 100% !important; }
-  [data-testid="stPlotlyChart"] > div { width: 100% !important; }
-  [data-testid="stPlotlyChart"] iframe { width: 100% !important; min-width: 100% !important; }
+  /* Charts: always full width, never overflow */
+  [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; width: 100% !important; max-width: 100% !important; overflow: hidden !important; }
+  [data-testid="stPlotlyChart"] > div { width: 100% !important; max-width: 100% !important; }
+  [data-testid="stPlotlyChart"] iframe { width: 100% !important; min-width: unset !important; max-width: 100% !important; }
   div[data-testid="stHorizontalBlock"] { gap: 10px !important; }
 
   /* ── Streamlit Native Metric Styling ─────────────────────────────────── */
@@ -2224,23 +2248,38 @@ st.markdown("""
      Phones < 640px · Tablets 640–1024px
   ═══════════════════════════════════════════════════════════════ */
   /* ── Prevent horizontal scroll globally ─── */
-  body, html { overflow-x: hidden !important; }
+  body, html {
+    overflow-x: hidden !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  /* ── All text wraps, never overflows ─── */
+  p, span, li, td, th, label, div, h1, h2, h3, h4, h5 {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+  }
 
   @media screen and (max-width: 768px) {
     .main .block-container {
-      padding: 0 0.75rem 2rem 0.75rem !important;
+      padding: 0 0.75rem 3rem 0.75rem !important;
       max-width: 100% !important;
       width: 100% !important;
       box-sizing: border-box !important;
     }
-    /* Tab bar: allow wrapping so all tabs are reachable */
+    /* Tab bar: scroll horizontally (tabs stay 1 row, accessible by swipe) */
     [data-testid="stTabs"] [data-baseweb="tab-list"] {
-      flex-wrap: wrap !important;
-      overflow-x: visible !important;
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      scrollbar-width: none !important;
+      padding-bottom: 2px !important;
     }
+    [data-testid="stTabs"] [data-baseweb="tab-list"]::-webkit-scrollbar { display: none !important; }
     [data-testid="stTabs"] [data-baseweb="tab"] {
-      font-size: 11px !important; padding: 5px 9px !important;
-      min-width: 0 !important;
+      font-size: 12px !important; padding: 6px 10px !important;
+      min-width: fit-content !important; white-space: nowrap !important;
+      flex-shrink: 0 !important;
     }
     .hero-banner { padding: 16px 14px !important; margin: -0.75rem -0.75rem 0 -0.75rem !important; }
     .hero-title  { font-size: 1.35rem !important; }
@@ -2268,27 +2307,37 @@ st.markdown("""
       min-width: calc(50% - 4px) !important;
       flex: 1 1 calc(50% - 4px) !important;
     }
-    /* Charts scroll horizontally on mobile rather than overflow */
-    .js-plotly-plot .plotly { overflow-x: auto !important; }
-    /* Stacked columns on small screens */
+    /* Charts: contain within viewport, no bleed */
+    .js-plotly-plot { max-width: 100% !important; overflow: hidden !important; }
+    .js-plotly-plot .plotly { max-width: 100% !important; overflow: hidden !important; }
+    /* Stacked columns on tablets */
     div[data-testid="stHorizontalBlock"] {
       flex-wrap: wrap !important;
       gap: 6px !important;
     }
     div[data-testid="stHorizontalBlock"] > div[data-testid="stVerticalBlock"] {
-      min-width: 140px !important;
+      min-width: calc(50% - 6px) !important;
+      flex: 1 1 calc(50% - 6px) !important;
+      box-sizing: border-box !important;
     }
+    /* Ticker: no edge bleed beyond screen */
+    .pulse-ticker-wrap { margin: 0 -0.75rem 0.8rem -0.75rem !important; }
   }
   @media screen and (max-width: 480px) {
     .hero-title { font-size: 1.15rem !important; }
     .hero-banner { margin: -0.5rem -0.5rem 0 -0.5rem !important; padding: 14px 12px !important; }
-    .main .block-container { padding: 0 0.5rem 2rem 0.5rem !important; }
+    .main .block-container { padding: 0 0.5rem 3rem 0.5rem !important; }
     .sh-tag { display: none !important; }
     [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
     /* Single column on phones */
     div[data-testid="stHorizontalBlock"] > div[data-testid="stVerticalBlock"] {
       min-width: 100% !important;
+      flex: 1 1 100% !important;
     }
+    /* Ticker: no edge bleed on phones */
+    .pulse-ticker-wrap { margin: 0 -0.5rem 0.8rem -0.5rem !important; }
+    /* LIVE badge + data points: wrap gracefully */
+    .hero-banner > div > div { flex-wrap: wrap !important; gap: 8px !important; }
   }
 
   /* ── Pill Button Style — Dark ────────────────────────────────────────── */
