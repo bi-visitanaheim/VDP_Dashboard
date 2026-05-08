@@ -6745,6 +6745,27 @@ df_tsa       = load_tsa_checkpoint()   # TSA checkpoint throughput (air travel d
 df_noaa      = load_noaa_marine()      # NOAA buoy ocean conditions (coastal demand driver)
 df_census    = load_census_demo()      # Census ACS feeder market demographics
 df_corr      = load_correlations()     # Pearson lag correlations: external signals × hotel KPIs
+df_tick      = load_ticketmaster_events()  # Forward event calendar
+df_aqi       = load_airnow_aqi()           # EPA AirNow AQI by ZIP
+df_wiki      = load_wikipedia_pageviews()  # Wikipedia awareness signal
+
+# Events economic analysis tables (no separate loader needed — inline SQL)
+conn_ev = get_connection()
+try:
+    df_events_eco   = pd.read_sql_query("SELECT * FROM events_economic_impact ORDER BY event_date", conn_ev)
+except Exception as _e:
+    _logger.debug("events_economic_impact load error: %s", _e)
+    df_events_eco   = pd.DataFrame()
+try:
+    df_events_promo = pd.read_sql_query("SELECT * FROM events_promotion_analysis ORDER BY event_date", conn_ev)
+except Exception as _e:
+    _logger.debug("events_promotion_analysis load error: %s", _e)
+    df_events_promo = pd.DataFrame()
+try:
+    df_events_vis   = pd.read_sql_query("SELECT * FROM events_visitor_mix ORDER BY event_date", conn_ev)
+except Exception as _e:
+    _logger.debug("events_visitor_mix load error: %s", _e)
+    df_events_vis   = pd.DataFrame()
 
 # Global Plotly chart config — drill-down ready
 PLOTLY_CONFIG = {
@@ -10785,6 +10806,62 @@ with tab_fo:
                 st.info("Occupancy data not available for compression calendar.")
         else:
             st.info("KPI data not available for compression calendar.")
+
+        # ── Ticketmaster Upcoming Regional Events ─────────────────────────────────
+        try:
+            if not df_tick.empty:
+                st.markdown(sec_div("📅 Upcoming Regional Events"), unsafe_allow_html=True)
+                st.markdown(_sh("📅", "Upcoming Regional Events — Ticketmaster Discovery", "orange", "FORWARD DEMAND SIGNAL"), unsafe_allow_html=True)
+                st.caption(
+                    "Regional ticketed events within 50 miles of Dana Point — forward hotel demand indicators. "
+                    "Source: Ticketmaster Discovery API · Updated on each pipeline run."
+                )
+                _tick_disp = df_tick.copy()
+                # Format display columns
+                _tick_cols_map = {
+                    "name": "Event Name",
+                    "event_date": "Date",
+                    "venue_name": "Venue",
+                    "venue_city": "City",
+                    "distance_miles": "Distance (mi)",
+                    "segment": "Category",
+                    "genre": "Genre",
+                }
+                _tick_disp_cols = [c for c in _tick_cols_map if c in _tick_disp.columns]
+                _tick_disp = _tick_disp[_tick_disp_cols].rename(columns=_tick_cols_map)
+                # Add price range if available
+                if "price_min" in df_tick.columns and "price_max" in df_tick.columns:
+                    _tick_disp["Price Range"] = df_tick.apply(
+                        lambda r: (
+                            f"${r['price_min']:.0f}–${r['price_max']:.0f}"
+                            if pd.notna(r.get("price_min")) and pd.notna(r.get("price_max"))
+                            else "—"
+                        ),
+                        axis=1,
+                    )
+                if "Distance (mi)" in _tick_disp.columns:
+                    _tick_disp["Distance (mi)"] = pd.to_numeric(_tick_disp["Distance (mi)"], errors="coerce").round(1)
+                if "Date" in _tick_disp.columns:
+                    _tick_disp["Date"] = pd.to_datetime(_tick_disp["Date"], errors="coerce").dt.strftime("%b %d, %Y")
+                _tc1, _tc2 = st.columns([3, 1])
+                with _tc1:
+                    st.dataframe(_tick_disp, use_container_width=True, hide_index=True)
+                with _tc2:
+                    st.metric("Upcoming Events", len(df_tick))
+                    _near_30 = df_tick[
+                        pd.to_datetime(df_tick["event_date"], errors="coerce") <=
+                        (pd.Timestamp.today() + pd.Timedelta(days=30))
+                    ] if "event_date" in df_tick.columns else pd.DataFrame()
+                    st.metric("Within 30 Days", len(_near_30))
+                    if "distance_miles" in df_tick.columns:
+                        _close_ev = df_tick[pd.to_numeric(df_tick["distance_miles"], errors="coerce") <= 15]
+                        st.metric("Within 15 mi", len(_close_ev))
+                st.caption(
+                    "📌 **Demand signal:** Events within 15 miles directly compress Dana Point hotel inventory. "
+                    "Events 15–50 miles may generate overflow demand on peak nights."
+                )
+        except Exception as _e:
+            _logger.debug("Ticketmaster events panel error: %s", _e)
 
         # ── Forward Outlook Narrative ─────────────────────────────────────────────
         st.markdown("### Strategic Outlook Narrative", unsafe_allow_html=True)
