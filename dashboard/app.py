@@ -39,6 +39,7 @@ from utils import (
     format_hero_kpi_card, format_exec_kpi_banner, safe_sql_query,
     combine_social_followers, safe_execute_with_logging, format_metric_delta,
 )
+from components_coastal import render_coastal_intelligence
 
 
 def md_to_html(text: str) -> str:
@@ -16063,6 +16064,10 @@ with tab_cs:
                     unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
+
+        # ── Coastal Intelligence: Beach + Whale + Revenue ────────────────────────
+        st.markdown("")
+        render_coastal_intelligence(df_kpi)
 
 
     # TAB 5 — DATA LOG
