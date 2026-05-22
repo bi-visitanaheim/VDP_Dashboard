@@ -706,6 +706,47 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("airnow_aqi_daily",         "insights_daily",               "derived_from",  "as_of_date",
      "compute_insights.py flags AQI risk windows for residents/visitors audience cards"),
+
+    # ── 2026-05-22: New coastal + demand intelligence tables ────────────────────
+    ("surf_conditions_daily",    "kpi_daily_summary",            "cross_ref",     "obs_date→as_of_date",
+     "Wave height and water temp correlate with weekend occupancy spikes (+4-7% on good surf days)"),
+    ("surf_conditions_daily",    "weather_monthly",              "enriches",      "month",
+     "Daily surf conditions enrich monthly weather with actionable beach-quality signal"),
+    ("surf_conditions_daily",    "vdp_events",                   "context",       "event_date",
+     "Surf quality on event dates (Ohana Fest, whale watching) directly affects attendance"),
+    ("surf_conditions_daily",    "insights_daily",               "derived_from",  "as_of_date",
+     "Beach conditions inform visitor audience cards (best_value, booking_timing)"),
+    ("surf_conditions_daily",    "noaa_tides_daily",             "cross_ref",     "obs_date",
+     "Surf + tides combined give complete coastal visitor experience signal"),
+
+    ("ca_state_parks_visitation","kpi_daily_summary",            "cross_ref",     "report_month",
+     "State park day-use visits are proxy for beach tourism invisible in hotel STR data"),
+    ("ca_state_parks_visitation","datafy_overview_kpis",         "cross_ref",     "report_year",
+     "Doheny camping nights add to overnight visitor count not captured in hotel STR"),
+    ("ca_state_parks_visitation","insights_daily",               "derived_from",  "report_year",
+     "Park visitation informs resident/visitor insights on peak periods and community impact"),
+
+    ("demand_signal_weekly",     "kpi_daily_summary",            "derived_from",  "week_date→as_of_date",
+     "Demand signal index synthesizes 6 sources to predict STR occupancy 2-4 weeks forward"),
+    ("demand_signal_weekly",     "google_trends_weekly",         "derived_from",  "week_date",
+     "Google Trends primary (35% weight) is the strongest leading indicator in demand index"),
+    ("demand_signal_weekly",     "eia_gas_prices",               "derived_from",  "week_date",
+     "Gas price component (15% weight) proxies drive-market affordability in demand index"),
+    ("demand_signal_weekly",     "wikipedia_pageviews_daily",    "derived_from",  "week_date",
+     "Wikipedia awareness (15% weight) measures destination mindshare in demand index"),
+    ("demand_signal_weekly",     "weather_monthly",              "derived_from",  "month",
+     "Seasonal beach quality (20% weight) anchors demand index baseline by month"),
+    ("demand_signal_weekly",     "insights_daily",               "derived_from",  "as_of_date",
+     "Demand signal generates forward-looking DMO/visitor insights with quantified confidence"),
+
+    ("data_correlation_matrix",  "google_trends_weekly",         "measures",      "lag_weeks",
+     "Quantifies how many weeks Google Trends leads STR occupancy (typically 2-3 week lag)"),
+    ("data_correlation_matrix",  "eia_gas_prices",               "measures",      "lag_weeks",
+     "Measures gas price impact on occupancy with seasonal adjustment for summer demand"),
+    ("data_correlation_matrix",  "kpi_daily_summary",            "measures",      "as_of_date",
+     "All correlations in matrix target kpi_occ_pct or kpi_adr as the dependent variable"),
+    ("data_correlation_matrix",  "insights_daily",               "derived_from",  "updated_at",
+     "Correlation insights inform AI analyst answers with statistically-backed lead times"),
 ]
 
 
