@@ -747,6 +747,62 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
      "All correlations in matrix target kpi_occ_pct or kpi_adr as the dependent variable"),
     ("data_correlation_matrix",  "insights_daily",               "derived_from",  "updated_at",
      "Correlation insights inform AI analyst answers with statistically-backed lead times"),
+
+    # ── Beach Water Quality (Heal the Bay / CA monitoring) ────────────────────
+    ("beach_water_quality_weekly","kpi_daily_summary",           "context",       "sample_date→as_of_date",
+     "Beach advisory days correlate with RevPAR softness 1-3 days after rain; A/B grades support demand"),
+
+    ("beach_water_quality_weekly","weather_monthly",             "cross_ref",     "sample_date→month",
+     "Post-rain bacterial exceedances (C/D/F grades) directly follow wet-weather events in weather data"),
+
+    ("beach_water_quality_weekly","surf_conditions_daily",       "cross_ref",     "sample_date→obs_date",
+     "Beach grade and surf quality combined give complete coastal visitor-experience signal per day"),
+
+    ("beach_water_quality_weekly","noaa_tides_daily",            "context",       "sample_date→obs_date",
+     "Incoming tides after rain flush bacteria from creek mouths; tide data contextualizes grade swings"),
+
+    ("beach_water_quality_weekly","vdp_events",                  "context",       "event_date",
+     "Beach-centric events (Doheny Blues, triathlon) screened against advisory status on event date"),
+
+    ("beach_water_quality_weekly","airnow_aqi_daily",            "cross_ref",     "sample_date",
+     "Beach advisories and poor AQI days together quantify total outdoor visitor-experience risk"),
+
+    ("beach_water_quality_weekly","datafy_overview_kpis",        "context",       "report_period",
+     "Seasonal advisory frequency contextualizes Datafy overnight visitor mix and accommodation share"),
+
+    ("beach_water_quality_weekly","insights_daily",              "derived_from",  "sample_date→as_of_date",
+     "compute_insights.py flags advisory windows for visitor/resident audience cards"),
+
+    # ── Whale Watching Activity ────────────────────────────────────────────────
+    ("whale_watching_activity",   "kpi_daily_summary",           "cross_ref",     "obs_month",
+     "Whale watching index >= 70 correlates with +8-12% shoulder-season ADR premium on boat-tour weekends"),
+
+    ("whale_watching_activity",   "datafy_overview_dma",         "cross_ref",     "obs_month",
+     "Fly markets (SLC, Dallas, NYC) over-index during whale season vs. drive markets — premium segment signal"),
+
+    ("whale_watching_activity",   "datafy_overview_kpis",        "context",       "obs_month",
+     "Whale watching visitor trips add to destination total overnight count; shoulder season LOS driver"),
+
+    ("whale_watching_activity",   "kpi_compression_quarterly",   "context",       "obs_month→quarter",
+     "Gray whale season (Q1) lifts compression-day count; blue whale season anchors Q3 compression"),
+
+    ("whale_watching_activity",   "vdp_events",                  "cross_ref",     "obs_month→event_date",
+     "Festival of Whales (March) and Tall Ships Festival (September) directly overlap whale seasons"),
+
+    ("whale_watching_activity",   "noaa_marine_monthly",         "enriches",      "obs_month",
+     "Ocean conditions (wave height, water temp) directly affect charter sighting rates and trip quality"),
+
+    ("whale_watching_activity",   "surf_conditions_daily",       "context",       "obs_month",
+     "Calm seas (wave < 3ft) maximize charter comfort; combined with whale index for visit-quality score"),
+
+    ("whale_watching_activity",   "ticketmaster_events",         "context",       "obs_month",
+     "Marine and outdoor events near whale season amplify shoulder-demand beyond whale watching alone"),
+
+    ("whale_watching_activity",   "insights_daily",              "derived_from",  "obs_month",
+     "compute_insights.py uses whale index to forecast shoulder-season demand and OOS visitor premium"),
+
+    ("whale_watching_activity",   "google_trends_weekly",        "cross_ref",     "obs_month",
+     "Google search interest for 'whale watching Dana Point' leads charter bookings by 2-4 weeks"),
 ]
 
 

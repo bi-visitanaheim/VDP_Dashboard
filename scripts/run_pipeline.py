@@ -38,7 +38,9 @@ Pipeline steps:
   22. fetch_noaa_tides.py         — NOAA tide predictions       → noaa_tides_daily (skip-safe, no key)
   23. fetch_airnow_aqi.py         — EPA AirNow AQI              → airnow_aqi_daily (skip-safe, demo seeds without key)
   24. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
-  25. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
+  25. fetch_beach_water_quality.py — Heal the Bay beach grades → beach_water_quality_weekly (skip-safe)
+  26. fetch_whale_watching.py      — Whale watching charter activity index → whale_watching_activity (skip-safe)
+  27. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
 
 Steps 1, 2, 3, 6 are FAIL-FAST (abort on failure). All others are skip-safe.
 Each step is logged to logs/pipeline.log:
@@ -113,6 +115,11 @@ STEPS = [
     ("fetch_ca_state_parks",  os.path.join(BASE_DIR, "fetch_ca_state_parks.py"),       False),
     # Cross-source demand signal index + statistical correlation matrix
     ("fetch_demand_signals",  os.path.join(BASE_DIR, "fetch_demand_signals.py"),        False),
+    # Beach + marine visitor-experience data (added 2026-05-22)
+    # Beach water quality grades directly affect visitor decisions and attendance
+    ("fetch_beach_water_quality", os.path.join(BASE_DIR, "fetch_beach_water_quality.py"), False),
+    # Whale watching activity index — top-5 visitor reason; shoulder-season demand driver
+    ("fetch_whale_watching",      os.path.join(BASE_DIR, "fetch_whale_watching.py"),      False),
     # Design inspiration — no DB writes; saves to data/design/godly_inspiration.json
     ("fetch_godly_design", os.path.join(BASE_DIR, "fetch_godly_design.py"),      False),
     # ALWAYS LAST — rebuilds all table relationships after every pipeline run
