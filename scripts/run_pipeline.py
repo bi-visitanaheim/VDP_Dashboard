@@ -37,10 +37,13 @@ Pipeline steps:
   21. fetch_wikipedia_pageviews.py — Wikipedia awareness signal → wikipedia_pageviews_daily (skip-safe, no key)
   22. fetch_noaa_tides.py         — NOAA tide predictions       → noaa_tides_daily (skip-safe, no key)
   23. fetch_airnow_aqi.py         — EPA AirNow AQI              → airnow_aqi_daily (skip-safe, demo seeds without key)
-  24. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
-  25. fetch_beach_water_quality.py — Heal the Bay beach grades → beach_water_quality_weekly (skip-safe)
-  26. fetch_whale_watching.py      — Whale watching charter activity index → whale_watching_activity (skip-safe)
-  27. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
+  24. load_visit_ca_gmp.py        — Visit California intl market profiles (GMP PDFs) → visit_ca_intl_market_profiles (skip-safe)
+  25. load_visit_ca_lodging.py    — CA lodging performance XLS → visit_ca_lodging_monthly (skip-safe)
+  26. fetch_airbnb_market.py      — InsideAirbnb STVR listings → airbnb_market_data, airbnb_market_summary (skip-safe)
+  27. fetch_beach_water_quality.py — Heal the Bay beach grades → beach_water_quality_weekly (skip-safe)
+  28. fetch_whale_watching.py      — Whale watching charter activity index → whale_watching_activity (skip-safe)
+  29. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
+  30. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
 
 Steps 1, 2, 3, 6 are FAIL-FAST (abort on failure). All others are skip-safe.
 Each step is logged to logs/pipeline.log:
@@ -115,8 +118,14 @@ STEPS = [
     ("fetch_ca_state_parks",  os.path.join(BASE_DIR, "fetch_ca_state_parks.py"),       False),
     # Cross-source demand signal index + statistical correlation matrix
     ("fetch_demand_signals",  os.path.join(BASE_DIR, "fetch_demand_signals.py"),        False),
+    # Visit California deep-parse: GMP international market profiles + lodging XLS (added 2026-05-22)
+    # GMP PDFs cover 13 international origin markets — key for intl visitor intelligence
+    ("load_visit_ca_gmp",     os.path.join(BASE_DIR, "load_visit_ca_gmp.py"),     False),
+    # CA statewide lodging performance monthly data (XLS format)
+    ("load_visit_ca_lodging", os.path.join(BASE_DIR, "load_visit_ca_lodging.py"), False),
+    # InsideAirbnb STVR market data — competitive landscape for hotel market
+    ("fetch_airbnb_market",   os.path.join(BASE_DIR, "fetch_airbnb_market.py"),   False),
     # Beach + marine visitor-experience data (added 2026-05-22)
-    # Beach water quality grades directly affect visitor decisions and attendance
     ("fetch_beach_water_quality", os.path.join(BASE_DIR, "fetch_beach_water_quality.py"), False),
     # Whale watching activity index — top-5 visitor reason; shoulder-season demand driver
     ("fetch_whale_watching",      os.path.join(BASE_DIR, "fetch_whale_watching.py"),      False),
