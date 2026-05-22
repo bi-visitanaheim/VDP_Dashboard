@@ -106,6 +106,13 @@ STEPS = [
     ("fetch_airnow_aqi",     os.path.join(BASE_DIR, "fetch_airnow_aqi.py"),          False),
     # Strategy goal progress — refresh current_value for all active goals from live data
     ("strategy_progress", os.path.join(BASE_DIR, "compute_strategy_progress.py"), False),
+    # 2026-05-22: New coastal + demand intelligence sources
+    # Surf conditions are a key beach-tourism driver (water temp, wave quality)
+    ("fetch_surf_conditions", os.path.join(BASE_DIR, "fetch_surf_conditions_daily.py"), False),
+    # CA State Parks Doheny/Crystal Cove/San Clemente visitation (day-use invisible in STR)
+    ("fetch_ca_state_parks",  os.path.join(BASE_DIR, "fetch_ca_state_parks.py"),       False),
+    # Cross-source demand signal index + statistical correlation matrix
+    ("fetch_demand_signals",  os.path.join(BASE_DIR, "fetch_demand_signals.py"),        False),
     # Design inspiration — no DB writes; saves to data/design/godly_inspiration.json
     ("fetch_godly_design", os.path.join(BASE_DIR, "fetch_godly_design.py"),      False),
     # ALWAYS LAST — rebuilds all table relationships after every pipeline run
