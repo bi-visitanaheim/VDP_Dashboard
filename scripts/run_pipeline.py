@@ -92,8 +92,6 @@ STEPS = [
     ("load_zartico",      os.path.join(BASE_DIR, "load_zartico_reports.py"),    False),
     ("fetch_vdp_events",  os.path.join(BASE_DIR, "fetch_vdp_events.py"),        False),
     ("load_visit_ca",     os.path.join(BASE_DIR, "load_visit_ca.py"),           False),
-    ("load_visit_ca_gmp", os.path.join(BASE_DIR, "load_visit_ca_gmp.py"),      False),
-    ("load_visit_ca_lodging", os.path.join(BASE_DIR, "load_visit_ca_lodging.py"), False),
     ("load_later",        os.path.join(BASE_DIR, "load_later_reports.py"),      False),
     ("fetch_event_analytics", os.path.join(BASE_DIR, "fetch_event_analytics.py"), False),
     ("audit_data",        os.path.join(BASE_DIR, "audit_data.py"),              False),

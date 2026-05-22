@@ -323,38 +323,84 @@ def _safe_float(val) -> float | None:
 
 def _extract_visitation_thousands(text: str) -> float | None:
     """
-    Find the most recent visitation forecast figure in thousands.
-    Pattern in PDFs: 'Visitation (thousands)' near a row of numbers
-    like '432' for Australia 2025.
+    Find the 2025 visitation forecast figure in thousands from Visitation Forecast chart.
+
+    The PDF chart text for the Visitor Volume section looks like:
+        '546\\n517\\n480\\n449\\n432\\n423\\n406\\n5% 4%...\\n2024 2025 2026 2027 2028 2029 2030'
+    The values appear from largest (2030 forecast) to smallest (2024 actual), so
+    the 2025 estimate is the second-to-last value. We collect all non-year integers
+    in the block and return the second smallest (2025 ≈ second lowest in the series).
     """
-    # Match numeric values that appear in visitation forecast charts
-    # The 2025 forecast value is typically the 2nd number in a 7-year series
-    patterns = [
-        r"Visitation.*?(\d{3,5})\s+(\d{3,5})\s+(\d{3,5})",
-    ]
-    for p in patterns:
-        m = re.search(p, text, re.DOTALL | re.IGNORECASE)
-        if m:
-            # Return the first value (2024 actual or 2025 forecast)
-            v = _safe_float(m.group(1))
-            if v and 50 < v < 50000:
-                return v
-    return None
+    # 'Forecast: Visitor Volume' section ends at 'Source:'
+    m = re.search(r"Visitor Volume(.*?)Source:", text, re.DOTALL | re.IGNORECASE)
+    if not m:
+        return None
+
+    block = m.group(1)
+    # Collect 3-5 digit integers, excluding year numbers (2010–2035)
+    raw_nums = re.findall(r"\b(\d{3,5})\b", block)
+    values = []
+    for raw in raw_nums:
+        v = float(raw)
+        if 2010 <= v <= 2035:
+            continue       # skip year axis labels
+        if 10 <= v <= 50000:
+            values.append(v)
+
+    if not values:
+        return None
+
+    # Values are listed largest→smallest (2030 forecast → 2024 actual).
+    # Sort ascending; index 1 is the 2025 estimate (second lowest = second from right in chart).
+    values_sorted = sorted(values)
+    if len(values_sorted) >= 2:
+        return values_sorted[1]   # 2025 forecast
+    return values_sorted[0]
 
 
-def _extract_spend_millions(text: str) -> float | None:
+def _extract_spend_millions(text: str, country: str = "") -> float | None:
     """
-    Extract visitor spend in millions USD from forecast text.
-    Pattern like '$1,330' or '$2,700'.
+    Extract 2025 visitor spend forecast in millions USD from the country-specific
+    'Spending Forecast and YOY % change' chart section.
+
+    Pattern: '{Country}: Spending Forecast and YOY % change\\n$X,XXX\\n$X,XXX...'
+    Values are listed from 2030 (max) to 2024 (min); 2025 is second smallest.
+
+    The country name is used to find the right chart section and avoid confusing
+    it with the global 'Forecast: Visitor Spending by Market' table.
     """
-    # Look for dollar amounts with commas in millions range
-    m = re.search(r"Spending \(millions\).*?\$([\d,]+)", text, re.DOTALL)
-    if m:
-        val_str = m.group(1).replace(",", "")
-        v = _safe_float(val_str)
-        if v and 50 < v < 200000:
-            return v
-    return None
+    # Look for country-specific spending chart section
+    if country:
+        # Match "{Country}: Spending Forecast" block
+        pattern = re.escape(country) + r".*?Spending Forecast.*?YOY.*?change(.*?)Source:"
+        m = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+    else:
+        m = None
+
+    if not m:
+        # Fallback: look for any country's spending forecast block (country-specific page)
+        m = re.search(r"Spending Forecast and YOY.*?change(.*?)Source:", text, re.DOTALL | re.IGNORECASE)
+
+    if not m:
+        return None
+
+    block = m.group(1)
+    raw_amounts = re.findall(r"\$([\d,]+)", block)
+    values = []
+    for raw in raw_amounts:
+        v = _safe_float(raw.replace(",", ""))
+        # Valid spend range: $50M to $50B per market
+        if v and 50 < v < 50000:
+            values.append(v)
+
+    if not values:
+        return None
+
+    # Values listed 2030→2024 (largest to smallest); 2025 is second-to-last = second-smallest
+    values_sorted = sorted(values)
+    if len(values_sorted) >= 2:
+        return values_sorted[1]   # 2025 spend forecast
+    return values_sorted[0]
 
 
 def _extract_destinations(text: str) -> list[str]:
@@ -425,27 +471,29 @@ def _extract_repeat_pct(text: str) -> float | None:
 
 def _extract_yoy_change(text: str, year: int = 2025) -> float | None:
     """
-    Extract YOY visitor change for the most recent forecast year.
-    The YOY percentages appear as a series of numbers with % signs
-    near the visitation chart; we grab the value for 2025.
+    Extract 2025 YOY visitor change from the Visitor Volume chart.
+
+    The PDF chart lists YOY values in descending year order (2030→2024):
+        '5% 4% 6% 7% 8% 6%\\n-6%'  (last value is 2024 actual YOY)
+    So 2025 YOY = second-to-last value.
+    We target only the Visitor Volume section to avoid the Spending YOY series.
     """
-    # Pattern: series of YOY% values, positive and negative
-    m = re.search(
-        r"YOY % change\s*([-\d%\s]+)",
-        text, re.IGNORECASE
-    )
-    if m:
-        raw = m.group(1)
-        nums = re.findall(r"(-?\d+)%", raw)
-        if len(nums) >= 2:
-            # Second value is the 2025 forecast YOY (after 2024 actual)
-            v = _safe_float(nums[1])
-            if v is not None and -50 < v < 100:
-                return v
+    m = re.search(r"Visitor Volume(.*?)Source:", text, re.DOTALL | re.IGNORECASE)
+    if not m:
+        return None
+
+    block = m.group(1)
+    nums = re.findall(r"(-?\d+)%", block)
+    if len(nums) >= 2:
+        # YOY values: [2030, 2029, 2028, 2027, 2026, 2025, 2024]
+        # 2025 is second from the right → index -2
+        v = _safe_float(nums[-2])
+        if v is not None and -80 < v < 100:
+            return v
     return None
 
 
-def _try_extract_from_pdf(pdf_path: Path) -> dict:
+def _try_extract_from_pdf(pdf_path: Path, country: str = "") -> dict:
     """
     Attempt to extract key metrics from a GMP PDF.
     Returns a partial dict of fields; caller merges with seed.
@@ -467,7 +515,7 @@ def _try_extract_from_pdf(pdf_path: Path) -> dict:
     if vis:
         extracted["total_visitors_thousands"] = vis
 
-    spend = _extract_spend_millions(full_text)
+    spend = _extract_spend_millions(full_text, country=country)
     if spend:
         extracted["visitor_spend_total_millions"] = spend
 
@@ -594,7 +642,7 @@ def main() -> int:
         seed["report_year"] = year
 
         # Attempt PDF extraction and overlay any parsed values
-        parsed = _try_extract_from_pdf(pdf_path)
+        parsed = _try_extract_from_pdf(pdf_path, country=country)
         if parsed:
             seed.update(parsed)
             print(f"{ts()} [OK  ] {country}: PDF extracted {len(parsed)} fields from {pdf_path.name}")
