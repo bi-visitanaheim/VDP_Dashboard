@@ -1018,7 +1018,8 @@ st.markdown("""
   [data-testid="stToolbar"]             { display: none !important; visibility: hidden !important; height: 0 !important; }
   [data-testid="stDecoration"]          { display:    none    !important; }
   [data-testid="stStatusWidget"]        { visibility: hidden !important; }
-  [data-testid="stHeader"]              { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; overflow: hidden !important; }
+  [data-testid="stHeader"]              { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; overflow: hidden !important; position: absolute !important; top: 0 !important; pointer-events: none !important; }
+  header                                { display: none !important; height: 0 !important; }
   /* ── Kill ALL Streamlit floating bottom chrome ───────────────────────── */
   [data-testid="stBottom"]              { display: none !important; }
   [data-testid="stAppDeployButton"]     { display: none !important; }
@@ -1901,6 +1902,10 @@ st.markdown("""
   [data-testid="stMainBlockContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
   section[data-testid="stMain"] > div:first-child { padding-top: 0 !important; margin-top: 0 !important; }
   div[data-testid="stVerticalBlock"] > div:first-child { margin-top: 0 !important; }
+  /* Catch emotion-generated class names Streamlit injects inline */
+  [class*="st-emotion-cache"] { --header-height: 0px !important; }
+  [data-testid="stMainBlockContainer"] > div:first-child { padding-top: 0 !important; margin-top: 0 !important; }
+  .stMainBlockContainer > div { padding-top: 0 !important; margin-top: 0 !important; }
   @media (max-width: 768px) {
     .block-container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
   }
@@ -2972,6 +2977,38 @@ st.markdown("""
   if(window.MutationObserver){
     new MutationObserver(killBadges).observe(document.body,{childList:true,subtree:true});
   }
+  // Force zero top-padding — Streamlit emotion CSS sets it inline after our stylesheet
+  function zeroTopPad(){
+    var targets = [
+      '[data-testid="stMain"]',
+      '[data-testid="stMainBlockContainer"]',
+      '[data-testid="stAppViewContainer"] > section > div',
+      '.block-container'
+    ];
+    targets.forEach(function(sel){
+      document.querySelectorAll(sel).forEach(function(el){
+        if(el.style.paddingTop && el.style.paddingTop !== '0px'){
+          el.style.setProperty('padding-top','0px','important');
+        }
+        if(el.style.marginTop && el.style.marginTop !== '0px'){
+          el.style.setProperty('margin-top','0px','important');
+        }
+      });
+    });
+    // Hide any residual header
+    document.querySelectorAll('[data-testid="stHeader"],header').forEach(function(el){
+      el.style.setProperty('display','none','important');
+      el.style.setProperty('height','0','important');
+      el.style.setProperty('position','absolute','important');
+    });
+  }
+  zeroTopPad();
+  setTimeout(zeroTopPad, 200);
+  setTimeout(zeroTopPad, 600);
+  if(window.MutationObserver){
+    new MutationObserver(zeroTopPad).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
+  }
+
   // Nightly reset at 9 PM UTC
   if(!window._dpNightlySet){
     window._dpNightlySet=true;
