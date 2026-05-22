@@ -175,6 +175,45 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
      "Profitability metrics (GOP margin, labor cost per room) contextualize RevPAR performance"),
 
     # ── Visit California Context ───────────────────────────────────────────
+    ("visit_ca_travel_indicators","kpi_daily_summary",           "context",       "report_period",
+     "Monthly CA travel indicators (air pax, hotel KPIs, spending, gas) contextualize VDP STR performance"),
+
+    ("visit_ca_travel_indicators","fact_str_metrics",            "context",       "report_period",
+     "CA statewide hotel OCC/ADR/RevPAR travel indicators benchmark against VDP local STR metrics"),
+
+    ("visit_ca_travel_indicators","eia_gas_prices",              "cross_ref",     "report_period",
+     "CA gas price travel indicator cross-referenced with EIA weekly gas price series for drive-market analysis"),
+
+    ("visit_ca_travel_indicators","visit_ca_airport_traffic",    "enriches",      "report_period",
+     "Monthly air passenger indicators enrich airport traffic counts with statewide demand context"),
+
+    ("visit_ca_travel_indicators","visit_ca_intl_arrivals",      "cross_ref",     "report_period",
+     "CA international air arrivals indicator cross-referenced with NTTO monthly international arrivals table"),
+
+    ("visit_ca_intl_market_profiles","datafy_overview_dma",      "cross_ref",     "country",
+     "International market visitor profiles cross-referenced with Datafy DMA feeder market spending data"),
+
+    ("visit_ca_intl_market_profiles","visit_ca_intl_arrivals",   "enriches",      "country",
+     "Market-level visitor profiles (spend/LOS/activities) enrich raw international arrivals counts"),
+
+    ("visit_ca_intl_market_profiles","fact_str_metrics",         "context",       "report_year",
+     "International market spend-per-visitor context informs ADR premium opportunity in STR metrics"),
+
+    ("visit_ca_intl_market_profiles","insights_daily",           "derived_from",  "report_year",
+     "International market profiles feed compute_insights.py OOS visitor premium and feeder value gap insights"),
+
+    ("visit_ca_lodging_monthly",   "kpi_daily_summary",          "cross_ref",     "report_period",
+     "CA statewide monthly lodging actuals (STR) cross-referenced with VDP local KPI daily summary"),
+
+    ("visit_ca_lodging_monthly",   "fact_str_metrics",           "cross_ref",     "report_period",
+     "CA regional lodging OCC/ADR/RevPAR monthly benchmarks against VDP portfolio STR metrics"),
+
+    ("visit_ca_lodging_monthly",   "visit_ca_lodging_forecast",  "enriches",      "region",
+     "Monthly lodging actuals enrich the annual lodging forecast with realized performance by region"),
+
+    ("visit_ca_lodging_monthly",   "costar_market_snapshot",     "cross_ref",     "report_period",
+     "CA lodging monthly actuals cross-referenced with CoStar South OC market snapshot for benchmarking"),
+
     ("visit_ca_travel_forecast", "kpi_daily_summary",            "context",       "year",
      "CA statewide travel demand forecast provides macro demand context for VDP KPI interpretation"),
 

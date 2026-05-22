@@ -21,7 +21,9 @@ Pipeline steps:
    6. compute_insights.py         — AI insights engine          → insights_daily (FAIL-FAST)
    7. load_zartico_reports.py     — Zartico historical PDFs     → 8 zartico_* tables (skip-safe)
    8. fetch_vdp_events.py         — VDP event calendar scraper  → vdp_events (skip-safe)
-   9. load_visit_ca.py            — Visit California Excel      → 4 visit_ca_* tables (skip-safe)
+   9. load_visit_ca.py            — Visit California Excel      → 5 visit_ca_* tables incl. travel_indicators (skip-safe)
+  9a. load_visit_ca_gmp.py       — Visit CA Global Market Profile PDFs → visit_ca_intl_market_profiles (skip-safe)
+  9b. load_visit_ca_lodging.py   — CALodgingPerformance_202601.xls → visit_ca_lodging_monthly (skip-safe)
   10. load_later_reports.py       — Later.com social CSVs       → 14 later_* tables (skip-safe)
   11. fetch_event_analytics.py    — Event impact analysis       → 5 events_* tables (skip-safe)
   12. audit_data.py               — data-quality audit; stdout summary (skip-safe)
@@ -90,6 +92,8 @@ STEPS = [
     ("load_zartico",      os.path.join(BASE_DIR, "load_zartico_reports.py"),    False),
     ("fetch_vdp_events",  os.path.join(BASE_DIR, "fetch_vdp_events.py"),        False),
     ("load_visit_ca",     os.path.join(BASE_DIR, "load_visit_ca.py"),           False),
+    ("load_visit_ca_gmp", os.path.join(BASE_DIR, "load_visit_ca_gmp.py"),      False),
+    ("load_visit_ca_lodging", os.path.join(BASE_DIR, "load_visit_ca_lodging.py"), False),
     ("load_later",        os.path.join(BASE_DIR, "load_later_reports.py"),      False),
     ("fetch_event_analytics", os.path.join(BASE_DIR, "fetch_event_analytics.py"), False),
     ("audit_data",        os.path.join(BASE_DIR, "audit_data.py"),              False),

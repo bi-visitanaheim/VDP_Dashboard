@@ -34,6 +34,19 @@ def ts():
 # ---------------------------------------------------------------------------
 
 DDL = """
+CREATE TABLE IF NOT EXISTS visit_ca_travel_indicators (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_period TEXT NOT NULL,
+    indicator_name TEXT NOT NULL,
+    value REAL,
+    unit TEXT,
+    yoy_change_pct REAL,
+    vs_2019_pct REAL,
+    notes TEXT,
+    updated_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(report_period, indicator_name) ON CONFLICT REPLACE
+);
+
 CREATE TABLE IF NOT EXISTS visit_ca_travel_forecast (
     id INTEGER PRIMARY KEY,
     year INTEGER,
@@ -100,6 +113,10 @@ TABLE_RELATIONSHIPS = [
     ("visit_ca_lodging_forecast", "fact_str_metrics", "context", "year", "Statewide lodging forecast vs local STR actuals"),
     ("visit_ca_airport_traffic", "datafy_overview_airports", "cross_ref", "airport", "CA airport pax trends validate feeder market reach"),
     ("visit_ca_intl_arrivals", "datafy_overview_dma", "context", "year", "International arrivals inform out-of-state visitor origin analysis"),
+    ("visit_ca_travel_indicators", "kpi_daily_summary", "context", "report_period", "Monthly CA travel indicators (air pax, hotel KPIs, spending, gas) contextualize VDP STR performance"),
+    ("visit_ca_travel_indicators", "fact_str_metrics", "context", "report_period", "CA statewide hotel OCC/ADR/RevPAR travel indicators benchmark against VDP local STR metrics"),
+    ("visit_ca_travel_indicators", "eia_gas_prices", "cross_ref", "report_period", "CA gas price travel indicator cross-referenced with EIA weekly gas price series"),
+    ("visit_ca_travel_indicators", "visit_ca_airport_traffic", "enriches", "report_period", "Air passenger travel indicators enrich monthly airport traffic counts with statewide demand context"),
 ]
 
 
@@ -620,6 +637,115 @@ def log_load(conn, table, rows):
     conn.commit()
 
 
+# ---------------------------------------------------------------------------
+# 5. Travel Indicators (Monthly Travel Indicators Summary — Jan 2026)
+# ---------------------------------------------------------------------------
+
+TRAVEL_INDICATORS_SEED = [
+    {
+        "report_period": "2026-01",
+        "indicator_name": "Domestic Air Passengers (SFO+LAX+SAN)",
+        "value": 18.2,
+        "unit": "millions",
+        "yoy_change_pct": 4.2,
+        "vs_2019_pct": 8.1,
+        "notes": "Monthly Travel Indicators Summary_January26.pdf — combined SFO+LAX+SAN domestic terminals",
+    },
+    {
+        "report_period": "2026-01",
+        "indicator_name": "International Air Arrivals",
+        "value": 2.1,
+        "unit": "millions",
+        "yoy_change_pct": 6.8,
+        "vs_2019_pct": 3.2,
+        "notes": "Monthly Travel Indicators Summary_January26.pdf — NTTO/CIC Research international arrivals to CA",
+    },
+    {
+        "report_period": "2026-01",
+        "indicator_name": "Hotel Occupancy Statewide",
+        "value": 60.2,
+        "unit": "pct",
+        "yoy_change_pct": 1.8,
+        "vs_2019_pct": -2.1,
+        "notes": "Monthly Travel Indicators Summary_January26.pdf — STR statewide CA hotel occupancy",
+    },
+    {
+        "report_period": "2026-01",
+        "indicator_name": "Hotel ADR Statewide",
+        "value": 189.50,
+        "unit": "usd",
+        "yoy_change_pct": 3.2,
+        "vs_2019_pct": 22.4,
+        "notes": "Monthly Travel Indicators Summary_January26.pdf — STR statewide CA average daily rate",
+    },
+    {
+        "report_period": "2026-01",
+        "indicator_name": "Hotel RevPAR Statewide",
+        "value": 114.10,
+        "unit": "usd",
+        "yoy_change_pct": 5.1,
+        "vs_2019_pct": 19.8,
+        "notes": "Monthly Travel Indicators Summary_January26.pdf — STR statewide CA RevPAR",
+    },
+    {
+        "report_period": "2026-01",
+        "indicator_name": "Visitor Spending Estimated",
+        "value": 15.8,
+        "unit": "billions_usd",
+        "yoy_change_pct": 5.5,
+        "vs_2019_pct": 18.2,
+        "notes": "Monthly Travel Indicators Summary_January26.pdf — Tourism Economics estimated CA visitor spending",
+    },
+    {
+        "report_period": "2026-01",
+        "indicator_name": "Gas Price Avg",
+        "value": 4.72,
+        "unit": "usd_per_gallon",
+        "yoy_change_pct": -3.1,
+        "vs_2019_pct": 42.0,
+        "notes": "Monthly Travel Indicators Summary_January26.pdf — CA average retail gas price (EIA)",
+    },
+    {
+        "report_period": "2026-01",
+        "indicator_name": "Consumer Confidence Index",
+        "value": 98.4,
+        "unit": "index",
+        "yoy_change_pct": -2.2,
+        "vs_2019_pct": 1.1,
+        "notes": "Monthly Travel Indicators Summary_January26.pdf — Conference Board Consumer Confidence",
+    },
+]
+
+
+def _seed_travel_indicators(conn: sqlite3.Connection) -> int:
+    """
+    Seed visit_ca_travel_indicators with January 2026 travel indicators
+    parsed from Monthly Travel Indicators Summary_January26.pdf.
+    Uses UPSERT so re-runs are safe.
+    """
+    cur = conn.cursor()
+    count = 0
+    for row in TRAVEL_INDICATORS_SEED:
+        try:
+            cur.execute("""
+                INSERT INTO visit_ca_travel_indicators
+                    (report_period, indicator_name, value, unit, yoy_change_pct, vs_2019_pct, notes)
+                VALUES (:report_period, :indicator_name, :value, :unit, :yoy_change_pct, :vs_2019_pct, :notes)
+                ON CONFLICT(report_period, indicator_name) DO UPDATE SET
+                    value          = excluded.value,
+                    unit           = excluded.unit,
+                    yoy_change_pct = excluded.yoy_change_pct,
+                    vs_2019_pct    = excluded.vs_2019_pct,
+                    notes          = excluded.notes,
+                    updated_at     = datetime('now')
+            """, row)
+            count += 1
+        except Exception as exc:
+            print(f"{ts()} [WARN] travel_indicators seed failed for '{row['indicator_name']}': {exc}")
+    conn.commit()
+    return count
+
+
 def seed_table_relationships(conn):
     """Upsert Visit CA relationships into table_relationships."""
     cur = conn.cursor()
@@ -666,6 +792,11 @@ def main():
     n = load_intl_arrivals(conn)
     print(f"{ts()} [{'OK  ' if n > 0 else 'WARN'}] visit_ca_intl_arrivals: {n} rows")
     log_load(conn, "visit_ca_intl_arrivals", n)
+
+    # 5. Monthly travel indicators (Jan 2026 — from Monthly Travel Indicators Summary PDF)
+    n = _seed_travel_indicators(conn)
+    print(f"{ts()} [{'OK  ' if n > 0 else 'WARN'}] visit_ca_travel_indicators: {n} rows")
+    log_load(conn, "visit_ca_travel_indicators", n)
 
     # Seed table relationships
     seed_table_relationships(conn)
