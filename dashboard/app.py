@@ -1013,12 +1013,12 @@ st.markdown("""
   .insight-icon { display: inline-block; vertical-align: middle; margin-right: 6px; line-height: 0; }
 
   /* ── Hide Streamlit Chrome ───────────────────────────────────────────── */
-  #MainMenu                              { visibility: hidden !important; }
-  footer                                 { visibility: hidden !important; }
-  [data-testid="stToolbar"]             { visibility: hidden !important; }
+  #MainMenu                              { display: none !important; }
+  footer                                 { display: none !important; }
+  [data-testid="stToolbar"]             { display: none !important; visibility: hidden !important; height: 0 !important; }
   [data-testid="stDecoration"]          { display:    none    !important; }
   [data-testid="stStatusWidget"]        { visibility: hidden !important; }
-  [data-testid="stHeader"]              { background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; }
+  [data-testid="stHeader"]              { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; overflow: hidden !important; }
   /* ── Kill ALL Streamlit floating bottom chrome ───────────────────────── */
   [data-testid="stBottom"]              { display: none !important; }
   [data-testid="stAppDeployButton"]     { display: none !important; }
@@ -1895,10 +1895,12 @@ st.markdown("""
   }
 
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
-  .block-container { padding-top: 0 !important; padding-left: 1rem !important; padding-right: 1rem !important; overflow: visible !important; }
-  [data-testid="stAppViewContainer"] > section > div:first-child { padding-top: 0 !important; }
+  .block-container { padding-top: 0 !important; margin-top: 0 !important; padding-left: 1rem !important; padding-right: 1rem !important; overflow: visible !important; }
+  [data-testid="stAppViewContainer"] > section > div:first-child { padding-top: 0 !important; margin-top: 0 !important; }
   [data-testid="stMain"] { padding-top: 0 !important; margin-top: 0 !important; }
   [data-testid="stMainBlockContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
+  section[data-testid="stMain"] > div:first-child { padding-top: 0 !important; margin-top: 0 !important; }
+  div[data-testid="stVerticalBlock"] > div:first-child { margin-top: 0 !important; }
   @media (max-width: 768px) {
     .block-container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
   }
