@@ -700,6 +700,9 @@ st.markdown("""
     background-color: var(--dp-bg) !important;
     color: var(--dp-text-1) !important;
     font-size: 14px !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    text-rendering: optimizeLegibility !important;
   }
   p, li, span, label, div { font-size: inherit; }
   [data-testid="stMarkdownContainer"] p,
@@ -1153,7 +1156,7 @@ st.markdown("""
       radial-gradient(circle at 50% 120%, rgba(167,139,250,0.10) 0%, transparent 40%),
       linear-gradient(160deg, #0B1E38 0%, #132D50 60%, #162E52 100%) !important;
     border-radius: 0 !important;
-    margin: -1rem -1rem 0 -1rem;
+    margin: 0 -1rem 0 -1rem;
     padding: 26px 36px 22px 36px;
     border-bottom: 1px solid rgba(0,212,200,0.20) !important;
     overflow: hidden;
@@ -1577,41 +1580,48 @@ st.markdown("""
     position: sticky !important;
     top: 0 !important;
     z-index: 990 !important;
-    background: var(--dp-bg) !important;
-    padding-top: 10px !important;
-    padding-bottom: 2px !important;
-    margin-bottom: 0 !important;
+    background: #FFFFFF !important;
+    padding-top: 8px !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 4px !important;
+    border-bottom: 1px solid #F1F5F9 !important;
   }
   [data-testid="stTabs"] [data-baseweb="tab-list"] {
-    gap: 3px !important;
-    background: rgba(255,255,255,0.04) !important;
-    border-radius: 14px !important;
+    gap: 2px !important;
+    background: #F1F5F9 !important;
+    border-radius: 12px !important;
     padding: 4px !important;
-    border: 1px solid rgba(0,212,200,0.12) !important;
-    box-shadow: inset 0 1px 4px rgba(0,0,0,0.25) !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: inset 0 1px 3px rgba(15,23,42,0.06) !important;
     flex-wrap: wrap !important;
+    overflow-x: auto !important;
   }
   [data-testid="stTabs"] [data-baseweb="tab"] {
-    border-radius: 10px !important;
-    padding: 7px 15px !important;
-    font-family: 'DM Sans', 'Inter', sans-serif !important;
-    font-size: 12.5px !important;
+    border-radius: 8px !important;
+    padding: 6px 14px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
-    letter-spacing: -0.01em !important;
-    color: var(--dp-text-2) !important;
-    transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease !important;
+    letter-spacing: 0em !important;
+    color: #475569 !important;
+    -webkit-text-fill-color: #475569 !important;
+    transition: color 0.15s, background 0.15s, box-shadow 0.15s !important;
     white-space: nowrap !important;
+    background: transparent !important;
+    border: none !important;
   }
   [data-testid="stTabs"] [data-baseweb="tab"]:hover {
-    background: rgba(0,212,200,0.08) !important;
-    color: var(--dp-teal) !important;
+    background: rgba(8,145,178,0.08) !important;
+    color: #0891B2 !important;
+    -webkit-text-fill-color: #0891B2 !important;
   }
   [data-testid="stTabs"] [aria-selected="true"] {
-    background: rgba(0,212,200,0.14) !important;
-    color: var(--dp-teal) !important;
+    background: #FFFFFF !important;
+    color: #0891B2 !important;
+    -webkit-text-fill-color: #0891B2 !important;
     font-weight: 700 !important;
-    border: 1px solid rgba(0,212,200,0.30) !important;
-    box-shadow: 0 2px 12px rgba(0,212,200,0.15), 0 0 0 1px rgba(0,212,200,0.18) !important;
+    border: none !important;
+    box-shadow: 0 1px 4px rgba(15,23,42,0.12), 0 0 0 1px rgba(8,145,178,0.18) !important;
   }
 
   /* ── Source Attribution Tags (inline) ───────────────────────────────── */
@@ -2266,7 +2276,7 @@ st.markdown("""
       font-size: 11px !important; padding: 5px 9px !important;
       min-width: 0 !important;
     }
-    .hero-banner { padding: 16px 14px !important; margin: -0.75rem -0.75rem 0 -0.75rem !important; }
+    .hero-banner { padding: 16px 14px !important; margin: 0 -0.75rem 0 -0.75rem !important; }
     .hero-title  { font-size: 1.35rem !important; }
     .hero-subtitle { font-size: 11px !important; }
     .sh-block  { padding: 9px 12px !important; }
@@ -2305,7 +2315,7 @@ st.markdown("""
   }
   @media screen and (max-width: 480px) {
     .hero-title { font-size: 1.15rem !important; }
-    .hero-banner { margin: -0.5rem -0.5rem 0 -0.5rem !important; padding: 14px 12px !important; }
+    .hero-banner { margin: 0 -0.5rem 0 -0.5rem !important; padding: 14px 12px !important; }
     .main .block-container { padding: 0 0.5rem 2rem 0.5rem !important; }
     .sh-tag { display: none !important; }
     [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
@@ -2977,36 +2987,58 @@ st.markdown("""
   if(window.MutationObserver){
     new MutationObserver(killBadges).observe(document.body,{childList:true,subtree:true});
   }
-  // Force zero top-padding — Streamlit emotion CSS sets it inline after our stylesheet
-  function zeroTopPad(){
-    var targets = [
-      '[data-testid="stMain"]',
-      '[data-testid="stMainBlockContainer"]',
-      '[data-testid="stAppViewContainer"] > section > div',
-      '.block-container'
-    ];
-    targets.forEach(function(sel){
-      document.querySelectorAll(sel).forEach(function(el){
-        if(el.style.paddingTop && el.style.paddingTop !== '0px'){
+  // ── Nuclear top-gap fix ──────────────────────────────────────────────────
+  // Streamlit's React sets paddingTop inline AFTER stylesheets load.
+  // We defeat it with: (a) a <style> injected into <head> that wins cascade,
+  // (b) direct inline-style overrides on every RAF frame for 5 s,
+  // (c) MutationObserver as persistent watchdog after that.
+  if(!window.__dpHeaderFix){
+    window.__dpHeaderFix = true;
+    // (a) Head-injected stylesheet — loads after emotion, wins in cascade
+    if(!document.getElementById('dp-header-fix')){
+      var _hs = document.createElement('style');
+      _hs.id = 'dp-header-fix';
+      _hs.textContent =
+        '[data-testid="stHeader"]{display:none!important;height:0!important;min-height:0!important;' +
+          'position:absolute!important;top:-9999px!important;overflow:hidden!important}' +
+        'header{display:none!important;height:0!important;overflow:hidden!important}' +
+        '[data-testid="stToolbar"]{display:none!important;height:0!important}' +
+        '[data-testid="stMain"]{padding-top:0!important;margin-top:0!important}' +
+        '[data-testid="stMainBlockContainer"]{padding-top:0!important;margin-top:0!important}' +
+        'section[data-testid="stMain"]>div{padding-top:0!important;margin-top:0!important}' +
+        '.block-container{padding-top:0!important;margin-top:0!important}' +
+        '.hero-banner{margin-top:0!important}';
+      document.head.appendChild(_hs);
+    }
+    // (b) Inline-style overrides (defeats React inline style)
+    function _applyZero(){
+      ['[data-testid="stMain"]','[data-testid="stMainBlockContainer"]','.block-container',
+       'section[data-testid="stMain"]>div'].forEach(function(s){
+        document.querySelectorAll(s).forEach(function(el){
           el.style.setProperty('padding-top','0px','important');
-        }
-        if(el.style.marginTop && el.style.marginTop !== '0px'){
           el.style.setProperty('margin-top','0px','important');
-        }
+        });
       });
-    });
-    // Hide any residual header
-    document.querySelectorAll('[data-testid="stHeader"],header').forEach(function(el){
-      el.style.setProperty('display','none','important');
-      el.style.setProperty('height','0','important');
-      el.style.setProperty('position','absolute','important');
-    });
-  }
-  zeroTopPad();
-  setTimeout(zeroTopPad, 200);
-  setTimeout(zeroTopPad, 600);
-  if(window.MutationObserver){
-    new MutationObserver(zeroTopPad).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
+      document.querySelectorAll('[data-testid="stHeader"],header').forEach(function(el){
+        el.style.setProperty('display','none','important');
+        el.style.setProperty('height','0px','important');
+        el.style.setProperty('position','absolute','important');
+        el.style.setProperty('top','-9999px','important');
+      });
+      document.querySelectorAll('.hero-banner').forEach(function(el){
+        el.style.setProperty('margin-top','0px','important');
+      });
+    }
+    _applyZero();
+    // (b2) RAF loop for first 5 s — catches every React hydration tick
+    var _rafEnd = Date.now() + 5000;
+    (function _raf(){ _applyZero(); if(Date.now() < _rafEnd) requestAnimationFrame(_raf); })();
+    // (c) MutationObserver watchdog — persistent after RAF loop ends
+    if(window.MutationObserver){
+      new MutationObserver(_applyZero).observe(document.documentElement,{
+        childList:true, subtree:true, attributes:true, attributeFilter:['style','class']
+      });
+    }
   }
 
   // Nightly reset at 9 PM UTC
@@ -3815,22 +3847,23 @@ st.markdown("""
   .splash-title {
     font-family: 'Syne', 'Outfit', system-ui, sans-serif;
     font-size: 42px; font-weight: 900;
-    color: #F8FAFC; letter-spacing: -0.04em; margin-bottom: 8px;
-    position: relative;
-    z-index: 10;
-    background: linear-gradient(120deg, #F8FAFC, #CBD5E1);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #FFFFFF !important; letter-spacing: -0.04em; margin-bottom: 8px;
+    position: relative; z-index: 10;
+    -webkit-text-fill-color: #FFFFFF !important;
+    text-shadow: 0 2px 24px rgba(0,0,0,0.40);
   }
-  .splash-title span { color: #0891B2; }
+  .splash-title span {
+    color: #22D3EE !important;
+    -webkit-text-fill-color: #22D3EE !important;
+    text-shadow: 0 0 28px rgba(34,211,238,0.55);
+  }
   .splash-sub {
     font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
-    font-size: 14px; color: rgba(200,224,242,0.70);
-    letter-spacing: 0.04em; margin-bottom: 48px;
-    position: relative;
-    z-index: 10;
-    font-weight: 500;
+    font-size: 14px; color: rgba(255,255,255,0.88) !important;
+    -webkit-text-fill-color: rgba(255,255,255,0.88) !important;
+    letter-spacing: 0.06em; margin-bottom: 48px;
+    position: relative; z-index: 10; font-weight: 500;
+    text-transform: uppercase;
   }
   .splash-progress {
     width: 160px;
@@ -3852,11 +3885,10 @@ st.markdown("""
   }
   .splash-status {
     font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
-    font-size: 12px; color: rgba(200,224,242,0.55);
-    letter-spacing: 0.08em; text-transform: uppercase;
-    position: relative;
-    z-index: 10;
-    font-weight: 600;
+    font-size: 12px; color: rgba(255,255,255,0.75) !important;
+    -webkit-text-fill-color: rgba(255,255,255,0.75) !important;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    position: relative; z-index: 10; font-weight: 700;
   }
 </style>
 <div id="pulse-splash">
@@ -7435,7 +7467,9 @@ st.markdown(
     f'padding:8px 20px;border-radius:28px;">⬤ LIVE</span>'
     f'<span style="font-size:16px;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:800;letter-spacing:.05em;text-shadow:0 1px 2px rgba(0,0,0,0.3);">{range_label} window</span>'
     f'<span style="font-size:16px;color:#FFFFFF !important;opacity:0.8;">·</span>'
-    f'<span style="font-size:16px;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:800;letter-spacing:.05em;text-shadow:0 1px 2px rgba(0,0,0,0.3);">Updated {last_upd}</span>'
+    f'<span style="font-size:16px;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:800;letter-spacing:.05em;text-shadow:0 1px 2px rgba(0,0,0,0.3);">STR through {last_upd}</span>'
+    f'<span style="font-size:16px;color:#FFFFFF !important;opacity:0.8;">·</span>'
+    f'<span style="font-size:14px;color:rgba(34,211,238,0.90) !important;-webkit-text-fill-color:rgba(34,211,238,0.90) !important;font-weight:700;letter-spacing:.04em;">Brain refreshed May 26, 2026</span>'
     f'</div>'
     f'</div>',
     unsafe_allow_html=True,
