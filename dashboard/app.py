@@ -10678,7 +10678,15 @@ with tab_fo:
         if not _camp_row.empty:
             _camp_insight = _camp_row.iloc[0].get("body", "")
     if _camp_insight:
-        st.info(f"📡 **Campaign Timing Signal:** {_camp_insight}")
+        st.markdown(
+            insight_card(
+                "Campaign Timing Signal",
+                _camp_insight,
+                kind="warning",
+                icon="signal",
+            ),
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
 
