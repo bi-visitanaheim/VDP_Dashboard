@@ -1063,9 +1063,14 @@ st.markdown("""
   [class*="appCreator"]                 { display: none !important; }
   [class*="deployButton"]               { display: none !important; }
   [class*="viewerBadge"]                { display: none !important; }
+  [class*="viewerBadge" i]              { display: none !important; }
+  [class*="profileContainer" i]         { display: none !important; }
   .viewerBadge_container__1QSob        { display: none !important; }
   .styles_viewerBadge__CvC9N           { display: none !important; }
+  [data-testid="manage-app-button"]     { display: none !important; }
   a[href*="streamlit.io"]               { display: none !important; }
+  a[href*="streamlit.app" i]            { display: none !important; }
+  a[href*="share.streamlit" i]          { display: none !important; }
   a[href*="github.com/streamlit"]       { display: none !important; }
   button[title*="Deploy"]               { display: none !important; }
   button[aria-label*="deploy"]          { display: none !important; }
@@ -2300,6 +2305,16 @@ st.markdown("""
       width: 100% !important;
       box-sizing: border-box !important;
     }
+    /* Guard against any sideways scroll / element collision on phones */
+    html, body,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"] {
+      overflow-x: hidden !important;
+      max-width: 100vw !important;
+    }
+    /* Kill residual top gap above the hero on mobile */
+    [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stMainBlockContainer"] { padding-top: 0 !important; }
     /* Tab bar: allow wrapping so all tabs are reachable */
     [data-testid="stTabs"] [data-baseweb="tab-list"] {
       flex-wrap: wrap !important;
@@ -2505,7 +2520,7 @@ st.markdown("""
     .pulse-ticker-label { font-size: 12px !important; }
   }
   @media (max-width: 768px) {
-    .pulse-ticker-wrap { margin: 0 -1rem 0.6rem -1rem; }
+    .pulse-ticker-wrap { margin: 0 -0.75rem 0.6rem -0.75rem; }
     .pulse-ticker-item { padding: 0 12px; font-size: 12px !important; }
     .pulse-ticker-val { font-size: 24px !important; }
     .pulse-ticker-label { font-size: 10px !important; }
@@ -3008,12 +3023,23 @@ st.markdown("""
     var sel = [
       '[data-testid="stBottom"]','[data-testid="appCreatorAvatar"]',
       '[data-testid="appCreatorName"]','[data-testid="stAppDeployButton"]',
+      '[data-testid="stStatusWidget"]','[data-testid="manage-app-button"]',
       '[class*="_profileImage_"]','[class*="_link_gzau"]',
-      '[class*="_container_gzau"]','[class*="appCreator"]','[class*="deployButton"]'
+      '[class*="_container_gzau"]','[class*="appCreator" i]','[class*="deployButton" i]',
+      '[class*="viewerBadge" i]','[class*="profileContainer" i]'
     ];
     sel.forEach(function(s){
-      document.querySelectorAll(s).forEach(function(el){ el.style.display='none'; });
+      try { document.querySelectorAll(s).forEach(function(el){ el.style.setProperty('display','none','important'); }); } catch(e){}
     });
+    try {
+      document.querySelectorAll('a[href]').forEach(function(a){
+        if(/streamlit\.(io|app)|share\.streamlit/i.test(a.getAttribute('href')||'')){
+          var n=a; for(var i=0;i<4&&n;i++){ var p=getComputedStyle(n).position;
+            if(p==='fixed'||p==='absolute'){ n.style.setProperty('display','none','important'); break; } n=n.parentElement; }
+          a.style.setProperty('display','none','important');
+        }
+      });
+    } catch(e){}
   }
   killBadges();
   setTimeout(killBadges, 800);
@@ -3147,14 +3173,18 @@ st.markdown("""
   }
   #dp-fixed-footer .fp-sep { opacity: 0.35; margin: 0 6px; }
   #dp-fixed-footer .fp-right { font-size: 10px; opacity: 0.55; }
-  /* Push page content up so fixed footer doesn't overlap bottom content */
+  /* Clear the fixed footer so bottom content never sits under it.
+     Uses .main .block-container (specificity 0,2,0) to beat the responsive
+     padding shorthand declared earlier in the cascade. */
   [data-testid="stMain"] > div:first-child,
-  .block-container { padding-bottom: 40px !important; }
+  .main .block-container,
+  .block-container { padding-bottom: 76px !important; }
   /* Mobile responsive footer */
   @media (max-width: 768px) {
     #dp-fixed-footer { height: 28px; font-size: 10px; }
     [data-testid="stMain"] > div:first-child,
-    .block-container { padding-bottom: 36px !important; }
+    .main .block-container,
+    .block-container { padding-bottom: 64px !important; }
   }
   @media print { #dp-fixed-footer { display: none !important; } }
 </style>
@@ -3984,6 +4014,36 @@ _st_components.html("""
     doc.querySelectorAll('.hero-banner').forEach(function(el){
       el.style.setProperty('margin-top','0px','important');
     });
+    // (e) Kill host-injected Streamlit badges (viewer "Hosted with Streamlit",
+    //     Manage app, deploy). These use randomized class hashes that drift
+    //     between releases, so match by stable testid + case-insensitive class
+    //     fragment + any anchor that links to a streamlit domain.
+    var _bsel = [
+      '[data-testid="stStatusWidget"]', '[data-testid="manage-app-button"]',
+      '[data-testid="stAppDeployButton"]', '[data-testid="stDeployButton"]',
+      '[class*="viewerBadge" i]', '[class*="profileContainer" i]',
+      '[class*="appCreator" i]', '[class*="deployButton" i]'
+    ];
+    _bsel.forEach(function(s){
+      try { doc.querySelectorAll(s).forEach(function(el){
+        el.style.setProperty('display', 'none', 'important');
+      }); } catch(e){}
+    });
+    try {
+      doc.querySelectorAll('a[href]').forEach(function(a){
+        if(/streamlit\.(io|app)|share\.streamlit/i.test(a.getAttribute('href') || '')){
+          var n = a;
+          for(var i = 0; i < 4 && n; i++){
+            var p = window.parent.getComputedStyle(n).position;
+            if(p === 'fixed' || p === 'absolute'){
+              n.style.setProperty('display', 'none', 'important'); break;
+            }
+            n = n.parentElement;
+          }
+          a.style.setProperty('display', 'none', 'important');
+        }
+      });
+    } catch(e){}
   }
   // (c) RAF loop for 6 s — catches every React hydration tick
   applyFix();
