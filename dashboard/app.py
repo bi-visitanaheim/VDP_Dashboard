@@ -1063,9 +1063,14 @@ st.markdown("""
   [class*="appCreator"]                 { display: none !important; }
   [class*="deployButton"]               { display: none !important; }
   [class*="viewerBadge"]                { display: none !important; }
+  [class*="viewerBadge" i]              { display: none !important; }
+  [class*="profileContainer" i]         { display: none !important; }
   .viewerBadge_container__1QSob        { display: none !important; }
   .styles_viewerBadge__CvC9N           { display: none !important; }
+  [data-testid="manage-app-button"]     { display: none !important; }
   a[href*="streamlit.io"]               { display: none !important; }
+  a[href*="streamlit.app" i]            { display: none !important; }
+  a[href*="share.streamlit" i]          { display: none !important; }
   a[href*="github.com/streamlit"]       { display: none !important; }
   button[title*="Deploy"]               { display: none !important; }
   button[aria-label*="deploy"]          { display: none !important; }
@@ -3008,12 +3013,23 @@ st.markdown("""
     var sel = [
       '[data-testid="stBottom"]','[data-testid="appCreatorAvatar"]',
       '[data-testid="appCreatorName"]','[data-testid="stAppDeployButton"]',
+      '[data-testid="stStatusWidget"]','[data-testid="manage-app-button"]',
       '[class*="_profileImage_"]','[class*="_link_gzau"]',
-      '[class*="_container_gzau"]','[class*="appCreator"]','[class*="deployButton"]'
+      '[class*="_container_gzau"]','[class*="appCreator" i]','[class*="deployButton" i]',
+      '[class*="viewerBadge" i]','[class*="profileContainer" i]'
     ];
     sel.forEach(function(s){
-      document.querySelectorAll(s).forEach(function(el){ el.style.display='none'; });
+      try { document.querySelectorAll(s).forEach(function(el){ el.style.setProperty('display','none','important'); }); } catch(e){}
     });
+    try {
+      document.querySelectorAll('a[href]').forEach(function(a){
+        if(/streamlit\.(io|app)|share\.streamlit/i.test(a.getAttribute('href')||'')){
+          var n=a; for(var i=0;i<4&&n;i++){ var p=getComputedStyle(n).position;
+            if(p==='fixed'||p==='absolute'){ n.style.setProperty('display','none','important'); break; } n=n.parentElement; }
+          a.style.setProperty('display','none','important');
+        }
+      });
+    } catch(e){}
   }
   killBadges();
   setTimeout(killBadges, 800);
@@ -3984,6 +4000,36 @@ _st_components.html("""
     doc.querySelectorAll('.hero-banner').forEach(function(el){
       el.style.setProperty('margin-top','0px','important');
     });
+    // (e) Kill host-injected Streamlit badges (viewer "Hosted with Streamlit",
+    //     Manage app, deploy). These use randomized class hashes that drift
+    //     between releases, so match by stable testid + case-insensitive class
+    //     fragment + any anchor that links to a streamlit domain.
+    var _bsel = [
+      '[data-testid="stStatusWidget"]', '[data-testid="manage-app-button"]',
+      '[data-testid="stAppDeployButton"]', '[data-testid="stDeployButton"]',
+      '[class*="viewerBadge" i]', '[class*="profileContainer" i]',
+      '[class*="appCreator" i]', '[class*="deployButton" i]'
+    ];
+    _bsel.forEach(function(s){
+      try { doc.querySelectorAll(s).forEach(function(el){
+        el.style.setProperty('display', 'none', 'important');
+      }); } catch(e){}
+    });
+    try {
+      doc.querySelectorAll('a[href]').forEach(function(a){
+        if(/streamlit\.(io|app)|share\.streamlit/i.test(a.getAttribute('href') || '')){
+          var n = a;
+          for(var i = 0; i < 4 && n; i++){
+            var p = window.parent.getComputedStyle(n).position;
+            if(p === 'fixed' || p === 'absolute'){
+              n.style.setProperty('display', 'none', 'important'); break;
+            }
+            n = n.parentElement;
+          }
+          a.style.setProperty('display', 'none', 'important');
+        }
+      });
+    } catch(e){}
   }
   // (c) RAF loop for 6 s — catches every React hydration tick
   applyFix();
