@@ -2305,6 +2305,16 @@ st.markdown("""
       width: 100% !important;
       box-sizing: border-box !important;
     }
+    /* Guard against any sideways scroll / element collision on phones */
+    html, body,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"] {
+      overflow-x: hidden !important;
+      max-width: 100vw !important;
+    }
+    /* Kill residual top gap above the hero on mobile */
+    [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stMainBlockContainer"] { padding-top: 0 !important; }
     /* Tab bar: allow wrapping so all tabs are reachable */
     [data-testid="stTabs"] [data-baseweb="tab-list"] {
       flex-wrap: wrap !important;
@@ -2510,7 +2520,7 @@ st.markdown("""
     .pulse-ticker-label { font-size: 12px !important; }
   }
   @media (max-width: 768px) {
-    .pulse-ticker-wrap { margin: 0 -1rem 0.6rem -1rem; }
+    .pulse-ticker-wrap { margin: 0 -0.75rem 0.6rem -0.75rem; }
     .pulse-ticker-item { padding: 0 12px; font-size: 12px !important; }
     .pulse-ticker-val { font-size: 24px !important; }
     .pulse-ticker-label { font-size: 10px !important; }
@@ -3163,14 +3173,18 @@ st.markdown("""
   }
   #dp-fixed-footer .fp-sep { opacity: 0.35; margin: 0 6px; }
   #dp-fixed-footer .fp-right { font-size: 10px; opacity: 0.55; }
-  /* Push page content up so fixed footer doesn't overlap bottom content */
+  /* Clear the fixed footer so bottom content never sits under it.
+     Uses .main .block-container (specificity 0,2,0) to beat the responsive
+     padding shorthand declared earlier in the cascade. */
   [data-testid="stMain"] > div:first-child,
-  .block-container { padding-bottom: 40px !important; }
+  .main .block-container,
+  .block-container { padding-bottom: 76px !important; }
   /* Mobile responsive footer */
   @media (max-width: 768px) {
     #dp-fixed-footer { height: 28px; font-size: 10px; }
     [data-testid="stMain"] > div:first-child,
-    .block-container { padding-bottom: 36px !important; }
+    .main .block-container,
+    .block-container { padding-bottom: 64px !important; }
   }
   @media print { #dp-fixed-footer { display: none !important; } }
 </style>
