@@ -754,6 +754,23 @@ st.markdown("""
     border-right: 1px solid var(--dp-border) !important;
   }
   [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
+  /* Sidebar buttons: override the * rule so button text stays white on teal */
+  [data-testid="stSidebar"] button[data-testid^="stBaseButton"] {
+    background: #0891B2 !important;
+    border: none !important;
+    border-radius: 8px !important;
+  }
+  [data-testid="stSidebar"] button[data-testid^="stBaseButton"],
+  [data-testid="stSidebar"] button[data-testid^="stBaseButton"] *,
+  [data-testid="stSidebar"] button[data-testid^="stBaseButton"] p,
+  [data-testid="stSidebar"] button[data-testid^="stBaseButton"] span {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+  }
+  [data-testid="stSidebar"] button[data-testid^="stBaseButton"]:hover {
+    background: #0E7490 !important;
+    opacity: 1 !important;
+  }
   [data-testid="stSidebar"] label,
   [data-testid="stSidebar"] .st-emotion-cache-16idsys p,
   [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
@@ -12656,9 +12673,16 @@ with tab_ei:
     ), unsafe_allow_html=True)
 
     # ── Event ROI Intelligence Panel ──────────────────────────────────────────
+    # Pull live Q1 compression for next-steps copy
+    _ei_q1_comp = 0
+    if not df_comp.empty:
+        _q1_rows = df_comp[df_comp["quarter"].str.endswith("Q1")].sort_values("quarter", ascending=False)
+        if not _q1_rows.empty:
+            _ei_q1_comp = int(_q1_rows.iloc[0]["days_above_80_occ"])
+
     _ei_next_steps = [
-        "<strong>Shoulder Season Events:</strong> Current calendar peaks in Q3 — add 2-3 signature events "
-        "in Q1 (Jan-Mar, currently only 4 compression days) to convert low-demand nights into peak-rate nights.",
+        f"<strong>Shoulder Season Events:</strong> Q3 peaks at {_q3_comp} compression days — Q1 has {_ei_q1_comp} compression days. "
+        "Add 2-3 signature events in Jan-Mar to convert low-demand nights into peak-rate nights.",
         "<strong>ADR Lift Stacking:</strong> Ohana Fest drove +$139 ADR lift — identify 3-5 events with "
         "similar out-of-state draw (>60% OOS attendance) that can be anchored as annual recurring events.",
         "<strong>TBID Revenue Calculation:</strong> At 3.2× spend multiplier × $14.6M event spend × 1.25% TBID rate, "
@@ -12758,17 +12782,20 @@ with tab_ei:
     _zrt_fe = df_zrt_future_events.iloc[0] if not df_zrt_future_events.empty else None
     _ev_yoy_str = f"+{_zrt_fe['yoy_pct_change_events']:.0f}%" if _zrt_fe is not None and pd.notna(_zrt_fe.get("yoy_pct_change_events")) else "N/A"
     _att_yoy_str = f"+{_zrt_fe['yoy_pct_change_attendees']:.0f}%" if _zrt_fe is not None and pd.notna(_zrt_fe.get("yoy_pct_change_attendees")) else "N/A"
-    # Q3 compression: 34 days above 80% in 2025
+    # Q3 compression: most recent Q3 above 80%
     _q3_comp = 0
+    _q3_year_label = ""
     if not df_comp.empty:
-        _q3_row = df_comp[df_comp["quarter"] == "2025-Q3"]
-        _q3_comp = int(_q3_row["days_above_80_occ"].iloc[0]) if not _q3_row.empty else 34
+        _q3_rows = df_comp[df_comp["quarter"].str.endswith("Q3")].sort_values("quarter", ascending=False)
+        if not _q3_rows.empty:
+            _q3_comp = int(_q3_rows.iloc[0]["days_above_80_occ"])
+            _q3_year_label = _q3_rows.iloc[0]["quarter"]
 
     _ei_summary_data = [
         (_total_major, "Major Annual Events", f"{_total_events} total on calendar"),
         (_ev_yoy_str, "YOY Event Growth", "Zartico · Jun 2025 snapshot"),
         (_att_yoy_str, "YOY Attendee Growth", "events driving tourism demand"),
-        (f"{_q3_comp}", "Q3 Compression Days", "days above 80% occ (2025)"),
+        (f"{_q3_comp}", "Q3 Compression Days", f"days above 80% occ · {_q3_year_label}"),
     ]
     for i, (val, lbl, sub) in enumerate(_ei_summary_data):
         with _ei_summary_cols[i]:
@@ -12871,7 +12898,7 @@ with tab_ei:
             f'<span style="width:14px;height:14px;border-radius:3px;background:#64748B;display:inline-block;"></span>'
             f'Standard Event ({_total_events - _total_major})</span>'
             f'<span style="margin-left:auto;font-size:11px;color:#CBD5E1;">'
-            f'{_total_events} events · Jan – Dec 2025 · Source: Visit Dana Point</span>'
+            f'{_total_events} events · {_evts_sorted["event_date"].min().strftime("%b %Y")} – {_evts_sorted["event_date"].max().strftime("%b %Y")} · Source: Visit Dana Point</span>'
             f'</div>',
             unsafe_allow_html=True,
         )
