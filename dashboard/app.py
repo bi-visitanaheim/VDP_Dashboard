@@ -4030,7 +4030,9 @@ _st_components.html("""
       '[data-testid="stMainBlockContainer"]{padding-top:0!important;margin-top:0!important}' +
       'section[data-testid="stMain"]>div{padding-top:0!important;margin-top:0!important}' +
       '.block-container{padding-top:0!important;margin-top:0!important}' +
-      '.hero-banner{margin-top:0!important}';
+      '.hero-banner{margin-top:0!important}' +
+      '[data-testid="stApp"],[data-testid="stAppViewContainer"],[data-testid="stBottom"],' +
+      'body,.main,.stApp{background:#0B1E38!important}';
     doc.head.appendChild(s);
   }
   // (b) Force inline styles — beats React inline style overrides
@@ -4050,6 +4052,13 @@ _st_components.html("""
     });
     doc.querySelectorAll('.hero-banner').forEach(function(el){
       el.style.setProperty('margin-top','0px','important');
+    });
+    // Force dark background on app shell to hide any residual gap
+    ['[data-testid="stApp"]','[data-testid="stAppViewContainer"]','body'].forEach(function(sel){
+      doc.querySelectorAll(sel).forEach(function(el){
+        el.style.setProperty('background','#0B1E38','important');
+        el.style.setProperty('background-color','#0B1E38','important');
+      });
     });
     // (e) Kill host-injected Streamlit badges (viewer "Hosted with Streamlit",
     //     Manage app, deploy). These use randomized class hashes that drift
@@ -8847,39 +8856,50 @@ def render_intel_panel(
                 del st.session_state[_ans_key]
 
 
-# ─── Sidebar toggle — always-visible button in main content ───────────────────
+# ─── Sidebar toggle — injected into parent document so it floats above all content ──
 _st_components.html("""
-<style>
-  body{margin:0;padding:0;background:transparent;overflow:hidden;}
-  #sb-toggle{
-    position:fixed;top:14px;left:14px;z-index:999999;
-    display:flex;align-items:center;gap:7px;
-    background:rgba(26,55,86,0.95);border:1px solid rgba(0,212,200,0.45);
-    border-radius:10px;padding:7px 14px;cursor:pointer;
-    color:#0891B2;font-size:13px;font-weight:700;
-    font-family:'Inter',sans-serif;
-    box-shadow:0 2px 12px rgba(0,0,0,0.40);
-    backdrop-filter:blur(8px);
-    transition:background 0.2s,box-shadow 0.2s;
-    white-space:nowrap;
-  }
-  #sb-toggle:hover{background:rgba(0,212,200,0.18);box-shadow:0 4px 18px rgba(0,212,200,0.28);}
-  #sb-toggle svg{width:16px;height:16px;fill:#0891B2;flex-shrink:0;}
-</style>
-<button id="sb-toggle" onclick="
-  var p=window.parent.document;
-  var open=p.querySelector('[data-testid=stSidebarCollapseButton] button')
-          ||p.querySelector('button[aria-label=\\'Collapse sidebar\\']')
-          ||p.querySelector('button[aria-label=\\'Close sidebar\\']');
-  var closed=p.querySelector('[data-testid=collapsedControl]')
-            ||p.querySelector('button[aria-label=\\'Open sidebar\\']')
-            ||p.querySelector('button[aria-label=\\'Expand sidebar\\']');
-  if(open){open.click();}else if(closed){closed.click();}
-">
-  <svg viewBox='0 0 24 24'><path d='M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z'/></svg>
-  Menu
-</button>
-""", height=0)
+<script>
+(function(){
+  var doc = window.parent.document;
+  if(!doc) return;
+  if(doc.getElementById('sb-toggle')) return; // already injected
+  // Inject style into parent <head>
+  var s = doc.createElement('style');
+  s.textContent =
+    '#sb-toggle{' +
+      'position:fixed;top:14px;left:14px;z-index:999999;' +
+      'display:flex;align-items:center;gap:7px;' +
+      'background:rgba(26,55,86,0.95);border:1px solid rgba(0,212,200,0.45);' +
+      'border-radius:10px;padding:7px 14px;cursor:pointer;' +
+      'color:#0891B2;font-size:13px;font-weight:700;' +
+      'font-family:Inter,sans-serif;' +
+      'box-shadow:0 2px 12px rgba(0,0,0,0.40);' +
+      'backdrop-filter:blur(8px);' +
+      'transition:background 0.2s,box-shadow 0.2s;' +
+      'white-space:nowrap;' +
+    '}' +
+    '#sb-toggle:hover{background:rgba(0,212,200,0.18);box-shadow:0 4px 18px rgba(0,212,200,0.28);}' +
+    '#sb-toggle svg{width:16px;height:16px;fill:#0891B2;flex-shrink:0;}';
+  doc.head.appendChild(s);
+  // Create button and append to parent body
+  var btn = doc.createElement('button');
+  btn.id = 'sb-toggle';
+  btn.innerHTML =
+    '<svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>' +
+    'Menu';
+  btn.onclick = function(){
+    var open = doc.querySelector('[data-testid=stSidebarCollapseButton] button') ||
+               doc.querySelector('button[aria-label="Collapse sidebar"]') ||
+               doc.querySelector('button[aria-label="Close sidebar"]');
+    var closed = doc.querySelector('[data-testid=collapsedControl]') ||
+                 doc.querySelector('button[aria-label="Open sidebar"]') ||
+                 doc.querySelector('button[aria-label="Expand sidebar"]');
+    if(open){open.click();}else if(closed){closed.click();}
+  };
+  doc.body.appendChild(btn);
+})();
+</script>
+""", height=0, scrolling=False)
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
