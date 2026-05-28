@@ -8875,9 +8875,11 @@ _st_components.html("""
       'font-family:Inter,sans-serif;' +
       'box-shadow:0 2px 12px rgba(0,0,0,0.40);' +
       'backdrop-filter:blur(8px);' +
-      'transition:background 0.2s,box-shadow 0.2s;' +
+      'opacity:0;pointer-events:none;' +
+      'transition:opacity 0.3s,background 0.2s,box-shadow 0.2s;' +
       'white-space:nowrap;' +
     '}' +
+    '#sb-toggle.sb-visible{opacity:1;pointer-events:auto;}' +
     '#sb-toggle:hover{background:rgba(0,212,200,0.18);box-shadow:0 4px 18px rgba(0,212,200,0.28);}' +
     '#sb-toggle svg{width:16px;height:16px;fill:#0891B2;flex-shrink:0;}';
   doc.head.appendChild(s);
@@ -8897,6 +8899,14 @@ _st_components.html("""
     if(open){open.click();}else if(closed){closed.click();}
   };
   doc.body.appendChild(btn);
+  // Auto-hide: show on mouse move near top-left (within 120px), hide after 2.5s idle
+  var _hideTimer = null;
+  function showBtn(){ btn.classList.add('sb-visible'); clearTimeout(_hideTimer); _hideTimer = setTimeout(function(){ btn.classList.remove('sb-visible'); }, 2500); }
+  doc.addEventListener('mousemove', function(e){ if(e.clientX < 180 && e.clientY < 80) showBtn(); });
+  // Also show briefly on any touch start (mobile tap anywhere near top)
+  doc.addEventListener('touchstart', function(e){ var t=e.touches[0]; if(t&&t.clientX<180&&t.clientY<80) showBtn(); }, {passive:true});
+  // Show once on load, then auto-hide
+  showBtn();
 })();
 </script>
 """, height=0, scrolling=False)
