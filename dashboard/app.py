@@ -8834,67 +8834,93 @@ with tab_ov:
 
     # ── HERO SECTION: Compelling Headline + Date Context ────────────────────────
     try:
-        _headline = "On Track"
-        _headline_color = "🟢"
-        _headline_detail = "Market performing as expected"
-        _headline_emoji = "✨"
+        # ── Pull live KPI values for the brief ───────────────────────────────
+        _ov_occ   = m.get("occ_30", 0.0)    if m else 0.0
+        _ov_adr   = m.get("adr_30", 0.0)    if m else 0.0
+        _ov_rvp   = m.get("revpar_30", 0.0) if m else 0.0
+        _ov_occ_y = m.get("occ_delta", 0.0) if m else 0.0
+        _ov_adr_y = m.get("adr_delta", 0.0) if m else 0.0
+        _ov_rvp_y = m.get("revpar_delta", 0.0) if m else 0.0
 
-        # Determine headline based on top insight
+        # Pick the strongest cross- or dmo insight for the lead headline
+        _top_insight_txt = ""
+        _top_insight_body = ""
         if not df_insights.empty:
-            _top = df_insights.sort_values("priority").iloc[0]
-            _headline = (_top.get("headline", "") or "On Track")
-            _headline_detail = (_top.get("body", "") or _headline)
-            _headline_color = "🟢"
+            _cross = df_insights[df_insights["audience"].isin(["cross", "dmo"])].sort_values("priority")
+            _src   = _cross if not _cross.empty else df_insights.sort_values("priority")
+            _top   = _src.iloc[0]
+            _top_insight_txt  = str(_top.get("headline", "") or "").strip()
+            _top_insight_body = str(_top.get("body", "") or "").strip()
+            # Trim body to 160 chars for the brief
+            if len(_top_insight_body) > 160:
+                _top_insight_body = _top_insight_body[:157].rstrip() + "…"
 
-        # Get current date context
-        _today = datetime.now().strftime("%A, %B %d")
+        _today        = datetime.now().strftime("%A, %B %d, %Y")
         _report_month = datetime.now().strftime("%B %Y").upper()
 
-        st.markdown(
-            f"""<div style="
-            margin-bottom: 50px;
-            padding: 0;
-            ">
-            <div style="
-            display: flex;
-            align-items: baseline;
-            gap: 12px;
-            margin-bottom: 8px;
-            ">
-            <span style="font-size: 28px; line-height: 1;">{_headline_color}</span>
-            <h1 style="
-            font-family: 'Outfit', sans-serif;
-            font-size: 42px;
-            font-weight: 900;
-            letter-spacing: -0.02em;
-            margin: 0;
-            color: #0F172A;
-            line-height: 1.1;
-            ">{_headline}</h1>
-            </div>
-            <p style="
-            font-size: 16px;
-            color: #334155;
-            margin: 12px 0 6px 0;
-            line-height: 1.6;
-            font-weight: 400;
-            ">{_headline_detail}</p>
-            <p style="
-            font-size: 13px;
-            color: #64748B;
-            margin: 0;
-            font-weight: 500;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            ">{_today} &nbsp;·&nbsp; {_report_month}</p>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-    except Exception as e:
-        _logger.debug(f"Failed to render headline insight: {str(e)}")
+        # Determine status badge from YOY RevPAR
+        if _ov_rvp_y >= 50:
+            _status_bg, _status_tx, _status_label = "#DCFCE7", "#15803D", "OUTPERFORMING"
+        elif _ov_rvp_y >= 10:
+            _status_bg, _status_tx, _status_label = "#DBEAFE", "#1D4ED8", "ON TARGET"
+        elif _ov_rvp_y >= 0:
+            _status_bg, _status_tx, _status_label = "#FEF9C3", "#A16207", "TRACKING"
+        else:
+            _status_bg, _status_tx, _status_label = "#FEE2E2", "#B91C1C", "WATCH"
 
-    # ── HERO METRICS: Large, Spaced, High-Impact KPI Cards ──────────────────────
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+<div style="margin-bottom:36px;padding:0;">
+  <!-- Status + Date row -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+    <span style="background:{_status_bg};color:{_status_tx};font-size:11px;font-weight:800;
+      letter-spacing:.10em;padding:5px 14px;border-radius:20px;text-transform:uppercase;
+      border:1px solid {_status_tx}22;">{_status_label}</span>
+    <span style="font-size:13px;color:#94A3B8;font-weight:500;letter-spacing:.04em;
+      text-transform:uppercase;">{_today}</span>
+  </div>
+  <!-- KPI snapshot row -->
+  <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px;">
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.10em;
+        color:#94A3B8;margin-bottom:4px;">Occupancy (30d)</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:52px;font-weight:900;
+        letter-spacing:-0.04em;color:#0F172A;line-height:1;">
+        {_ov_occ:.1f}<span style="font-size:28px;font-weight:700;color:#64748B;">%</span>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:{'#15803D' if _ov_occ_y>=0 else '#DC2626'};">
+        {'▲' if _ov_occ_y>=0 else '▼'} {abs(_ov_occ_y):.1f}pp YOY
+      </div>
+    </div>
+    <div style="width:1px;height:70px;background:#E2E8F0;flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.10em;
+        color:#94A3B8;margin-bottom:4px;">ADR (30d)</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:52px;font-weight:900;
+        letter-spacing:-0.04em;color:#0F172A;line-height:1;">
+        <span style="font-size:28px;font-weight:700;color:#64748B;">$</span>{_ov_adr:,.0f}
+      </div>
+      <div style="font-size:13px;font-weight:700;color:{'#15803D' if _ov_adr_y>=0 else '#DC2626'};">
+        {'▲' if _ov_adr_y>=0 else '▼'} {abs(_ov_adr_y):.1f}% YOY
+      </div>
+    </div>
+    <div style="width:1px;height:70px;background:#E2E8F0;flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.10em;
+        color:#94A3B8;margin-bottom:4px;">RevPAR (30d)</div>
+      <div style="font-family:'Outfit',sans-serif;font-size:52px;font-weight:900;
+        letter-spacing:-0.04em;color:#0891B2;line-height:1;">
+        <span style="font-size:28px;font-weight:700;color:#0891B2;">$</span>{_ov_rvp:,.0f}
+      </div>
+      <div style="font-size:13px;font-weight:700;color:{'#15803D' if _ov_rvp_y>=0 else '#DC2626'};">
+        {'▲' if _ov_rvp_y>=0 else '▼'} {abs(_ov_rvp_y):.1f}% YOY
+      </div>
+    </div>
+  </div>
+  <!-- Top insight brief -->
+  {'<div style="padding:16px 20px;background:#F8FAFC;border-left:3px solid #0891B2;border-radius:0 8px 8px 0;"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0891B2;margin-bottom:6px;">Top Signal</div><div style="font-size:14px;font-weight:600;color:#0F172A;line-height:1.5;">' + _top_insight_txt + '</div><div style="font-size:13px;color:#475569;margin-top:4px;line-height:1.6;">' + _top_insight_body + '</div></div>' if _top_insight_txt else ''}
+</div>""", unsafe_allow_html=True)
+    except Exception as e:
+        _logger.debug(f"Overview brief render error: {e}")
 
     try:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
@@ -10373,18 +10399,18 @@ with tab_fo:
         if not _q1_rows.empty:
             _fwd_q1_label = f"Q1 {_q1_rows.iloc[0]['quarter'][:4]}"
 
-    def _kfm_card(label, value, delta, delta_color="#94A3B8"):
+    def _kfm_card(label, value, delta, delta_color="#64748B"):
         return (
-            f'<div style="background:linear-gradient(135deg, #1E3A52 0%, #2D4B67 100%);'
-            f'border-radius:12px;padding:16px 18px;'
-            f'border:1px solid rgba(8,145,178,0.25);border-left:4px solid #0891B2;'
+            f'<div style="background:#FFFFFF;'
+            f'border-radius:12px;padding:20px 20px 16px 20px;'
+            f'border:1px solid #E2E8F0;border-top:3px solid #0891B2;'
             f'position:relative;overflow:hidden;margin-bottom:8px;'
-            f'box-shadow:0 2px 8px rgba(0,0,0,0.15);">'
-            f'<div style="font-size:10px;color:#CBD5E1;font-weight:700;text-transform:uppercase;'
-            f'letter-spacing:.10em;margin-bottom:6px;">{label}</div>'
-            f'<div style="font-size:1.9rem;font-weight:900;letter-spacing:-0.04em;line-height:1.1;'
-            f'color:#F8FAFC;">{value}</div>'
-            f'<div style="font-size:11px;color:{delta_color};font-weight:600;margin-top:5px;">{delta}</div>'
+            f'box-shadow:0 1px 3px rgba(15,23,42,0.08);">'
+            f'<div style="font-size:10px;color:#94A3B8;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:.10em;margin-bottom:8px;">{label}</div>'
+            f'<div style="font-family:\'Outfit\',sans-serif;font-size:2.0rem;font-weight:900;'
+            f'letter-spacing:-0.04em;line-height:1.1;color:#0F172A;">{value}</div>'
+            f'<div style="font-size:12px;color:{delta_color};font-weight:700;margin-top:8px;">{delta}</div>'
             f'</div>'
         )
     with _fwd_c1:
