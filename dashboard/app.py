@@ -7543,7 +7543,7 @@ st.markdown(
     f'<span style="font-size:16px;color:#FFFFFF !important;opacity:0.8;">·</span>'
     f'<span style="font-size:16px;color:#FFFFFF !important;-webkit-text-fill-color:#FFFFFF !important;font-weight:800;letter-spacing:.05em;text-shadow:0 1px 2px rgba(0,0,0,0.3);">STR through {last_upd}</span>'
     f'<span style="font-size:16px;color:#FFFFFF !important;opacity:0.8;">·</span>'
-    f'<span style="font-size:14px;color:rgba(34,211,238,0.90) !important;-webkit-text-fill-color:rgba(34,211,238,0.90) !important;font-weight:700;letter-spacing:.04em;">Brain refreshed May 26, 2026</span>'
+    f'<span style="font-size:14px;color:rgba(34,211,238,0.90) !important;-webkit-text-fill-color:rgba(34,211,238,0.90) !important;font-weight:700;letter-spacing:.04em;">Brain refreshed {pd.to_datetime(df_insights["as_of_date"].max()).strftime("%b %d, %Y") if not df_insights.empty else datetime.now().strftime("%b %d, %Y")}</span>'
     f'</div>'
     f'</div>',
     unsafe_allow_html=True,
