@@ -79,6 +79,112 @@ def bold_key_data(text: str) -> str:
     text = _re.sub(r'(?<![0-9])(\d+\.\d+)(?![×%])', r'<strong>\1</strong>', text)
     return text
 
+# ─── Pro icon system — Material Symbols line icons (replaces stock emoji) ──────
+# Two render paths, both React-safe:
+#   • mi(name)   -> ":material/name:"  for Streamlit widget labels (tabs, headers,
+#                   buttons, expanders) — Streamlit renders the glyph itself.
+#   • msym(name) -> <span class="msym">…</span>  for unsafe_allow_html HTML blocks
+#                   (cards, hero, sidebar). Needs the Material Symbols font (loaded
+#                   in the main CSS block). Plain text content is never touched.
+# Colored status dots (🟢🔴🟡⚫) are intentionally kept as emoji — they encode
+# color and appear in dataframe cells / captions where HTML/icons can't render.
+
+# Legacy stock emoji -> Material Symbols ligature name
+ICON = {
+    "📊": "bar_chart",       "📈": "trending_up",     "📉": "trending_down",
+    "📋": "assignment",      "📌": "push_pin",        "📅": "calendar_month",
+    "📆": "event",           "🗓": "calendar_month",  "🗓️": "calendar_month",
+    "💡": "lightbulb",       "🎯": "target",          "🔮": "auto_awesome",
+    "🧠": "psychology",      "🧭": "explore",         "🔍": "search",
+    "🔗": "link",            "⚡": "bolt",            "🔄": "sync",
+    "🏨": "hotel",           "🛌": "king_bed",        "🏠": "home",
+    "🏡": "cottage",         "🏢": "apartment",       "🏛": "account_balance",
+    "🏛️": "account_balance", "🏗": "construction",    "🏗️": "construction",
+    "🌊": "waves",           "🏖": "beach_access",    "🏖️": "beach_access",
+    "🏄": "surfing",         "🏕": "festival",        "🏕️": "festival",
+    "✈": "flight",           "✈️": "flight",          "🗺": "map",
+    "🗺️": "map",             "🌐": "public",          "👥": "groups",
+    "🧑": "person",          "🤝": "handshake",       "💰": "payments",
+    "💵": "attach_money",    "💎": "diamond",         "📦": "inventory_2",
+    "🏆": "emoji_events",    "🥇": "workspace_premium","🥈": "military_tech",
+    "⛽": "local_gas_station","📸": "photo_camera",    "📡": "sensors",
+    "📱": "smartphone",      "📥": "download",        "⬇": "download",
+    "⬇️": "download",        "📧": "mail",            "📚": "library_books",
+    "📖": "menu_book",       "📄": "description",     "📑": "summarize",
+    "📐": "architecture",    "🗄": "database",        "🗄️": "database",
+    "🤖": "smart_toy",       "💬": "chat_bubble",     "🎉": "celebration",
+    "🎸": "music_note",      "🎵": "music_note",      "🎙": "mic",
+    "🎙️": "mic",             "⭐": "star",            "⚙": "settings",
+    "⚙️": "settings",        "⏱": "timer",           "⏱️": "timer",
+    "⛅": "partly_cloudy_day","☁": "cloud",           "🔔": "notifications",
+    "➕": "add_circle",      "⚠": "warning",          "⚠️": "warning",
+    "✅": "check_circle",    "✓": "check",            "🚀": "rocket_launch",
+    "📢": "campaign",        "📣": "campaign",         "🆚": "compare_arrows",
+    "🧑‍🤝‍🧑": "groups",         "🕐": "history",          "🔀": "alt_route",
+    "🏷": "sell",            "🏷️": "sell",            "📍": "location_on",
+    "🌡": "device_thermostat","🌡️": "device_thermostat","🔥": "local_fire_department",
+    "💧": "water_drop",      "🌙": "dark_mode",        "☀": "sunny",
+    "☀️": "sunny",           "📶": "signal_cellular_alt","🎫": "confirmation_number",
+    "🛬": "flight_land",     "🛫": "flight_takeoff",   "🚗": "directions_car",
+    "🍽": "restaurant",      "🍽️": "restaurant",      "🛍": "shopping_bag",
+    "🛍️": "shopping_bag",    "💲": "attach_money",     "💳": "credit_card",
+    "💹": "show_chart",      "🎨": "palette",          "📬": "mail",
+    "📭": "mail",            "🔭": "travel_explore",   "🔢": "tag",
+    "📲": "smartphone",      "👑": "workspace_premium","🛏": "king_bed",
+    "🛏️": "king_bed",        "🌟": "star",             "🌴": "park",
+    "🏔": "landscape",       "🏔️": "landscape",        "🎪": "festival",
+    "💨": "air",             "⚓": "anchor",           "🎆": "celebration",
+    "🏁": "sports_score",    "🕒": "schedule",
+}
+
+# Emoji matcher built from ICON keys — longest first, optional VS16 (U+FE0F)
+_ICON_BASES = sorted({k.replace("️", "") for k in ICON}, key=len, reverse=True)
+_ICON_RE = _re.compile("(?:" + "|".join(_re.escape(b) for b in _ICON_BASES) + ")️?")
+
+def iconify(text: str) -> str:
+    """Replace known stock emoji with Material Symbols spans inside HTML strings.
+    Safe on unsafe_allow_html content; unmapped characters pass through unchanged."""
+    if not text:
+        return text
+    def _sub(m):
+        base = m.group(0).replace("️", "")
+        name = ICON.get(base) or ICON.get(base + "️")
+        return msym(name) if name else m.group(0)
+    return _ICON_RE.sub(_sub, text)
+
+def mi(name: str) -> str:
+    """Streamlit material-icon directive for widget labels (markdown-aware)."""
+    return f":material/{name}:"
+
+def msym(name: str, *, size: str = None, color: str = None, fill: bool = False,
+         weight: int = None, valign: str = None) -> str:
+    """Inline Material Symbols icon for use inside unsafe_allow_html HTML."""
+    cls = "msym fill" if fill else "msym"
+    styles = []
+    if size:
+        styles.append(f"font-size:{size}")
+    if color:
+        styles.append(f"color:{color}")
+    if valign:
+        styles.append(f"vertical-align:{valign}")
+    if weight or fill:
+        styles.append(
+            f"font-variation-settings:'FILL' {1 if fill else 0},'wght' {weight or 500},'GRAD' 0,'opsz' 24"
+        )
+    style_attr = f' style="{";".join(styles)}"' if styles else ""
+    return f'<span class="{cls}"{style_attr} aria-hidden="true">{name}</span>'
+
+# Auto-upgrade stock emoji -> Material Symbols inside every HTML block rendered
+# via st.markdown(unsafe_allow_html=True). Plain markdown, widget labels and
+# plotly text are never touched (they don't use unsafe_allow_html), so colored
+# status dots and chart glyphs keep their emoji fallback.
+_orig_st_markdown = st.markdown
+def _markdown_iconified(body="", *args, **kwargs):
+    if kwargs.get("unsafe_allow_html") and isinstance(body, str):
+        body = iconify(body)
+    return _orig_st_markdown(body, *args, **kwargs)
+st.markdown = _markdown_iconified
+
 # Load .env from the project root (one level above dashboard/)
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -109,7 +215,7 @@ _ENV_PERPLEXITY_KEY = os.getenv("PERPLEXITY_API_KEY", "")
 # ─── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Dana Point PULSE",
-    page_icon="🌊",
+    page_icon=":material/waves:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -670,6 +776,26 @@ st.markdown("""
 
   /* ── Google Fonts ────────────────────────────────────────────────────── */
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  /* ── Material Symbols — pro line-icon set (replaces stock emoji) ───────── */
+  @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0..1,0&display=block');
+  .msym {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal; font-style: normal;
+    font-size: 1.08em; line-height: 1;
+    letter-spacing: normal; text-transform: none;
+    display: inline-block; white-space: nowrap; word-wrap: normal;
+    direction: ltr; vertical-align: -0.16em;
+    -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  }
+  .msym.fill { font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+  /* Material icons rendered by Streamlit's :material/x: directive — size + align with text */
+  [data-testid="stIconMaterial"] {
+    font-size: 1.12em !important; vertical-align: -0.16em !important;
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24 !important;
+  }
 
   /* ── Design Tokens — Modern Light Theme ─────────────────────────────── */
   :root {
@@ -6429,7 +6555,7 @@ def render_share_bar(
         with _cols[_ci]:
             _html_rpt = generate_section_html(label, df, subtitle)
             st.download_button(
-                "📄 PDF",
+                ":material/description: PDF",
                 _html_rpt.encode("utf-8"),
                 file_name=f"{file_name}_{_date_sfx}.html",
                 mime="text/html",
@@ -6465,7 +6591,7 @@ def render_share_bar(
     if _has_df:
         with _cols[_ci]:
             st.download_button(
-                "⬇️ CSV",
+                ":material/download: CSV",
                 df.to_csv(index=False).encode(),
                 file_name=f"{file_name}_{_date_sfx}.csv",
                 mime="text/csv",
@@ -6478,7 +6604,7 @@ def render_share_bar(
     # ── 📧 Email ──────────────────────────────────────────────────────────────
     with _cols[_ci]:
         st.link_button(
-            "📧 Email",
+            ":material/mail: Email",
             f"mailto:?subject={_subj}&body={_body}",
             use_container_width=True,
             help="Share this section via email",
@@ -6866,11 +6992,11 @@ def empty_state(icon: str, title: str, body: str) -> str:
 
 def tab_intro(title: str, desc: str, bullets: list[str]) -> str:
     """Enhanced tab summary with label + bullets for plain-language navigation."""
-    _bullet_html = "".join(f"<li>{b}</li>" for b in bullets)
+    _bullet_html = "".join(f"<li>{iconify(b)}</li>" for b in bullets)
     return (
         f'<div class="tab-summary">'
         f'<span class="ts-label">What you\'ll find here</span>'
-        f'<strong>{title}</strong> — {desc}'
+        f'<strong>{iconify(title)}</strong> — {iconify(desc)}'
         f'<ul class="ts-bullets">{_bullet_html}</ul>'
         f'</div>'
     )
@@ -6882,8 +7008,8 @@ def callout(icon: str, headline: str, body: str, style: str = "teal") -> str:
             "purple": "dp-callout-purple", "green": "dp-callout-green"}.get(style, "dp-callout")
     return (
         f'<div class="{_cls}">'
-        f'<div class="dp-callout-head">{icon} {headline}</div>'
-        f'<p>{body}</p>'
+        f'<div class="dp-callout-head">{iconify(icon)} {iconify(headline)}</div>'
+        f'<p>{iconify(body)}</p>'
         f'</div>'
     )
 
@@ -6905,10 +7031,10 @@ def _safe_section(fn, section_name: str = "section"):
         st.warning(
             f"⚠️ **{section_name}** could not render — data may be incomplete or a format changed. "
             f"Run `python scripts/run_pipeline.py` to refresh, then click 🔄 Refresh Dashboard.",
-            icon="⚠️",
+            icon=":material/warning:",
         )
         if st.session_state.get("is_admin", False):
-            with st.expander(f"🔍 Debug: {section_name} error"):
+            with st.expander(f":material/search: Debug: {section_name} error"):
                 st.code(_tb.format_exc(), language="python")
 
 
@@ -7425,7 +7551,7 @@ with st.sidebar:
     st.divider()
 
     # ── Quick Navigation Guide ─────────────────────────────────────────────────
-    with st.expander("🧭 Tab Guide — Where to Find What", expanded=False):
+    with st.expander(":material/explore: Tab Guide — Where to Find What", expanded=False):
         _nav_items = [
             ("🏠", "Today's Overview", "Daily KPIs, AI Analyst, board summary, and PULSE score."),
             ("🏨", "Hotel Trends", "Deep-dive: occupancy, room rates, and revenue over time."),
@@ -7451,7 +7577,7 @@ with st.sidebar:
         )
 
     # ── Thursday Demo Walkthrough ──────────────────────────────────────────────
-    with st.expander("🎯 Thursday Demo Flow", expanded=False):
+    with st.expander(":material/target: Thursday Demo Flow", expanded=False):
         st.markdown(
             '<div style="font-size:11px;line-height:1.7;color:#CBD5E1;">'
             '<strong style="color:#22D3EE;font-size:12px;">Suggested 10-Minute Flow</strong><br><br>'
@@ -7487,12 +7613,12 @@ with st.sidebar:
       st.markdown("**⚙️ Pipeline Controls**")
 
       fetch_btn = st.button(
-          "📡 Fetch All Sources",
+          ":material/sensors: Fetch All Sources",
           use_container_width=True,
           help="Pull latest data from every source (STR · Datafy · CoStar · Zartico · Visit CA · VDP Events · FRED · CA TOT · JWA). Only new rows are inserted — no duplicates ever.",
       )
       run_btn = st.button(
-          "🔄 Run Pipeline",
+          ":material/sync: Run Pipeline",
           use_container_width=True,
           help="Recompute KPIs and regenerate AI insights from loaded data. Run this after Fetch to update everything the app displays.",
       )
@@ -7783,7 +7909,7 @@ def generate_board_report_html(
         "Current data: Newport Beach/Dana Point submarket."
     )
     demand_risk_class = "risk-green" if rvp_d >= 0 else "risk-red"
-    demand_risk_icon  = "✅" if rvp_d >= 0 else "🔴"
+    demand_risk_icon  = ":material/check_circle:" if rvp_d >= 0 else "🔴"
     demand_risk_msg   = (
         "Demand trajectory supports current pricing strategy."
         if rvp_d >= 0 else
@@ -8750,7 +8876,7 @@ def render_intel_panel(
     if not (ANTHROPIC_AVAILABLE and api_key_valid):
         return
 
-    with st.expander("💬 Ask about this data", expanded=False):
+    with st.expander(":material/chat_bubble: Ask about this data", expanded=False):
         # Suggested question chips
         if suggested_questions:
             chips_html = "".join(
@@ -8858,15 +8984,15 @@ if _requested_tab:
         pass
 
 tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
-    "🏠 Today's Overview",
-    "🏨 Hotel Trends",
-    "🔮 What's Next",
-    "👥 Our Visitors",
-    "🗺️ Where They're From",
-    "🎉 Event Impact",
-    "🏗️ New Competition",
-    "📈 Market Intel",
-    "🗄️ Data & Downloads",
+    ":material/home: Today's Overview",
+    ":material/hotel: Hotel Trends",
+    ":material/auto_awesome: What's Next",
+    ":material/groups: Our Visitors",
+    ":material/map: Where They're From",
+    ":material/celebration: Event Impact",
+    ":material/construction: New Competition",
+    ":material/trending_up: Market Intel",
+    ":material/database: Data & Downloads",
 ])
 
 # If a tab was requested, inject JavaScript to auto-click it
@@ -8893,7 +9019,7 @@ def _tab_controls(tab_id: str = "", show_filter_badge: bool = True):
     """Render per-tab refresh button. Share/Download buttons live inside each section."""
     _tc1, _tc_spacer = st.columns([1, 7])
     with _tc1:
-        if st.button("🔄 Refresh", key=f"tab_refresh_{tab_id}",
+        if st.button(":material/sync: Refresh", key=f"tab_refresh_{tab_id}",
                      help="Clear cache and reload data.", use_container_width=True):
             st.cache_data.clear()
             st.rerun()
@@ -9291,10 +9417,10 @@ with tab_ov:
     )
 
     _ov_t1, _ov_t2, _ov_t3, _ov_t4 = st.tabs([
-        "📊 Scorecard",
-        "📋 Board Report",
-        "🎯 Goals",
-        "🤖 VDP Assistant",
+        ":material/bar_chart: Scorecard",
+        ":material/assignment: Board Report",
+        ":material/target: Goals",
+        ":material/smart_toy: VDP Assistant",
     ])
 
     # ── SUB-TAB 1: Scorecard ──────────────────────────────────────────────────────
@@ -9397,7 +9523,7 @@ with tab_ov:
     # ── SUB-TAB 2: Board Report ──────────────────────────────────────────────────
     with _ov_t2:
         st.markdown(sec_div("📋 Board Intelligence Report"), unsafe_allow_html=True)
-        with st.expander("📋 VDP Board Report — Auto-Generated Talking Points", expanded=True):
+        with st.expander(":material/assignment: VDP Board Report — Auto-Generated Talking Points", expanded=True):
             st.markdown('<span class="ai-chip">BOARD READY</span>', unsafe_allow_html=True)
 
             if m:
@@ -9503,7 +9629,7 @@ with tab_ov:
         with _goals_col1:
             st.subheader("Active Goals")
         with _goals_col2:
-            if st.button("➕ Add Goal", key="add_goal_btn"):
+            if st.button(":material/add_circle: Add Goal", key="add_goal_btn"):
                 st.session_state.show_goal_form = True
 
         if st.session_state.get("show_goal_form", False):
@@ -9589,7 +9715,7 @@ with tab_ov:
                 key="ov_main_ai_input",
             )
         with _ov_ai_c2:
-            if st.button("⚡ Ask", type="primary", use_container_width=True, key="ov_main_ai_btn"):
+            if st.button(":material/bolt: Ask", type="primary", use_container_width=True, key="ov_main_ai_btn"):
                 if _ov_custom_q.strip():
                     st.session_state.ai_current_prompt = build_custom_prompt(_ov_custom_q, m)
                     st.session_state.ai_prompt_label = f"💬 {_ov_custom_q.strip()[:40]}"
@@ -10717,11 +10843,11 @@ with tab_fo:
     # ── Audience tabs ────────────────────────────────────────────────────────
     st.markdown(sec_div("🧠 Audience-Specific Insights"), unsafe_allow_html=True)
     AUDIENCE_CONFIG = {
-        "dmo":      ("🏢 DMO / TBID Board",       TEAL,       "Destination Marketing & Revenue Strategy"),
-        "city":     ("🏛 City of Dana Point",      "#4A6FA5",  "TOT Revenue, Infrastructure & Economic Policy"),
-        "visitor":  ("✈️ Visitors",                ORANGE,     "Trip Planning, Rates & Events"),
-        "resident": ("🏡 Residents",               "#6A4F8A",  "Community Impact & Local Access"),
-        "cross":    ("🔀 Cross-Dataset Signals",   RED,        "Hidden insights only visible by joining STR + Datafy data"),
+        "dmo":      (":material/apartment: DMO / TBID Board",       TEAL,       "Destination Marketing & Revenue Strategy"),
+        "city":     (":material/account_balance: City of Dana Point", "#4A6FA5",  "TOT Revenue, Infrastructure & Economic Policy"),
+        "visitor":  (":material/flight: Visitors",                ORANGE,     "Trip Planning, Rates & Events"),
+        "resident": (":material/cottage: Residents",               "#6A4F8A",  "Community Impact & Local Access"),
+        "cross":    (":material/alt_route: Cross-Dataset Signals",   RED,        "Hidden insights only visible by joining STR + Datafy data"),
     }
 
     aud_tabs = st.tabs([cfg[0] for cfg in AUDIENCE_CONFIG.values()])
@@ -10823,7 +10949,7 @@ with tab_fo:
             _dl_cols = [c for c in ["as_of_date", "audience", "category", "headline", "body", "priority", "horizon_days"] if c in df_aud.columns]
             _aud_csv = df_aud[_dl_cols].to_csv(index=False).encode()
             st.download_button(
-                f"⬇️ Download {label} Insights CSV",
+                f":material/download: Download {label} Insights CSV",
                 _aud_csv,
                 file_name=f"insights_{audience}_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv",
@@ -10908,7 +11034,7 @@ with tab_fo:
                 _evts       = _fwd_events.get((_fm.year, _fm.month), [])
                 _evt_html   = ""
                 for _ev in _evts[:2]:  # max 2 events shown
-                    _ev_icon = "🎸" if "ohana" in _ev["name"].lower() else (
+                    _ev_icon = ":material/music_note:" if "ohana" in _ev["name"].lower() else (
                                "🎵" if _ev["is_major"] else "📅")
                     _ev_col  = "#FB923C" if _ev["is_major"] else "#64748B"
                     _evt_html += (
@@ -11147,7 +11273,7 @@ with tab_ev:
 
 
     # ── Visitor Intelligence Sub-Tabs ──────────────────────────────────────────
-    _ev_t1, _ev_t2, _ev_t3 = st.tabs(["👥 Visitor Overview", "💰 Spending & DMA", "📱 Digital & Social"])
+    _ev_t1, _ev_t2, _ev_t3 = st.tabs([":material/groups: Visitor Overview", ":material/payments: Spending & DMA", ":material/smartphone: Digital & Social"])
 
     # ── Visitor Overview → sub-tab 1 ────────────────────────────────────────────
     with _ev_t1:
@@ -11629,9 +11755,9 @@ with tab_ev:
                     ))
                     fig_ch.update_layout(xaxis_title="Sessions", yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
                     st.plotly_chart(style_fig(fig_ch, height=300), use_container_width=True, config=PLOTLY_CONFIG)
-                    with st.expander("📊 View raw channel data"):
+                    with st.expander(":material/bar_chart: View raw channel data"):
                         st.dataframe(_ch[_ch_cols].reset_index(drop=True), use_container_width=True)
-                        st.download_button("⬇️ Download", _ch[_ch_cols].to_csv(index=False), "website_channels.csv", "text/csv", key="dl_web_ch")
+                        st.download_button(":material/download: Download", _ch[_ch_cols].to_csv(index=False), "website_channels.csv", "text/csv", key="dl_web_ch")
                 else:
                     st.dataframe(_ch.reset_index(drop=True), use_container_width=True)
             else:
@@ -11655,9 +11781,9 @@ with tab_ev:
                     ))
                     fig_wm.update_layout(xaxis_title=_x_col.replace("_"," ").title(), yaxis_title=None, margin=dict(l=0,r=0,t=20,b=20), height=220)
                     st.plotly_chart(style_fig(fig_wm, height=300), use_container_width=True, config=PLOTLY_CONFIG)
-                    with st.expander("📊 View raw top markets data"):
+                    with st.expander(":material/bar_chart: View raw top markets data"):
                         st.dataframe(_wm[_wm_cols].reset_index(drop=True), use_container_width=True)
-                        st.download_button("⬇️ Download", _wm[_wm_cols].to_csv(index=False), "website_top_markets.csv", "text/csv", key="dl_web_mkts")
+                        st.download_button(":material/download: Download", _wm[_wm_cols].to_csv(index=False), "website_top_markets.csv", "text/csv", key="dl_web_mkts")
                 else:
                     st.dataframe(_wm.reset_index(drop=True), use_container_width=True)
             else:
@@ -11775,7 +11901,7 @@ with tab_ev:
                 st.plotly_chart(style_fig(fig_cl, height=280), use_container_width=True, config=PLOTLY_CONFIG)
                 with st.expander("View raw cluster data"):
                     st.dataframe(_cl.reset_index(drop=True), use_container_width=True)
-                    st.download_button("⬇️ Download Cluster Data CSV", _cl.to_csv(index=False).encode(), "cluster_visitation.csv", "text/csv", key="dl_cluster")
+                    st.download_button(":material/download: Download Cluster Data CSV", _cl.to_csv(index=False).encode(), "cluster_visitation.csv", "text/csv", key="dl_cluster")
 
     # ── Social & Web Analytics ────────────────────────────────────────────────
     # ── Digital & Social → sub-tab 3 ──────────────────────────────────────────
@@ -11803,9 +11929,9 @@ with tab_ev:
                     st.plotly_chart(style_fig(fig_st, height=260), use_container_width=True, config=PLOTLY_CONFIG)
                 else:
                     st.dataframe(_st.reset_index(drop=True), use_container_width=True)
-                with st.expander("📊 View raw traffic source data"):
+                with st.expander(":material/bar_chart: View raw traffic source data"):
                     st.dataframe(_st.reset_index(drop=True), use_container_width=True)
-                    st.download_button("⬇️ Download", _st.to_csv(index=False), "traffic_sources.csv", "text/csv", key="dl_traf")
+                    st.download_button(":material/download: Download", _st.to_csv(index=False), "traffic_sources.csv", "text/csv", key="dl_traf")
             else:
                 st.info("Social traffic source data not available.")
 
@@ -11829,9 +11955,9 @@ with tab_ev:
                     st.plotly_chart(style_fig(fig_pg, height=310), use_container_width=True, config=PLOTLY_CONFIG)
                 else:
                     st.dataframe(_pg.reset_index(drop=True), use_container_width=True)
-                with st.expander("📊 View raw top pages data"):
+                with st.expander(":material/bar_chart: View raw top pages data"):
                     st.dataframe(_pg.reset_index(drop=True), use_container_width=True)
-                    st.download_button("⬇️ Download", _pg.to_csv(index=False), "top_pages.csv", "text/csv", key="dl_pages")
+                    st.download_button(":material/download: Download", _pg.to_csv(index=False), "top_pages.csv", "text/csv", key="dl_pages")
             else:
                 st.info("Top pages data not available.")
 
@@ -12555,7 +12681,7 @@ with tab_fm:
         st.dataframe(_full_tbl.sort_values("Visitor Days %", ascending=False),
                      use_container_width=True, hide_index=True)
         _dma_dl = df_dfy_dma.to_csv(index=False).encode()
-        st.download_button("⬇️ Download Full Market Intelligence CSV", _dma_dl,
+        st.download_button(":material/download: Download Full Market Intelligence CSV", _dma_dl,
                            file_name="feeder_market_intelligence.csv", mime="text/csv",
                            key="fm_dl_full")
 
@@ -12588,10 +12714,10 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
             st.plotly_chart(style_fig(fig_zrt_mkt, height=320), use_container_width=True, config=PLOTLY_CONFIG)
 
         # ── Raw data expander ─────────────────────────────────────────────────
-        with st.expander("📊 View raw DMA data"):
+        with st.expander(":material/bar_chart: View raw DMA data"):
             st.dataframe(df_dfy_dma, use_container_width=True, hide_index=True)
             _dma_csv = df_dfy_dma.to_csv(index=False).encode()
-            st.download_button("⬇️ Download DMA Data CSV", _dma_csv,
+            st.download_button(":material/download: Download DMA Data CSV", _dma_csv,
                                file_name="datafy_dma.csv", mime="text/csv")
     else:
         st.markdown(empty_state(
@@ -13722,7 +13848,7 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
 
         st.markdown("---")
 
-        _cal_tab1, _cal_tab2 = st.tabs(["📅 Upcoming", "🕐 Past Events"])
+        _cal_tab1, _cal_tab2 = st.tabs([":material/calendar_month: Upcoming", ":material/history: Past Events"])
         with _cal_tab1:
             if not _evts_upcoming.empty:
                 for _, ev_row in _evts_upcoming.iterrows():
@@ -13773,10 +13899,10 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
             else:
                 st.info("No past events in the calendar.")
 
-        with st.expander("📊 Download full events calendar"):
+        with st.expander(":material/bar_chart: Download full events calendar"):
             st.dataframe(df_vdp_events, use_container_width=True, hide_index=True)
             _evt_csv = df_vdp_events.to_csv(index=False).encode()
-            st.download_button("⬇️ Download Events CSV", _evt_csv,
+            st.download_button(":material/download: Download Events CSV", _evt_csv,
                                file_name="dana_point_events.csv", mime="text/csv")
     else:
         st.info("No VDP events loaded. Run `python scripts/fetch_vdp_events.py`.")
@@ -13895,7 +14021,7 @@ with tab_sp:
         _sp_display.columns = ["Property", "City", "Segment", "Rooms",
                                 "Status", "Opens", "Brand", "Developer"]
         st.dataframe(_sp_display, use_container_width=True, hide_index=True)
-        st.download_button("⬇️ Download Pipeline CSV", _sp_display.to_csv(index=False).encode(), "supply_pipeline.csv", "text/csv", key="dl_sp_pipe")
+        st.download_button(":material/download: Download Pipeline CSV", _sp_display.to_csv(index=False).encode(), "supply_pipeline.csv", "text/csv", key="dl_sp_pipe")
 
         # ── Supply impact insight ─────────────────────────────────────────────
         _supply_impact_pct = _pipe_total / 5120 * 100
@@ -13915,7 +14041,7 @@ with tab_sp:
 
         # Download
         _pipe_csv = df_cs_pipe.to_csv(index=False).encode()
-        st.download_button("⬇️ Download Pipeline CSV", _pipe_csv,
+        st.download_button(":material/download: Download Pipeline CSV", _pipe_csv,
                            file_name="costar_supply_pipeline.csv", mime="text/csv",
                            use_container_width=True)
 
@@ -14109,10 +14235,10 @@ with tab_sp:
                 _fig_bench.update_layout(barmode="group", yaxis_tickprefix="$")
                 st.plotly_chart(style_fig(_fig_bench, height=280), use_container_width=True, config=PLOTLY_CONFIG)
 
-            with st.expander("📊 Full Dataset — Actuals + Forecasts"):
+            with st.expander(":material/bar_chart: Full Dataset — Actuals + Forecasts"):
                 st.dataframe(df_cs_annual, use_container_width=True, hide_index=True)
                 _ann_csv = df_cs_annual.to_csv(index=False).encode()
-                st.download_button("⬇️ Download Annual Data CSV", _ann_csv,
+                st.download_button(":material/download: Download Annual Data CSV", _ann_csv,
                                    file_name="costar_annual_performance.csv", mime="text/csv")
         else:
             st.info("No annual CoStar performance data loaded.")
@@ -14238,12 +14364,12 @@ with tab_cs:
 
 
     # ── Competitive Intel Sub-Tabs ──────────────────────────────────────────────
-    _cs_t1, _cs_t2 = st.tabs(["📊 Market Performance", "📡 External Signals"])
+    _cs_t1, _cs_t2 = st.tabs([":material/bar_chart: Market Performance", ":material/sensors: External Signals"])
 
     # ── Market Performance → sub-tab 1 ─────────────────────────────────────────
     with _cs_t1:
         # ── AI CoStar Analysis Panel ───────────────────────────────────────────────
-        with st.expander("🧠 CoStar VDP Analyst — Deep Market Insights", expanded=True):
+        with st.expander(":material/psychology: CoStar VDP Analyst — Deep Market Insights", expanded=True):
             st.markdown('<span class="ai-chip">MARKET INTELLIGENCE</span>', unsafe_allow_html=True)
 
             COSTAR_PROMPTS = [
@@ -14607,7 +14733,7 @@ with tab_cs:
             _chain_display["RevPAR $"]    = _chain_display["RevPAR $"].map("${:,.2f}".format)
             _chain_display["Mkt Share %"] = _chain_display["Mkt Share %"].map("{:.1f}%".format)
             st.dataframe(_chain_display, use_container_width=True, hide_index=True)
-            st.download_button("⬇️ Download Chain Scale CSV", _chain_display.to_csv(index=False).encode(), "chain_scale_performance.csv", "text/csv", key="dl_chain")
+            st.download_button(":material/download: Download Chain Scale CSV", _chain_display.to_csv(index=False).encode(), "chain_scale_performance.csv", "text/csv", key="dl_chain")
 
             # Key insight
             luxury_row = chain_2024[chain_2024["chain_scale"] == "Luxury"].iloc[0]
@@ -14696,7 +14822,7 @@ with tab_cs:
             _pipe_display.columns = ["Property","City","Segment","Rooms",
                                       "Status","Opens","Brand","Developer"]
             st.dataframe(_pipe_display, use_container_width=True, hide_index=True)
-            st.download_button("⬇️ Download Pipeline CSV", _pipe_display.to_csv(index=False).encode(), "hotel_pipeline.csv", "text/csv", key="dl_cs_pipe")
+            st.download_button(":material/download: Download Pipeline CSV", _pipe_display.to_csv(index=False).encode(), "hotel_pipeline.csv", "text/csv", key="dl_cs_pipe")
 
             # Supply impact insight
             market_supply_pct = (pipe_total / 5120 * 100)
@@ -14810,7 +14936,7 @@ with tab_cs:
             _comp_display["ARI"]     = _comp_display["ARI"].map("{:.1f}".format)
             _comp_display["RGI"]     = _comp_display["RGI"].map("{:.1f}".format)
             st.dataframe(_comp_display, use_container_width=True, hide_index=True)
-            st.download_button("⬇️ Download Comp Set CSV", _comp_display.to_csv(index=False).encode(), "competitive_set.csv", "text/csv", key="dl_compset")
+            st.download_button(":material/download: Download Comp Set CSV", _comp_display.to_csv(index=False).encode(), "competitive_set.csv", "text/csv", key="dl_compset")
         else:
             st.markdown(empty_state("🏆", "No competitive set data.",
                 "Run scripts/load_costar_reports.py to populate competitive benchmarks."),
@@ -15036,7 +15162,7 @@ with tab_cs:
         if not df_cs_mon.empty:
             _cs_csv = df_cs_mon.to_csv(index=False).encode()
             st.download_button(
-                "⬇️ Download CoStar Monthly Performance CSV",
+                ":material/download: Download CoStar Monthly Performance CSV",
                 _cs_csv, file_name="costar_monthly_performance.csv",
                 mime="text/csv", use_container_width=True,
             )
@@ -15231,7 +15357,7 @@ with tab_cs:
             if not df_vca_lodging.empty:
                 _vca_dl = df_vca_lodging.to_csv(index=False).encode()
                 st.download_button(
-                    "⬇️ Download Visit CA Lodging Forecast CSV",
+                    ":material/download: Download Visit CA Lodging Forecast CSV",
                     _vca_dl, file_name="visit_ca_lodging_forecast.csv",
                     mime="text/csv", use_container_width=True,
                 )
@@ -15243,7 +15369,7 @@ with tab_cs:
 
         # ── GloCon Solutions LLC — VDP vs Market Leadership Scorecard ─────────────
         st.markdown(sec_div("🏆 VDP vs. South OC Market — Leadership Scorecard"), unsafe_allow_html=True)
-        st.markdown("### 🏆 VDP vs. South OC Market — Leadership Scorecard")
+        st.markdown("### :material/emoji_events: VDP vs. South OC Market — Leadership Scorecard")
         st.caption("How Dana Point properties perform vs. the South Orange County submarket · Source: STR 30-day actuals vs. CoStar snapshot · Built by GloCon Solutions LLC")
 
         try:
@@ -15273,7 +15399,7 @@ with tab_cs:
                     else "Investigate comp set — close rate gap strategy needed."), axis=1)
                 _sc_dl = _sc_df[["Metric","VDP Portfolio","S. OC Market","Gap vs Mkt","Signal","Board Note"]]
                 st.dataframe(_sc_dl, use_container_width=True, hide_index=True)
-                st.download_button("⬇️ Download Scorecard CSV", _sc_dl.to_csv(index=False).encode(), "vdp_vs_market_scorecard.csv", "text/csv", key="dl_scorecard")
+                st.download_button(":material/download: Download Scorecard CSV", _sc_dl.to_csv(index=False).encode(), "vdp_vs_market_scorecard.csv", "text/csv", key="dl_scorecard")
                 # Visual comparison bar chart
                 _sc_fig = go.Figure()
                 for _sci, (_scm, _scvdp, _scmkt, _scgap, _scu) in enumerate(_sc_rows):
@@ -15581,7 +15707,7 @@ with tab_cs:
             )
 
         # ── External Correlations ─────────────────────────────────────────────────
-        with st.expander("🔗 External Correlations — Gas Prices vs. Hotel Demand", expanded=False):
+        with st.expander(":material/link: External Correlations — Gas Prices vs. Hotel Demand", expanded=False):
             st.caption(
                 "Correlation analysis: CA gas prices vs. STR occupancy · "
                 "Positive correlation = gas price drop boosts drive-market demand. "
@@ -15761,7 +15887,7 @@ with tab_cs:
 
         _li_col1, _li_col2 = st.columns([1, 4])
         with _li_col1:
-            if st.button("🔍 Search", key="li_search_btn", type="primary", use_container_width=True):
+            if st.button(":material/search: Search", key="li_search_btn", type="primary", use_container_width=True):
                 if _li_custom.strip():
                     st.session_state["li_pending_prompt"] = _li_custom.strip()
                     st.session_state["li_pending_label"]  = f"💬 {_li_custom.strip()[:50]}"
@@ -15785,7 +15911,7 @@ with tab_cs:
                 if _li_result:
                     _li_dl = f"# {_li_lbl_disp}\n\n{_li_result}"
                     st.download_button(
-                        "⬇️ Download Intelligence Report",
+                        ":material/download: Download Intelligence Report",
                         _li_dl.encode(),
                         file_name=f"live_intel_{datetime.now().strftime('%Y%m%d_%H%M')}.md",
                         mime="text/markdown",
@@ -16307,7 +16433,7 @@ with tab_cs:
                 f'<div style="font-size:12px;color:#5A7A95;">{_str_detail}</div>'
                 f'</div>', unsafe_allow_html=True)
         with _ac5:
-            with st.expander("📋 Full DataFrame Status Checklist", expanded=False):
+            with st.expander(":material/assignment: Full DataFrame Status Checklist", expanded=False):
                 _rows_html = ""
                 for _dot, _lbl, _msg in _checks:
                     _rows_html += (
@@ -16377,7 +16503,7 @@ with tab_dl:
             # Download button
             _csv_bytes = df_log.to_csv(index=False).encode()
             st.download_button(
-                "⬇️ Download Load Log CSV", _csv_bytes,
+                ":material/download: Download Load Log CSV", _csv_bytes,
                 file_name="load_log.csv", mime="text/csv",
                 use_container_width=True,
             )
@@ -16617,7 +16743,7 @@ with tab_dl:
                     if c in df_sel.columns]
         _dl_csv = df_sel[_dl_cols].rename(columns=rename).to_csv(index=False).encode()
         st.download_button(
-            f"⬇️ Download Full Selection CSV ({len(df_sel):,} rows)",
+            f":material/download: Download Full Selection CSV ({len(df_sel):,} rows)",
             _dl_csv, file_name=f"vdp_{grain.lower()}_{range_label.replace(' ','_')}.csv",
             mime="text/csv", use_container_width=True,
         )
@@ -16636,7 +16762,7 @@ with tab_dl:
         st.dataframe(_comp_display, use_container_width=True, hide_index=True)
         _comp_csv = df_comp.to_csv(index=False).encode()
         st.download_button(
-            "⬇️ Download Compression Data CSV", _comp_csv,
+            ":material/download: Download Compression Data CSV", _comp_csv,
             file_name="compression_quarters.csv", mime="text/csv",
             use_container_width=True,
         )
@@ -16673,13 +16799,13 @@ with tab_dl:
             if not _df2.empty:
                 _bytes2 = _df2.to_csv(index=False).encode()
                 st.download_button(
-                    f"⬇️ {_name2}", _bytes2, file_name=_fname2,
+                    f":material/download: {_name2}", _bytes2, file_name=_fname2,
                     mime="text/csv", use_container_width=True,
                     key=f"dl_tbl_{_di2}",
                 )
             else:
                 st.button(
-                    f"⬇️ {_name2}", disabled=True, use_container_width=True,
+                    f":material/download: {_name2}", disabled=True, use_container_width=True,
                     key=f"dl_tbl_dis_{_di2}", help="No data loaded for this table",
                 )
 
@@ -16687,7 +16813,7 @@ with tab_dl:
     render_share_bar("Data Vault", df=df_log, file_name="data_vault", key="dl_db")
 
     # ── Brain Architecture — Table Relationships ────────────────────────────
-    with st.expander("🗺 Brain Architecture — Table Relationships", expanded=False):
+    with st.expander(":material/map: Brain Architecture — Table Relationships", expanded=False):
         st.markdown(
             '<div style="font-family:\'Syne\',sans-serif;font-size:1rem;'
             'font-weight:800;margin-bottom:8px;">All Table Relationships in analytics.sqlite</div>',
@@ -16704,7 +16830,7 @@ with tab_dl:
                 df_rels.columns = ["Table A", "Table B", "Relationship", "Join Key", "Description"]
                 st.dataframe(df_rels, use_container_width=True, hide_index=True)
                 _rels_csv = df_rels.to_csv(index=False).encode()
-                st.download_button("⬇️ Download Relationships CSV", _rels_csv,
+                st.download_button(":material/download: Download Relationships CSV", _rels_csv,
                                    file_name="table_relationships.csv", mime="text/csv",
                                    key="dl_rels")
             else:
@@ -16713,7 +16839,7 @@ with tab_dl:
             st.caption(f"table_relationships not yet available: {e}")
 
     # ── Full Database Inventory ─────────────────────────────────────────────
-    with st.expander("🧠 Full Database Inventory", expanded=False):
+    with st.expander(":material/psychology: Full Database Inventory", expanded=False):
         st.markdown(
             '<div style="font-family:\'Syne\',sans-serif;font-size:1rem;'
             'font-weight:800;margin-bottom:8px;">All Tables in analytics.sqlite</div>',
@@ -16782,7 +16908,7 @@ with tab_dl:
         _brain_df = pd.DataFrame(_brain_rows)
         st.dataframe(_brain_df, use_container_width=True, hide_index=True)
         _brain_csv2 = _brain_df.to_csv(index=False).encode()
-        st.download_button("⬇️ Download DB Inventory CSV", _brain_csv2,
+        st.download_button(":material/download: Download DB Inventory CSV", _brain_csv2,
                            file_name="db_inventory.csv", mime="text/csv", key="dl_brain")
 
     # ── App Audit Report ──────────────────────────────────────────────────────
@@ -16882,7 +17008,7 @@ _SOURCES_HTML = """
 
 _gl1, _gl2 = st.columns(2)
 with _gl1:
-    with st.expander("📖 Data Glossary", expanded=False):
+    with st.expander(":material/menu_book: Data Glossary", expanded=False):
         for _term, _defn in _GLOSSARY_TERMS.items():
             st.markdown(
                 f'<div style="margin-bottom:10px;">'
@@ -16892,7 +17018,7 @@ with _gl1:
                 unsafe_allow_html=True,
             )
 with _gl2:
-    with st.expander("🗂️ Data Sources", expanded=False):
+    with st.expander(":material/folder: Data Sources", expanded=False):
         st.markdown(_SOURCES_HTML, unsafe_allow_html=True)
 
 st.markdown(
