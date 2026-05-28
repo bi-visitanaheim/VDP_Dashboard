@@ -852,6 +852,7 @@ st.markdown("""
     margin-bottom: 14px;
     position: relative;
     overflow: hidden;
+    text-align: center;
     transition: box-shadow 0.24s cubic-bezier(0.28,0,0.49,1),
                 transform 0.24s cubic-bezier(0.28,0,0.49,1);
     box-shadow: var(--dp-shadow);
@@ -869,7 +870,7 @@ st.markdown("""
     background: var(--dp-card-hover);
   }
   .kpi-header {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: center;
     margin-bottom: 6px;
   }
   .kpi-label {
@@ -877,24 +878,26 @@ st.markdown("""
     font-size: 10px; font-weight: 800;
     text-transform: uppercase; letter-spacing: .15em;
     color: var(--dp-text-1) !important; -webkit-text-fill-color: var(--dp-text-1) !important;
+    text-align: center;
   }
   .kpi-icon-svg { flex-shrink: 0; line-height: 0; opacity: 0.45; }
   .kpi-value {
     font-family: 'Syne', 'Outfit', sans-serif;
-    font-size: 42px; font-weight: 800;
+    font-size: 48px; font-weight: 800;
     letter-spacing: -.04em; line-height: 1.0;
     color: var(--dp-text-1);
     -webkit-text-fill-color: var(--dp-text-1);
     margin: 6px 0 8px 0;
+    text-align: center;
   }
-  .kpi-delta-pos     { color: #10B981; font-size: 12px; font-weight: 700; display:flex; align-items:center; gap:4px; }
-  .kpi-delta-neg     { color: #EF4444; font-size: 12px; font-weight: 700; display:flex; align-items:center; gap:4px; }
-  .kpi-delta-neutral { color: var(--dp-text-3); font-size: 12px; font-weight: 600; }
+  .kpi-delta-pos     { color: #10B981; font-size: 12px; font-weight: 700; display:flex; align-items:center; justify-content:center; gap:4px; }
+  .kpi-delta-neg     { color: #EF4444; font-size: 12px; font-weight: 700; display:flex; align-items:center; justify-content:center; gap:4px; }
+  .kpi-delta-neutral { color: var(--dp-text-3); font-size: 12px; font-weight: 600; text-align: center; }
   .kpi-date {
     font-size: 10px; color: var(--dp-text-3);
     margin-top: 10px; letter-spacing: .02em;
     border-top: 1px solid rgba(255,255,255,0.06);
-    padding-top: 8px; display: block; font-weight: 500;
+    padding-top: 8px; display: block; font-weight: 500; text-align: center;
   }
 
   /* ── Insight Cards ────────────────────────────────────────────────────── */
@@ -1354,6 +1357,35 @@ st.markdown("""
     border-radius: 20px; padding: 3px 12px; display: inline-flex; align-items: center; gap: 5px;
   }
   .tab-summary .ts-bullets li::before { content: "→"; color: var(--dp-teal); font-weight: 700; }
+
+  /* ── Compact info-button tooltip replacing full tab-summary box ──────── */
+  .tab-info-btn-wrap { margin: 4px 0 10px 0; display: flex; }
+  .tab-info-btn {
+    position: relative; display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px; cursor: pointer;
+    background: rgba(0,212,200,0.08); border: 1px solid rgba(0,212,200,0.25);
+    color: var(--dp-teal); font-size: 12px; font-weight: 600;
+    font-family: 'DM Sans', 'Inter', sans-serif;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .tab-info-btn:hover { background: rgba(0,212,200,0.16); border-color: rgba(0,212,200,0.45); }
+  .tab-info-btn:hover .tab-info-tooltip,
+  .tab-info-btn:focus .tab-info-tooltip { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  .tab-info-tooltip {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 9999;
+    min-width: 340px; max-width: 480px;
+    background: #0F2540; border: 1px solid rgba(0,212,200,0.30);
+    border-radius: 10px; padding: 14px 16px;
+    font-family: 'DM Sans', 'Inter', sans-serif; font-size: 13px;
+    color: var(--dp-text-2); line-height: 1.6;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.40);
+    opacity: 0; pointer-events: none;
+    transform: translateY(-4px); transition: opacity 0.18s, transform 0.18s;
+  }
+  .tab-info-tooltip strong { color: var(--dp-teal); }
+  .tab-info-tooltip .ts-bullets { margin: 8px 0 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .tab-info-tooltip .ts-bullets li { font-size: 12px; color: var(--dp-text-3); display: flex; align-items: flex-start; gap: 6px; }
+  .tab-info-tooltip .ts-bullets li::before { content: "→"; color: var(--dp-teal); font-weight: 700; flex-shrink: 0; }
 
   /* ── Callout / Key Takeaway ──────────────────────────────────────────── */
   .dp-callout {
@@ -2344,7 +2376,7 @@ st.markdown("""
     .event-val  { font-size: 22px !important; }
     .nlm-briefing { padding: 12px 14px !important; }
     .src-card { padding: 10px 12px !important; }
-    .kpi-value { font-size: 24px !important; }
+    .kpi-value { font-size: 28px !important; }
     /* Demo question buttons: wrap to 2×2 grid on mobile */
     div[data-testid="stHorizontalBlock"]:has(button[data-testid^="stBaseButton-secondary"]) > div {
       min-width: calc(50% - 4px) !important;
@@ -2406,10 +2438,15 @@ st.markdown("""
     background: linear-gradient(180deg, #1A3756 0%, #1E3D5E 100%);
     border-bottom: 1px solid rgba(0,212,200,0.20);
     box-shadow: 0 4px 28px rgba(0,0,0,0.40);
-    margin: 0 -1rem 0.8rem -1rem;
+    margin: -8px -1rem 0.8rem -1rem;
     padding: 0;
     position: relative;
     z-index: 998;
+  }
+  /* Eliminate Streamlit element gap before ticker */
+  .hero-banner + div,
+  .hero-banner ~ div > [data-testid="stMarkdownContainer"] + [data-testid="stMarkdownContainer"] {
+    margin-top: 0 !important;
   }
   /* Edge fade-out (1ax style) */
   .pulse-ticker-wrap::before,
@@ -6865,13 +6902,16 @@ def empty_state(icon: str, title: str, body: str) -> str:
 
 
 def tab_intro(title: str, desc: str, bullets: list[str]) -> str:
-    """Enhanced tab summary with label + bullets for plain-language navigation."""
+    """Compact info-button tooltip replacing the old full-width orientation box."""
     _bullet_html = "".join(f"<li>{b}</li>" for b in bullets)
+    _tooltip_content = f"<strong>{title}</strong> — {desc}<ul class='ts-bullets'>{_bullet_html}</ul>"
     return (
-        f'<div class="tab-summary">'
-        f'<span class="ts-label">What you\'ll find here</span>'
-        f'<strong>{title}</strong> — {desc}'
-        f'<ul class="ts-bullets">{_bullet_html}</ul>'
+        f'<div class="tab-info-btn-wrap">'
+        f'<div class="tab-info-btn" tabindex="0">'
+        f'<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>'
+        f'<span>What you\'ll find here</span>'
+        f'<div class="tab-info-tooltip">{_tooltip_content}</div>'
+        f'</div>'
         f'</div>'
     )
 
@@ -8839,7 +8879,7 @@ _st_components.html("""
   <svg viewBox='0 0 24 24'><path d='M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z'/></svg>
   Menu
 </button>
-""", height=52)
+""", height=0)
 
 # ─── Tabs ─────────────────────────────────────────────────────────────────────
 
