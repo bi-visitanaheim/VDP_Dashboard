@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import logging
+import warnings
 
 import os
 import sys
@@ -25,6 +26,11 @@ import urllib.parse as _urlparse
 from pathlib import Path
 from dotenv import load_dotenv
 import re as _re
+
+# Suppress third-party deprecation noise — never show in customer-facing UI
+warnings.filterwarnings("ignore", category=FutureWarning, module="google")
+warnings.filterwarnings("ignore", message=".*google-generativeai.*")
+warnings.filterwarnings("ignore", message=".*generativeai.*deprecated.*")
 
 _logger = logging.getLogger("vdp_dashboard")
 
