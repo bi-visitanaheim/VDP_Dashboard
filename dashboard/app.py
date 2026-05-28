@@ -1160,6 +1160,8 @@ st.markdown("""
     padding: 26px 36px 22px 36px;
     border-bottom: 1px solid rgba(0,212,200,0.20) !important;
     overflow: hidden;
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
     /* Dot grid ambient pattern */
     --dot-color: rgba(255,255,255,0.04);
     --dot-size: 1.5px;
@@ -1219,6 +1221,14 @@ st.markdown("""
     color: rgba(200,230,255,0.90) !important; -webkit-text-fill-color: rgba(200,230,255,0.90) !important;
     letter-spacing: 0.10em; margin-top: 8px; position: relative;
     text-transform: uppercase;
+  }
+  /* Ensure stMarkdownContainer wrapper inside hero doesn't override white text */
+  .hero-banner [data-testid="stMarkdownContainer"],
+  .hero-banner [data-testid="stMarkdownContainer"] span,
+  .hero-banner [data-testid="stMarkdownContainer"] div,
+  .hero-banner [data-testid="stMarkdownContainer"] p {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
   }
 
   /* ── Home button title ───────────────────────────────────────────────── */
@@ -3907,6 +3917,64 @@ st.markdown("""
   </div>
 </div>
 """, unsafe_allow_html=True)
+
+# ─── Top-spacing nuclear fix via parent-document iframe ──────────────────────
+# st.markdown scripts share the Streamlit React document but can lose the race
+# against React's inline-style hydration. components.html iframes are same-origin
+# on Streamlit Cloud, so window.parent.document gives reliable parent access.
+_st_components.html("""
+<script>
+(function(){
+  var doc = window.parent.document;
+  if(!doc) return;
+  // (a) Inject a <style> into parent <head> — loads after emotion CSS, wins cascade
+  if(!doc.getElementById('dp-spacing-fix')){
+    var s = doc.createElement('style');
+    s.id = 'dp-spacing-fix';
+    s.textContent =
+      '[data-testid="stHeader"]{display:none!important;height:0!important;' +
+        'position:absolute!important;top:-9999px!important;overflow:hidden!important}' +
+      'header{display:none!important;height:0!important}' +
+      '[data-testid="stToolbar"]{display:none!important;height:0!important}' +
+      '[data-testid="stMain"]{padding-top:0!important;margin-top:0!important}' +
+      '[data-testid="stMainBlockContainer"]{padding-top:0!important;margin-top:0!important}' +
+      'section[data-testid="stMain"]>div{padding-top:0!important;margin-top:0!important}' +
+      '.block-container{padding-top:0!important;margin-top:0!important}' +
+      '.hero-banner{margin-top:0!important}';
+    doc.head.appendChild(s);
+  }
+  // (b) Force inline styles — beats React inline style overrides
+  function applyFix(){
+    ['[data-testid="stMain"]','[data-testid="stMainBlockContainer"]','.block-container',
+     'section[data-testid="stMain"]>div'].forEach(function(sel){
+      doc.querySelectorAll(sel).forEach(function(el){
+        el.style.setProperty('padding-top','0px','important');
+        el.style.setProperty('margin-top','0px','important');
+      });
+    });
+    doc.querySelectorAll('[data-testid="stHeader"],header').forEach(function(el){
+      el.style.setProperty('display','none','important');
+      el.style.setProperty('height','0px','important');
+      el.style.setProperty('position','absolute','important');
+      el.style.setProperty('top','-9999px','important');
+    });
+    doc.querySelectorAll('.hero-banner').forEach(function(el){
+      el.style.setProperty('margin-top','0px','important');
+    });
+  }
+  // (c) RAF loop for 6 s — catches every React hydration tick
+  applyFix();
+  var end = Date.now() + 6000;
+  (function raf(){ applyFix(); if(Date.now()<end) requestAnimationFrame(raf); })();
+  // (d) MutationObserver watchdog
+  if(window.MutationObserver){
+    new MutationObserver(applyFix).observe(doc.documentElement,{
+      childList:true,subtree:true,attributes:true,attributeFilter:['style','class']
+    });
+  }
+})();
+</script>
+""", height=0, scrolling=False)
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 ROOT    = Path(__file__).parent.parent                          # project root
