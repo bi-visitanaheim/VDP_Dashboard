@@ -1,0 +1,140 @@
+PROPRIETARY SOFTWARE LICENSE AGREEMENT
+Dana Point PULSE — Destination Intelligence Platform ("the Software")
+
+Copyright (c) 2026 Wilton John Picou, GloCon Solutions LLC.
+All rights reserved.
+
+================================================================================
+1. OWNERSHIP
+================================================================================
+The Software, including but not limited to all source code, object code,
+scripts, data models, database schemas, pipeline logic, dashboards, user
+interfaces, documentation, designs, text, layouts, and all related materials
+(collectively, the "Work"), was authored, developed, and is owned SOLELY and
+exclusively by Wilton John Picou of GloCon Solutions LLC (the "Owner").
+
+The Owner is the sole author and copyright holder of the Work. No employment,
+work-for-hire, joint authorship, contractor assignment, or other arrangement
+transfers, assigns, or shares ownership of the Work or any copyright, moral
+right, or other intellectual property right in the Work to any other person or
+entity, except as may be set out in a separate written agreement signed by the
+Owner.
+
+This Work is protected by the copyright laws of the United States (17 U.S.C.
+Sec. 101 et seq.) and by international copyright treaties. All rights not
+expressly granted in this Agreement are reserved by the Owner.
+
+================================================================================
+2. LICENSE GRANT — SOLE AUTHORIZED USER
+================================================================================
+Subject to the terms of this Agreement and any separate written agreement
+between the Owner and Visit Dana Point, the Owner grants to VISIT DANA POINT
+(the "Licensee") a PERPETUAL, EXCLUSIVE, NON-TRANSFERABLE, NON-SUBLICENSABLE
+license to access and use the Software for the Licensee's own destination
+marketing and analytics operations.
+
+Visit Dana Point is, and shall remain, the SOLE AUTHORIZED USER of the
+Software. No other person or entity is authorized to access, use, install,
+operate, or benefit from the Software without the prior express written consent
+of the Owner.
+
+"Exclusive" means that, for so long as this license remains in effect, the
+Owner will not grant the right to use the Software to any party other than
+Visit Dana Point. "Perpetual" means the Licensee's right to use the Software
+does not automatically expire by passage of time. Ownership of the Work is NOT
+transferred by this grant and at all times remains with the Owner.
+
+================================================================================
+3. RESTRICTIONS
+================================================================================
+Except as expressly permitted in Section 2, no person or entity (including the
+Licensee) may, in whole or in part:
+
+  (a) copy, reproduce, republish, or duplicate the Work;
+  (b) modify, adapt, translate, or create derivative works of the Work;
+  (c) distribute, sell, rent, lease, lend, sublicense, or otherwise transfer
+      the Work or any rights in it to any third party;
+  (d) reverse engineer, decompile, or disassemble the Work, except to the
+      extent expressly permitted by applicable law notwithstanding this
+      restriction;
+  (e) remove, obscure, or alter any copyright notice, attribution, proprietary
+      legend, or this license text embedded in or accompanying the Work;
+  (f) use the Work to build, train, or develop a competing product or service;
+      or
+  (g) use the Work in any manner not expressly authorized by this Agreement.
+
+================================================================================
+4. ATTRIBUTION
+================================================================================
+The Work must, at all times and in all copies and substantial portions,
+retain attribution to its author and owner: "Wilton John Picou, GloCon
+Solutions LLC." The copyright notices embedded in the source files and
+displayed in the Software's user interface must not be removed, hidden, or
+altered.
+
+================================================================================
+5. CONFIDENTIALITY
+================================================================================
+The Work is proprietary and confidential to the Owner. The Licensee shall
+protect the Work from unauthorized access or disclosure with at least the same
+degree of care it uses to protect its own confidential information, and in no
+event less than a reasonable degree of care.
+
+================================================================================
+6. DATA AND THIRD-PARTY MATERIALS
+================================================================================
+The Software ingests and processes data from third-party sources (including,
+without limitation, STR/CoStar, Datafy, Zartico, FRED, U.S. Census, BLS, NOAA,
+EIA, TSA, Visit California, Later.com, and others). Such third-party data
+remains the property of, and is governed by the license terms of, its
+respective owners. This Agreement does not grant any rights in such third-party
+data. The Software also incorporates open-source components governed by their
+own licenses; see the THIRD_PARTY_NOTICES.md file.
+
+================================================================================
+7. NO WARRANTY
+================================================================================
+THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE OWNER DOES NOT
+WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE OR UNINTERRUPTED.
+
+================================================================================
+8. LIMITATION OF LIABILITY
+================================================================================
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL THE OWNER BE LIABLE
+FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR
+ANY LOSS OF PROFITS OR DATA, ARISING OUT OF OR RELATED TO THE SOFTWARE OR THIS
+AGREEMENT, WHETHER IN CONTRACT, TORT, OR OTHERWISE.
+
+================================================================================
+9. ENFORCEMENT
+================================================================================
+Unauthorized use, reproduction, or distribution of the Work, or any portion of
+it, may result in severe civil and criminal penalties, and will be prosecuted
+to the maximum extent possible under the law. The Owner is entitled to seek
+injunctive relief, in addition to any other remedies available at law or in
+equity, for any breach of this Agreement.
+
+================================================================================
+10. GOVERNING LAW
+================================================================================
+This Agreement shall be governed by and construed in accordance with the laws
+of the State of California, United States, without regard to its conflict-of-law
+principles.
+
+================================================================================
+11. ENTIRE AGREEMENT
+================================================================================
+This Agreement constitutes the copyright and licensing notice for the Work. It
+supplements, and is supplemented by, any separate written services or license
+agreement signed between the Owner and the Licensee. In the event of a conflict
+between this notice and a signed written agreement, the signed agreement
+controls.
+
+For licensing inquiries, contact:
+  Wilton John Picou
+  GloCon Solutions LLC
+  john@gloconsolutions.com
+
+(c) 2026 Wilton John Picou, GloCon Solutions LLC. All rights reserved.

@@ -1,7 +1,9 @@
 # Project: VDP Analytics (Visit Dana Point)
 
 DMO tourism analytics platform — ETL pipeline, SQLite brain, Streamlit dashboard, Claude AI Analyst panel.
-Owner: John Picou | Org: gloconllc | Repo: VDPDashboard
+Owner: Wilton John Picou | Org: GloCon Solutions LLC | Repo: VDPDashboard
+
+**Legal:** Proprietary. © 2026 Wilton John Picou, GloCon Solutions LLC. All rights reserved. Licensed exclusively and perpetually to Visit Dana Point as the sole authorized user. See `LICENSE`, `COPYRIGHT`, `THIRD_PARTY_NOTICES.md`, and `docs/LEGAL_COMPLIANCE.md`. Every first-party source file carries an embedded copyright header — never remove it.
 
 ---
 
@@ -355,6 +357,8 @@ After every session or error correction:
 - **Top-spacing nuclear fix:** Streamlit's React sets `paddingTop` inline on `.block-container` AFTER stylesheets load, overriding `!important` CSS rules. Defeat it with: (a) `<style>` injected into `<head>` at runtime (post-emotion, wins cascade), (b) `requestAnimationFrame` loop for 5 s forcing inline `setProperty('padding-top','0px','important')`, (c) `MutationObserver` on `document.documentElement` as persistent watchdog. CSS alone is not sufficient.
 - **Dark cards on white page:** `_kfm_card` and similar dark-gradient metric cards look jarring on the light theme. Always check card bg color matches the page theme — use `#FFFFFF` + `border-top` accent for light pages, dark gradient only inside dark-bg sections.
 - **Overview headline:** Never default to "On Track" — always pull the highest-priority `cross` or `dmo` insight. Leadership opens the Overview tab first; the headline is the first impression.
+- **Copyright:** Work is owned solely by Wilton John Picou, GloCon Solutions LLC; licensed exclusively/perpetually to Visit Dana Point. Every first-party `.py`/`.css` carries an embedded header (run `python3 /tmp/stamp_headers.py` logic / grep for `owned solely by Wilton John Picou`). Never strip headers; new files must get one. `LICENSE`/`COPYRIGHT`/`THIRD_PARTY_NOTICES.md`/`docs/LEGAL_COMPLIANCE.md` are the legal record.
+- **Stay legal:** keep deps permissive (no GPL/AGPL); keep PII out of `analytics.sqlite`; keep AI keys server-side; never publish raw STR/CoStar/Datafy records (sole-user model = VDP-gated dashboard). Full analysis in `docs/LEGAL_COMPLIANCE.md`.
 
 ---
 
@@ -396,3 +400,4 @@ After every session or error correction:
 | 2026-04-24 | Major Overview tab redesign: reduced from 2,180 to 428 lines; new exec summary format (headline insight + 4 hero metrics + 5 exploration cards); moved AI Analyst panel to dedicated 🤖 AI Assistant sub-tab; consolidated KPI formatting functions into utils.py module; renamed sub-tabs (Scorecard, Board Report, Goals, AI Assistant) for clarity; added error logging to all except blocks; optimized social followers query; created dashboard/assets/styles.css for future stylesheet separation | Claude |
 | 2026-04-24 | Full UX/visual audit & enhancement: ticker readability improvement (65%→95% opacity, font 12px→16px, labels 8.5px→9.5px); new format_insight_card() utility for styled metric cards (replaces plain text paragraphs with visual hierarchy); light theme color consistency pass (updated CSS token usage); improved section spacing and visual separation between topic areas | Claude |
 | 2026-05-26 | Thursday demo prep: pipeline refresh (28 steps, 29 fresh insights, 288 relationships); top white-space nuclear fix (RAF loop + head-injected style + MutationObserver); hero banner margin-top 0; splash text to pure white; tab bar to clean white-pill SaaS style; Overview exec brief upgraded (live KPI snapshot + status badge + top insight block); Forward Outlook _kfm_card to light theme; font antialiasing global; hero "Brain refreshed" badge | Claude |
+| 2026-05-28 | Copyright & legal hardening: proprietary `LICENSE` (perpetual exclusive grant to Visit Dana Point as sole user), `COPYRIGHT`, `THIRD_PARTY_NOTICES.md`, `docs/LEGAL_COMPLIANCE.md` legal memo; embedded copyright header in all 66 first-party `.py` files + 2 CSS files; upgraded app.py header + login/fixed/Board-Report footers to full attribution; `COPYRIGHT_NOTICE`/`LICENSE_SUMMARY` constants in utils.py; owner set to full legal name Wilton John Picou, GloCon Solutions LLC | Claude |

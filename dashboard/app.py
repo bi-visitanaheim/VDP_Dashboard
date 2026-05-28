@@ -4,9 +4,22 @@ Visit Dana Point — Analytics Dashboard
 Streamlit app with Claude AI Analyst · Read-only connection to data/analytics.sqlite
 """
 
-# © 2026 Wilton John Picou · GloCon Solutions LLC · All rights reserved.
-# Dana Point PULSE — Destination Intelligence Platform
-# Unauthorized reproduction or distribution prohibited.
+# =============================================================================
+# Copyright (c) 2026 Wilton John Picou, GloCon Solutions LLC.
+# All rights reserved. Proprietary and confidential.
+#
+# Authored, developed, and owned solely by Wilton John Picou of GloCon
+# Solutions LLC. Licensed exclusively and perpetually to Visit Dana Point as
+# the sole authorized user. No part of this software may be copied, reproduced,
+# modified, published, distributed, sublicensed, or used by any other person or
+# entity without the prior express written consent of the copyright holder.
+# Unauthorized use, reproduction, or distribution is strictly prohibited and
+# constitutes a violation of U.S. and international copyright law
+# (17 U.S.C. Sec. 101 et seq.).
+#
+# Attribution to "Wilton John Picou, GloCon Solutions LLC" must be retained.
+# See the LICENSE file at the repository root for the full, binding terms.
+# =============================================================================
 
 import streamlit as st
 import streamlit.components.v1 as _st_components
@@ -272,8 +285,9 @@ def _render_login_page():
                 st.error("Incorrect username or password.")
 
         st.markdown('<div class="login-footer">'
-                    '© 2026 Wilton John Picou · GloCon Solutions LLC<br>'
-                    'Confidential · Authorized Access Only</div>', unsafe_allow_html=True)
+                    '© 2026 Wilton John Picou · GloCon Solutions LLC · All rights reserved<br>'
+                    'Licensed exclusively to Visit Dana Point · Confidential · Authorized Access Only</div>',
+                    unsafe_allow_html=True)
 
     st.stop()
 
@@ -3169,7 +3183,7 @@ st.markdown("""
     Data: STR &nbsp;·&nbsp; Datafy &nbsp;·&nbsp; CoStar &nbsp;·&nbsp; Visit California
   </div>
   <div class="fp-right">
-    © 2026 GloCon Solutions LLC &nbsp;·&nbsp; Visit Dana Point &nbsp;·&nbsp; All data proprietary &amp; confidential
+    © 2026 Wilton John Picou · GloCon Solutions LLC &nbsp;·&nbsp; Licensed exclusively to Visit Dana Point &nbsp;·&nbsp; All rights reserved · Proprietary &amp; confidential
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -6318,7 +6332,7 @@ def generate_section_html(label: str, df: "pd.DataFrame", subtitle: str = "") ->
     <h2>{label}</h2>
     {_table_html}
     <div class="footer">
-      Dana Point PULSE is a proprietary analytics platform developed by GloCon Solutions LLC for Visit Dana Point.<br>
+      Dana Point PULSE is a proprietary analytics platform authored and owned solely by Wilton John Picou, GloCon Solutions LLC, and licensed exclusively to Visit Dana Point. © 2026. All rights reserved.<br>
       Data sources: STR (hotel performance) · Datafy (visitor economy) · CoStar (market supply/pipeline) · Visit California · Later.com (social).<br>
       Live dashboard: https://vdp-analytics.streamlit.app · Contact: john@gloconsolutions.com
     </div>
