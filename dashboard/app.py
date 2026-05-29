@@ -387,6 +387,8 @@ San Francisco Bay Area (fly market via John Wayne Airport — JWA).
 - Music and cultural events: Ohana Fest (annual September, headliner-driven, 3-day festival)
 - Sports tourism: surf competitions, sailing regattas, Ocean Institute programming
 - Corporate/SMERF: shoulder-season meetings and social events at harbor venues
+- Group travel (SMERF + corporate incentive): a strategic growth segment for VDP — generates TBID \
+  in shoulder Q1/Q4 when transient demand is softest
 - Holiday travel: Memorial Day, Fourth of July, Labor Day — all high-compression periods
 
 **Seasonal Performance Patterns:**
@@ -501,6 +503,48 @@ in which case, say so once and move to what IS clear.
   city council (TOT/economic impact), or destination marketing staff (demand/campaign targeting)
 - Anchor every recommendation in the data provided, not in generic best practices
 - End with a single, clear, time-bound call to action that a board member could act on immediately
+
+## Group Travel Intelligence — Strategic Priority (2026)
+Group business is a TOP priority for Visit Dana Point and the TBID board. Key facts:
+- VDP earns TBID assessment revenue on ALL room revenue, including group bookings
+- Group demand estimated at **25–32% of total hotel demand** in South OC (industry benchmark, \
+  STR/CBRE 2024 upper-upscale coastal resort markets)
+- Group negotiated rates average **~18% below blended market ADR** — but group bookings in \
+  Q1/Q4 shoulder fill rooms that would otherwise be vacant, generating TBID at 100% margin above zero
+- **Group displacement risk is HIGH in Q3** (30+ compression days): group blocks on peak dates \
+  displace higher-rate transient leisure at $400+ ADR — avoid Q3 group commitments on compression weekends
+- **Optimal group strategy:** Target SMERF + corporate incentive groups for Q1/Q4 shoulder season. \
+  Each +5pp shift in group demand mix adds ~$180K in annual TBID revenue.
+- **TBID impact:** Est. $3.6M–$4.6M annual TBID from group demand at current benchmark share
+- **TOT impact:** Est. $28.8M–$36.8M annual TOT from group demand at current benchmark share
+
+**National benchmarks (U.S. Travel Association 2024 — in `us_travel_*` tables):**
+- Group travel = **$319B annual economic impact**, **3M+ jobs** across 4 segments:
+  - Meetings & Events: $126B (82% of 2019; projected to grow faster than transient through 2025)
+  - Live Spectator Events: $102B (concerts, festivals, pro sports — surpassed pre-pandemic)
+  - Participatory Sports: $52B (recession-resistant; leads hotel demand in secondary markets)
+  - Leisure Group: $39B (motorcoach, organized tours; critical for secondary destinations)
+- Business travelers = **20% of volume, 60% of hotel revenue** — most revenue-efficient segment
+- SMERF groups book **8–48 weeks ahead**, typical LOS **2–5 nights**, fill shoulder seasons
+- Family travelers: LOS **3–7 nights**, book **8–24 weeks ahead** — high total spend per stay
+- Luxury travelers: LOS **2–7 nights**, book **8–24 weeks ahead**, price rarely the deciding factor
+
+**Group data available in the brain:**
+- `group_intelligence` — Daily-updated benchmark table: group-primary room count, TBID/TOT projections, \
+  displacement risk assessment, TBID uplift per +5pp shift, scaffold for STR group data
+- `events_visitor_mix` — Per-event group_travel_pct, family_group_pct, avg_party_size (populated as events are analyzed)
+- `events_economic_impact` — Event room revenue, TBID/TOT attribution, daytrip vs. overnight split
+- `costar_chain_scale_breakdown` — Upper Upscale (1,842 rooms) + Upscale (1,256 rooms) = 3,098 group-primary rooms (60% of market)
+- `datafy_attribution_media_groups` — Media attribution by property type: Resorts (211 trips, 2.8 LOS) vs Hotels (145 trips, 3.1 LOS)
+
+**STR group-segment data is not yet available.** Current group intelligence uses CoStar chain-scale supply data \
+and industry benchmarks. When STR provides group demand segmentation exports, the `group_intelligence` table \
+`str_group_*` columns will be populated and `str_group_data_available` will be set to 1.
+
+When answering group travel questions, always:
+1. Distinguish between benchmark estimates and actual data
+2. Frame group strategy in terms of TBID revenue impact and shoulder-season fill
+3. Note the Q3 displacement risk — groups are most valuable when transient demand is soft
 
 ## Full Database Schema (analytics.sqlite — 57 tables)
 
@@ -625,6 +669,27 @@ CRITICAL: NEVER present Zartico as current data. Use only for historical trend c
 - `data_correlation_matrix` — Statistical Pearson correlations between data sources: metric_a, metric_b, \
   pearson_r, lag_weeks, sample_size, p_value_approx, is_significant (1=significant at p<0.10), interpretation. \
   Current findings: Google Trends → OCC (r=varies, 2-3 week lead); gas price → OCC (r=+0.36, co-seasonal).
+
+**U.S. Travel Association National Benchmark Tables (Layer 2 — Context):**
+- `us_travel_group_segments` — 4 group travel segments + total: spend_billion_usd, jobs_supported, \
+  pct_recovery_vs_2019. Segments: meetings_events ($126B), live_spectator ($102B), \
+  participatory_sports ($52B), leisure_group ($39B), total_group ($319B, 3M jobs). Annual.
+- `us_travel_business_travel` — Business travel totals: total_business ($312B, 85% recovery), \
+  transient_business ($186B, 87%), meetings_events ($126B, 82%). pct_total_lodging_rev=60%.
+- `us_travel_traveler_types` — 10 traveler type benchmarks: traveler_type, primary_motivation, \
+  booking_window_weeks_low/high, typical_los_nights_low/high, top_priority_1-3, \
+  revenue_contribution (low/medium/high/highest), seasonal_pattern, booking_lead_days.
+- `us_travel_national_kpis` — National KPI series: metric_name, metric_value, metric_unit, \
+  vs_prior_year_pct, vs_2019_pct. Covers total travel spending, recovery rates, hotel revenue shares.
+
+**Group Travel Intelligence Tables (2026-05-29):**
+- `group_intelligence` — Daily benchmark table for group demand analysis. Columns: benchmark_date, \
+  total_market_rooms, group_primary_rooms, group_primary_pct, benchmark_group_demand_share_low/high, \
+  benchmark_group_adr_discount_pct, market_blended_adr, market_blended_occ_pct, estimated_group_adr, \
+  estimated_annual_room_rev, estimated_group_room_rev_low/high, estimated_group_tbid_rev_low/high, \
+  estimated_group_tot_rev_low/high, tbid_uplift_per_5pp_shift, compression_days_annual, \
+  group_displacement_note, str_group_demand_rooms (NULL until STR group data), \
+  str_group_adr (NULL), str_group_room_rev (NULL), str_group_data_available (0=benchmark, 1=STR-sourced).
 
 **Intelligence Tables (Generated Daily):**
 - `insights_daily` — Forward-looking insights for 5 audiences (dmo, city, visitor, resident, cross). \
@@ -4399,6 +4464,37 @@ def load_costar_compset() -> pd.DataFrame:
     return _sql("SELECT * FROM costar_competitive_set ORDER BY revpar_usd DESC", "load_costar_compset")
 
 
+@st.cache_data(ttl=1800)
+def load_group_intelligence() -> pd.DataFrame:
+    return _sql(
+        "SELECT * FROM group_intelligence ORDER BY benchmark_date DESC LIMIT 1",
+        "load_group_intelligence",
+    )
+
+
+@st.cache_data(ttl=3600)
+def load_us_travel_group_segments() -> pd.DataFrame:
+    return _sql(
+        "SELECT * FROM us_travel_group_segments ORDER BY report_year DESC, spend_billion_usd DESC",
+        "load_us_travel_group_segments",
+    )
+
+
+@st.cache_data(ttl=3600)
+def load_us_travel_business_travel() -> pd.DataFrame:
+    return _sql(
+        "SELECT * FROM us_travel_business_travel ORDER BY report_year DESC",
+        "load_us_travel_business_travel",
+    )
+
+
+@st.cache_data(ttl=3600)
+def load_us_travel_traveler_types() -> pd.DataFrame:
+    return _sql(
+        "SELECT * FROM us_travel_traveler_types ORDER BY report_year DESC, traveler_type",
+        "load_us_travel_traveler_types",
+    )
+
 
 # ── Visit California state context loaders ───────────────────────────────────
 
@@ -7017,6 +7113,10 @@ df_cs_snap  = load_costar_snapshot()
 df_cs_pipe  = load_costar_pipeline()
 df_cs_chain = load_costar_chain()
 df_cs_comp  = load_costar_compset()
+# U.S. Travel Association national benchmarks
+df_ust_segments  = load_us_travel_group_segments()
+df_ust_biz       = load_us_travel_business_travel()
+df_ust_types     = load_us_travel_traveler_types()
 # Datafy visitor economy
 df_dfy_ov      = load_datafy_overview()
 df_dfy_dma     = load_datafy_dma()
@@ -16394,6 +16494,280 @@ with tab_cs:
                     unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
+
+        # ── Group Business Intelligence ───────────────────────────────────────────
+        st.markdown(sec_div("👥 Group Business Intelligence"), unsafe_allow_html=True)
+        try:
+            df_grp = load_group_intelligence()
+            if not df_grp.empty:
+                g = df_grp.iloc[0]
+                g_total_rooms = int(g.get("total_market_rooms") or 5120)
+                g_group_rooms = int(g.get("group_primary_rooms") or 3098)
+                g_group_pct   = float(g.get("group_primary_pct") or 0.605)
+                g_tbid_low    = float(g.get("estimated_group_tbid_rev_low") or 0)
+                g_tbid_high   = float(g.get("estimated_group_tbid_rev_high") or 0)
+                g_tot_low     = float(g.get("estimated_group_tot_rev_low") or 0)
+                g_tot_high    = float(g.get("estimated_group_tot_rev_high") or 0)
+                g_uplift      = float(g.get("tbid_uplift_per_5pp_shift") or 0)
+                g_group_adr   = float(g.get("estimated_group_adr") or 0)
+                g_market_adr  = float(g.get("market_blended_adr") or 0)
+                g_disc        = float(g.get("benchmark_group_adr_discount_pct") or 0.18)
+                g_share_low   = float(g.get("benchmark_group_demand_share_low") or 0.25)
+                g_share_high  = float(g.get("benchmark_group_demand_share_high") or 0.32)
+                g_compression = int(g.get("compression_days_annual") or 0)
+                g_str_avail   = bool(g.get("str_group_data_available") or False)
+
+                st.markdown("""
+                <div style="background:rgba(37,99,235,0.08);border-left:3px solid #2563EB;
+                            border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#93C5FD;">
+                ℹ️ <strong>Data context:</strong> Group demand estimates use CoStar chain-scale supply data
+                + industry benchmarks (STR/CBRE 2024 upper-upscale coastal resort averages).
+                Actual STR group-segment data will replace benchmarks when available.
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Hero KPIs
+                c1, c2, c3, c4 = st.columns(4)
+                with c1:
+                    st.markdown(kpi_card(
+                        "Group-Capable Rooms",
+                        f"{g_group_rooms:,}",
+                        f"{g_group_pct*100:.0f}% of {g_total_rooms:,} market rooms",
+                        positive=True,
+                        tooltip="Upper Upscale + Upscale properties — highest group amenity density",
+                    ), unsafe_allow_html=True)
+                with c2:
+                    st.markdown(kpi_card(
+                        "Est. Annual Group TBID",
+                        f"${g_tbid_low/1e6:.1f}M–${g_tbid_high/1e6:.1f}M",
+                        f"{int(g_share_low*100)}–{int(g_share_high*100)}% demand share benchmark",
+                        positive=True,
+                        tooltip="TBID generated by group demand at industry-benchmark share rates",
+                    ), unsafe_allow_html=True)
+                with c3:
+                    st.markdown(kpi_card(
+                        "TBID per +5pp Group Mix",
+                        f"+${g_uplift/1000:.0f}K/yr",
+                        "incremental if group share grows 5pp",
+                        positive=True,
+                        tooltip="Each 5 percentage-point shift in group demand mix adds this much annual TBID",
+                    ), unsafe_allow_html=True)
+                with c4:
+                    st.markdown(kpi_card(
+                        "Group ADR Benchmark",
+                        f"${g_group_adr:.0f}",
+                        f"~{int(g_disc*100)}% below ${g_market_adr:.0f} blended ADR",
+                        positive=False,
+                        tooltip="Negotiated group rates average ~18% below blended market ADR in upper-upscale coastal markets",
+                    ), unsafe_allow_html=True)
+
+                # Chain scale breakdown — group capacity view
+                if not df_cs_chain.empty:
+                    chain_latest = df_cs_chain.copy()
+                    # Use most recent year
+                    if "year" in chain_latest.columns:
+                        years = chain_latest["year"].dropna().unique()
+                        if len(years) > 0:
+                            chain_latest = chain_latest[chain_latest["year"] == sorted(years)[-1]]
+                    chain_latest = chain_latest.sort_values("revpar_usd", ascending=False)
+
+                    _GROUP_SCALES = {"Upper Upscale", "Upscale"}
+                    colors = [
+                        "#2563EB" if str(r.get("chain_scale","")) in _GROUP_SCALES else "#475569"
+                        for _, r in chain_latest.iterrows()
+                    ]
+                    fig_grp = go.Figure()
+                    fig_grp.add_trace(go_grp.Bar(
+                        x=chain_latest["chain_scale"].tolist(),
+                        y=chain_latest["supply_rooms"].tolist(),
+                        name="Supply Rooms",
+                        marker_color=colors,
+                        text=[f"{int(v):,}" for v in chain_latest["supply_rooms"]],
+                        textposition="outside",
+                        hovertemplate="<b>%{x}</b><br>Rooms: %{y:,}<br>ADR: $%{customdata[0]:.0f}<br>Occ: %{customdata[1]:.1f}%<extra></extra>",
+                        customdata=list(zip(chain_latest["adr_usd"], chain_latest["occupancy_pct"])),
+                    ))
+                    fig_grp.update_layout(
+                        title="Supply by Chain Scale — Blue = Group-Primary Properties",
+                        xaxis_title=None,
+                        yaxis_title="Supply Rooms",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        font=dict(color="#CBD5E1", size=11),
+                        margin=dict(t=40, b=20, l=0, r=0),
+                        showlegend=False,
+                        height=280,
+                    )
+                    fig_grp.update_xaxes(showgrid=False, color="#94A3B8")
+                    fig_grp.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)", color="#94A3B8")
+                    st.plotly_chart(fig_grp, use_container_width=True)
+
+                # Group displacement risk callout
+                if g_compression >= 30:
+                    risk_color = "#EF4444"
+                    risk_label = "HIGH"
+                elif g_compression >= 10:
+                    risk_color = "#F59E0B"
+                    risk_label = "MODERATE"
+                else:
+                    risk_color = "#22C55E"
+                    risk_label = "LOW"
+
+                st.markdown(f"""
+                <div style="background:rgba(0,0,0,0.2);border-left:3px solid {risk_color};
+                            border-radius:6px;padding:12px 16px;margin:8px 0;">
+                  <div style="color:{risk_color};font-weight:700;font-size:11px;letter-spacing:.05em;
+                              text-transform:uppercase;margin-bottom:4px;">
+                    GROUP DISPLACEMENT RISK: {risk_label}
+                  </div>
+                  <div style="color:#CBD5E1;font-size:12px;line-height:1.6;">
+                    <strong>{g_compression} compression days/year</strong> (80%+ occupancy).
+                    On peak nights, group blocks at est. <strong>${g_group_adr:.0f} ADR</strong> displace
+                    transient leisure at <strong>${g_market_adr:.0f}+ ADR</strong> — a
+                    <strong>${g_market_adr - g_group_adr:.0f}/room/night</strong> revenue gap.
+                    Optimal strategy: target group business in <strong>Q1/Q4 shoulder</strong> when
+                    transient demand is softest.
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Group insights from insights_daily
+                grp_insights = load_insights(audience=None)
+                if grp_insights is not None and not grp_insights.empty:
+                    grp_cats = ["group_revenue_opportunity", "group_displacement_risk",
+                                "group_adr_premium", "group_demand_trend"]
+                    grp_rows = grp_insights[grp_insights["category"].isin(grp_cats)]
+                    if not grp_rows.empty:
+                        st.markdown(
+                            '<div style="font-weight:600;color:#93C5FD;font-size:12px;'
+                            'text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px;">',
+                            unsafe_allow_html=True,
+                        )
+                        st.markdown("**Group Intelligence Insights**")
+                        for _, row in grp_rows.iterrows():
+                            from utils import format_insight_card
+                            st.markdown(
+                                format_insight_card(
+                                    icon="👥",
+                                    title=row.get("headline", "")[:90] + ("…" if len(str(row.get("headline",""))) > 90 else ""),
+                                    body=row.get("body", "")[:400] + ("…" if len(str(row.get("body",""))) > 400 else ""),
+                                    accent="#2563EB",
+                                ),
+                                unsafe_allow_html=True,
+                            )
+
+                # ── U.S. Travel National Benchmarks ──────────────────────────────
+                if not df_ust_segments.empty or not df_ust_biz.empty:
+                    st.markdown("**National Group Travel Benchmarks** *(U.S. Travel Association 2024)*")
+
+                    if not df_ust_segments.empty:
+                        # Filter out the total row for the segment chart
+                        segs = df_ust_segments[
+                            df_ust_segments["segment"] != "total_group"
+                        ].copy()
+                        segs["segment_label"] = segs["segment"].str.replace("_", " ").str.title()
+                        segs_sorted = segs.sort_values("spend_billion_usd", ascending=False)
+
+                        SEGMENT_COLORS = {
+                            "Meetings Events":      "#2563EB",
+                            "Live Spectator":       "#7C3AED",
+                            "Participatory Sports": "#0891B2",
+                            "Leisure Group":        "#059669",
+                        }
+                        seg_colors = [
+                            SEGMENT_COLORS.get(lbl, "#64748B")
+                            for lbl in segs_sorted["segment_label"]
+                        ]
+
+                        fig_ust = go.Figure(go.Bar(
+                            x=segs_sorted["segment_label"].tolist(),
+                            y=segs_sorted["spend_billion_usd"].tolist(),
+                            marker_color=seg_colors,
+                            text=[f"${v:.0f}B" for v in segs_sorted["spend_billion_usd"]],
+                            textposition="outside",
+                            hovertemplate="<b>%{x}</b><br>$%{y:.0f}B annual spending<extra></extra>",
+                        ))
+                        fig_ust.update_layout(
+                            title="U.S. Group Travel Segments — Annual Economic Impact ($B)",
+                            xaxis_title=None,
+                            yaxis_title="Spend ($B)",
+                            plot_bgcolor="rgba(0,0,0,0)",
+                            paper_bgcolor="rgba(0,0,0,0)",
+                            font=dict(color="#CBD5E1", size=11),
+                            margin=dict(t=40, b=20, l=0, r=0),
+                            showlegend=False,
+                            height=260,
+                        )
+                        fig_ust.update_xaxes(showgrid=False, color="#94A3B8")
+                        fig_ust.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)", color="#94A3B8")
+                        st.plotly_chart(fig_ust, use_container_width=True)
+
+                    # Business travel stat callout
+                    if not df_ust_biz.empty:
+                        biz_total = df_ust_biz[df_ust_biz["category"] == "total_business"]
+                        if not biz_total.empty:
+                            _biz_spend = float(biz_total.iloc[0].get("spend_billion_usd") or 312)
+                            _biz_recov = float(biz_total.iloc[0].get("pct_recovery_vs_2019") or 85)
+                            _biz_lodg  = float(biz_total.iloc[0].get("pct_total_lodging_rev") or 60)
+                            st.markdown(f"""
+                            <div style="display:flex;gap:12px;margin:8px 0;">
+                              <div style="flex:1;background:rgba(37,99,235,0.1);border-radius:6px;
+                                          padding:10px 14px;text-align:center;">
+                                <div style="color:#93C5FD;font-size:10px;font-weight:600;
+                                            text-transform:uppercase;letter-spacing:.05em;">National Business Travel</div>
+                                <div style="color:#EFF6FF;font-size:20px;font-weight:700;">${_biz_spend:.0f}B</div>
+                                <div style="color:#64748B;font-size:10px;">{_biz_recov:.0f}% of 2019</div>
+                              </div>
+                              <div style="flex:1;background:rgba(37,99,235,0.1);border-radius:6px;
+                                          padding:10px 14px;text-align:center;">
+                                <div style="color:#93C5FD;font-size:10px;font-weight:600;
+                                            text-transform:uppercase;letter-spacing:.05em;">Biz Traveler Hotel Rev Share</div>
+                                <div style="color:#EFF6FF;font-size:20px;font-weight:700;">{_biz_lodg:.0f}%</div>
+                                <div style="color:#64748B;font-size:10px;">of hotel revenue (20% of volume)</div>
+                              </div>
+                              <div style="flex:1;background:rgba(37,99,235,0.1);border-radius:6px;
+                                          padding:10px 14px;text-align:center;">
+                                <div style="color:#93C5FD;font-size:10px;font-weight:600;
+                                            text-transform:uppercase;letter-spacing:.05em;">Total Group Travel</div>
+                                <div style="color:#EFF6FF;font-size:20px;font-weight:700;">$319B</div>
+                                <div style="color:#64748B;font-size:10px;">3M+ U.S. jobs supported</div>
+                              </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                # Traveler type booking window reference
+                if not df_ust_types.empty:
+                    with st.expander("📋 Traveler Type Benchmarks (U.S. Travel 2024)", expanded=False):
+                        _type_cols = ["traveler_type", "primary_motivation", "booking_window_weeks_high",
+                                      "typical_los_nights_high", "seasonal_pattern", "revenue_contribution"]
+                        _type_disp = df_ust_types[[c for c in _type_cols if c in df_ust_types.columns]].copy()
+                        _type_disp.columns = [c.replace("_", " ").title() for c in _type_disp.columns]
+                        st.dataframe(_type_disp, use_container_width=True, hide_index=True)
+
+                # STR group data scaffold
+                if not g_str_avail:
+                    st.markdown("""
+                    <div style="background:rgba(245,158,11,0.08);border:1px dashed rgba(245,158,11,0.4);
+                                border-radius:8px;padding:14px 18px;margin-top:12px;">
+                      <div style="color:#FCD34D;font-weight:700;font-size:12px;margin-bottom:6px;">
+                        📋 STR GROUP DATA — AWAITING INTEGRATION
+                      </div>
+                      <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
+                        When STR provides group-segment demand exports, this section will automatically
+                        populate with: <strong>group demand rooms</strong> · <strong>group ADR</strong>
+                        · <strong>group room revenue</strong> · <strong>group vs. transient mix trend</strong>
+                        · <strong>SMERF segment breakdown</strong>.<br><br>
+                        To enable: run STR group export → save to
+                        <code>data/str/str_group_daily.xlsx</code> →
+                        <code>python scripts/run_pipeline.py</code>.
+                        The <code>group_intelligence</code> table will update automatically.
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("Group intelligence data not yet loaded. Run `python scripts/run_pipeline.py` to generate.")
+        except Exception as _ge:
+            _logger.debug("group intelligence section error: %s", _ge)
 
         # ── Coastal Intelligence: Beach + Whale + Revenue ────────────────────────
         st.markdown("")

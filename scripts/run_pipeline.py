@@ -87,8 +87,14 @@ STEPS = [
     ("load_str_monthly",  os.path.join(BASE_DIR, "load_str_monthly_sqlite.py"), True),
     ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),            True),
     ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),     False),
-    ("load_costar",       os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
-    ("compute_insights",  os.path.join(BASE_DIR, "compute_insights.py"),        True),
+    ("load_costar",           os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
+    # U.S. Travel Association national benchmarks (group + business travel + traveler types)
+    # Seeds hardcoded 2024 benchmarks + parses any PDFs in data/us_travel/.
+    # Download monthly from ustravel.org/state-of-group-travel-report and save to data/us_travel/
+    ("load_us_travel",        os.path.join(BASE_DIR, "load_us_travel_reports.py"),  False),
+    # Group benchmarks must run before compute_insights so group_intelligence data is available
+    ("seed_group_benchmarks", os.path.join(BASE_DIR, "seed_group_benchmarks.py"), False),
+    ("compute_insights",      os.path.join(BASE_DIR, "compute_insights.py"),      True),
     ("load_zartico",      os.path.join(BASE_DIR, "load_zartico_reports.py"),    False),
     ("fetch_vdp_events",  os.path.join(BASE_DIR, "fetch_vdp_events.py"),        False),
     ("load_visit_ca",     os.path.join(BASE_DIR, "load_visit_ca.py"),           False),
