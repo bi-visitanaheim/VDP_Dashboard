@@ -603,23 +603,46 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
 
     st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
 
-    # ── Actionable insights ───────────────────────────────────────────────────
+    # ── Actionable insights (by audience) ────────────────────────────────────
     if not insights.empty:
-        st.markdown("""
-        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
-                    letter-spacing:.06em;margin-bottom:10px;">ACTIONABLE INTELLIGENCE</div>
-        """, unsafe_allow_html=True)
-        for _, row in insights.iterrows():
-            pri = int(row.get("priority") or 5)
-            accent = "#0891B2" if pri <= 2 else ("#F59E0B" if pri <= 4 else "#64748B")
-            icon   = "🎯" if pri <= 2 else ("⚠️" if pri <= 4 else "ℹ️")
-            st.markdown(_action_card(
-                icon=icon,
-                headline=str(row.get("headline", ""))[:120],
-                body=str(row.get("body", ""))[:400],
-                action="Review and integrate into sales strategy",
-                accent=accent,
-            ), unsafe_allow_html=True)
+        _AUD_ORDER = ["dmo", "city", "cross", "visitor", "resident"]
+        _AUD_LABELS = {
+            "dmo":      ("🏢 DMO / TBID Board", "#0891B2"),
+            "city":     ("🏛 City of Dana Point", "#4A6FA5"),
+            "visitor":  ("✈️ Visitors", "#F59E0B"),
+            "resident": ("🏡 Residents", "#6A4F8A"),
+            "cross":    ("🔀 Hidden Signal", "#EF4444"),
+        }
+        _ACTION_BY_AUD = {
+            "dmo":      "Integrate into VDP marketing and TBID strategy",
+            "city":     "Present to City Council for infrastructure/policy decision",
+            "visitor":  "Surface on visitdanapoint.com for trip-planning guidance",
+            "resident": "Share via Dana Point community newsletter/social",
+            "cross":    "Escalate to senior leadership — non-obvious signal",
+        }
+        for _aud in _AUD_ORDER:
+            _aud_rows = insights[insights["audience"] == _aud] if "audience" in insights.columns else pd.DataFrame()
+            if _aud_rows.empty:
+                continue
+            _albl, _aclr = _AUD_LABELS.get(_aud, ("Insight", "#64748B"))
+            st.markdown(f"""
+            <div style="color:{_aclr};font-size:10px;font-weight:700;text-transform:uppercase;
+                        letter-spacing:.06em;margin:14px 0 8px;">{_albl} — ACTIONABLE INTELLIGENCE</div>
+            """, unsafe_allow_html=True)
+            for _, row in _aud_rows.iterrows():
+                pri    = int(row.get("priority") or 5)
+                icon   = "🎯" if pri <= 2 else ("⚠️" if pri <= 4 else "ℹ️")
+                _bdy   = str(row.get("body", ""))
+                # Show first 2 sentences (up to 500 chars)
+                _bddot = _bdy.find(". ", 80)
+                _bdy_s = _bdy[:_bddot+1 if 0 < _bddot < 500 else 500].rstrip() + ("…" if len(_bdy) > 500 and _bddot < 0 else "")
+                st.markdown(_action_card(
+                    icon=icon,
+                    headline=str(row.get("headline", ""))[:140],
+                    body=_bdy_s,
+                    action=_ACTION_BY_AUD.get(_aud, "Review and integrate into strategy"),
+                    accent=_aclr,
+                ), unsafe_allow_html=True)
 
     # ── STR scaffold notice ───────────────────────────────────────────────────
     if not g.get("str_group_data_available"):
