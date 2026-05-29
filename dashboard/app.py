@@ -9200,9 +9200,9 @@ with tab_ov:
             _top   = _src.iloc[0]
             _top_insight_txt  = str(_top.get("headline", "") or "").strip()
             _top_insight_body = str(_top.get("body", "") or "").strip()
-            # Trim body to 160 chars for the brief
-            if len(_top_insight_body) > 160:
-                _top_insight_body = _top_insight_body[:157].rstrip() + "…"
+            # Show first 2 sentences (up to 280 chars)
+            if len(_top_insight_body) > 280:
+                _top_insight_body = _top_insight_body[:277].rstrip() + "…"
 
         _today        = datetime.now().strftime("%A, %B %d, %Y")
         _report_month = datetime.now().strftime("%B %Y").upper()
@@ -9266,10 +9266,56 @@ with tab_ov:
     </div>
   </div>
   <!-- Top insight brief -->
-  {'<div style="padding:16px 20px;background:#F8FAFC;border-left:3px solid #0891B2;border-radius:0 8px 8px 0;"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0891B2;margin-bottom:6px;">Top Signal</div><div style="font-size:14px;font-weight:600;color:#0F172A;line-height:1.5;">' + _top_insight_txt + '</div><div style="font-size:13px;color:#475569;margin-top:4px;line-height:1.6;">' + _top_insight_body + '</div></div>' if _top_insight_txt else ''}
+  {'<div style="padding:16px 20px;background:#F8FAFC;border-left:4px solid #0891B2;border-radius:0 8px 8px 0;margin-bottom:16px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.10em;color:#0891B2;margin-bottom:8px;">⚡ Top Priority Signal</div><div style="font-size:14px;font-weight:700;color:#0F172A;line-height:1.5;margin-bottom:6px;">' + _top_insight_txt + '</div><div style="font-size:13px;color:#475569;line-height:1.65;">' + _top_insight_body + '</div></div>' if _top_insight_txt else ''}
 </div>""", unsafe_allow_html=True)
     except Exception as e:
         _logger.debug(f"Overview brief render error: {e}")
+
+    # ── Multi-Audience Intelligence Brief ─────────────────────────────────────
+    try:
+        if not df_insights.empty:
+            _AUD_META = [
+                ("dmo",      "🏢 DMO / TBID Board",    "#0891B2",  "Revenue Strategy & Marketing"),
+                ("city",     "🏛 City of Dana Point",   "#4A6FA5",  "TOT Revenue & Economic Policy"),
+                ("visitor",  "✈️ Visitors",             "#F59E0B",  "Trip Planning & Booking"),
+                ("resident", "🏡 Residents",            "#6A4F8A",  "Community Impact"),
+                ("cross",    "🔀 Hidden Signal",        "#EF4444",  "Cross-Dataset Intelligence"),
+            ]
+            _brief_cards = []
+            for _aud, _aud_label, _aud_color, _aud_sub in _AUD_META:
+                _aud_df = df_insights[df_insights["audience"] == _aud].sort_values("priority")
+                if _aud_df.empty:
+                    continue
+                _ar = _aud_df.iloc[0]
+                _hl = str(_ar.get("headline", "") or "").strip()
+                _bd = str(_ar.get("body", "") or "").strip()
+                # First sentence only (up to period or 180 chars)
+                _dot = _bd.find(". ")
+                _bd_short = (_bd[:_dot+1] if 0 < _dot < 200 else _bd[:180]).rstrip() + ("…" if len(_bd) > 180 and _dot < 0 else "")
+                _brief_cards.append((_aud_label, _aud_color, _aud_sub, _hl, _bd_short))
+
+            if _brief_cards:
+                st.markdown("""
+                <div style="margin-bottom:6px;margin-top:4px;">
+                  <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.10em;
+                              color:#64748B;margin-bottom:12px;">STAKEHOLDER INTELLIGENCE BRIEF</div>
+                </div>
+                """, unsafe_allow_html=True)
+                _brief_cols = st.columns(len(_brief_cards))
+                for _col, (_lbl, _clr, _sub, _hl, _bd) in zip(_brief_cols, _brief_cards):
+                    with _col:
+                        st.markdown(f"""
+                        <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid {_clr};
+                                    border-radius:8px;padding:14px 16px;height:100%;">
+                          <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                                      color:{_clr};margin-bottom:4px;">{_lbl}</div>
+                          <div style="font-size:9px;color:#94A3B8;margin-bottom:8px;">{_sub}</div>
+                          <div style="font-size:12px;font-weight:700;color:#0F172A;line-height:1.45;margin-bottom:6px;">{_hl[:100]}{'…' if len(_hl)>100 else ''}</div>
+                          <div style="font-size:11.5px;color:#475569;line-height:1.55;">{_bd}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+    except Exception as _be:
+        _logger.debug("audience brief render error: %s", _be)
 
     try:
         _exec_rvp   = m.get("revpar_30", 0.0) if m else 0.0
@@ -9656,6 +9702,49 @@ with tab_ov:
     """, unsafe_allow_html=True)
             else:
                 st.info("Run the pipeline to load STR data for board report generation.")
+
+            # ── All-Audience Insight Summary ─────────────────────────────────
+            if not df_insights.empty:
+                st.markdown("""
+                <div style="margin-top:20px;margin-bottom:12px;">
+                  <div style="font-size:11px;font-weight:800;text-transform:uppercase;
+                              letter-spacing:.10em;color:#0F172A;">STAKEHOLDER INTELLIGENCE — ALL AUDIENCES</div>
+                  <div style="font-size:11px;color:#64748B;margin-top:2px;">
+                    Top priority insight for each stakeholder group</div>
+                </div>
+                """, unsafe_allow_html=True)
+                _BR_AUDS = [
+                    ("dmo",      "🏢 DMO / TBID Board",    "#0891B2"),
+                    ("city",     "🏛 City of Dana Point",   "#4A6FA5"),
+                    ("visitor",  "✈️ Visitors",             "#F59E0B"),
+                    ("resident", "🏡 Residents",            "#6A4F8A"),
+                    ("cross",    "🔀 Hidden Signal",        "#EF4444"),
+                ]
+                for _baud, _blab, _bclr in _BR_AUDS:
+                    _bdf = df_insights[df_insights["audience"] == _baud].sort_values("priority")
+                    if _bdf.empty:
+                        continue
+                    _br = _bdf.iloc[0]
+                    _bhl = str(_br.get("headline", "") or "").strip()
+                    _bbd = str(_br.get("body", "") or "").strip()
+                    _bcat = str(_br.get("category", "")).replace("_", " ").title()
+                    # First 2 sentences
+                    _bdot = _bbd.find(". ", 60)
+                    _bbd2_end = _bdot + 1 if 0 < _bdot < 350 else 300
+                    _bbd_short = _bbd[:_bbd2_end].rstrip() + ("…" if len(_bbd) > _bbd2_end else "")
+                    st.markdown(f"""
+                    <div style="background:#FAFAFA;border-left:4px solid {_bclr};border-radius:0 6px 6px 0;
+                                padding:12px 16px;margin-bottom:10px;">
+                      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+                        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                                    color:{_bclr};">{_blab}</div>
+                        <div style="font-size:9.5px;color:#94A3B8;padding:2px 8px;border:1px solid #E2E8F0;
+                                    border-radius:99px;">{_bcat}</div>
+                      </div>
+                      <div style="font-size:13px;font-weight:700;color:#0F172A;margin:6px 0 4px;line-height:1.45;">{_bhl[:120]}{'…' if len(_bhl)>120 else ''}</div>
+                      <div style="font-size:12px;color:#475569;line-height:1.6;">{_bbd_short}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
             _dl_col, _sp_col = st.columns([1, 3])
@@ -10928,12 +11017,38 @@ with tab_fo:
         AUDIENCE_CONFIG.items(), aud_tabs
     ):
         with aud_tab:
-            st.markdown(
-                f'<div style="font-size:12px;opacity:0.55;margin-bottom:16px;">{subtitle}</div>',
-                unsafe_allow_html=True,
-            )
-
             df_aud = df_insights_all[df_insights_all["audience"] == audience] if not df_insights_all.empty else pd.DataFrame()
+
+            # Top-priority summary card for this audience
+            if not df_aud.empty:
+                _top_aud = df_aud.sort_values("priority").iloc[0]
+                _top_hl  = str(_top_aud.get("headline", "") or "").strip()
+                _top_bd  = str(_top_aud.get("body", "") or "").strip()
+                # First 2 sentences
+                _tdot    = _top_bd.find(". ", 60)
+                _top_bd_s = _top_bd[:_tdot+1 if 0 < _tdot < 350 else 320].rstrip() + ("…" if len(_top_bd) > 320 and _tdot < 0 else "")
+                _top_cat = str(_top_aud.get("category","")).replace("_"," ").title()
+                _top_hor = int(_top_aud.get("horizon_days", 30) or 30)
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,rgba(8,145,178,0.06),rgba(255,255,255,0));
+                            border:1px solid rgba(8,145,178,0.18);border-left:4px solid {color};
+                            border-radius:8px;padding:16px 20px;margin-bottom:16px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;
+                              flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+                    <div style="font-size:10px;font-weight:800;text-transform:uppercase;
+                                letter-spacing:.10em;color:{color};">⭐ TOP PRIORITY — {label}</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                      <span style="font-size:9.5px;color:#64748B;padding:2px 8px;border:1px solid #E2E8F0;border-radius:99px;">{_top_cat}</span>
+                      <span style="font-size:9.5px;color:#64748B;padding:2px 8px;border:1px solid #E2E8F0;border-radius:99px;">⏱ {_top_hor}d horizon</span>
+                    </div>
+                  </div>
+                  <div style="font-size:14px;font-weight:700;color:#0F172A;line-height:1.45;margin-bottom:8px;">{_top_hl[:150]}{'…' if len(_top_hl)>150 else ''}</div>
+                  <div style="font-size:12.5px;color:#475569;line-height:1.65;">{_top_bd_s}</div>
+                  <div style="font-size:11px;color:#94A3B8;margin-top:8px;">{subtitle}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div style="font-size:12px;opacity:0.55;margin-bottom:16px;">{subtitle}</div>', unsafe_allow_html=True)
 
             if df_aud.empty:
                 st.markdown(empty_state(
