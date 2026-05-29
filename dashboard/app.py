@@ -518,6 +518,17 @@ Group business is a TOP priority for Visit Dana Point and the TBID board. Key fa
 - **TBID impact:** Est. $3.6M–$4.6M annual TBID from group demand at current benchmark share
 - **TOT impact:** Est. $28.8M–$36.8M annual TOT from group demand at current benchmark share
 
+**National benchmarks (U.S. Travel Association 2024 — in `us_travel_*` tables):**
+- Group travel = **$319B annual economic impact**, **3M+ jobs** across 4 segments:
+  - Meetings & Events: $126B (82% of 2019; projected to grow faster than transient through 2025)
+  - Live Spectator Events: $102B (concerts, festivals, pro sports — surpassed pre-pandemic)
+  - Participatory Sports: $52B (recession-resistant; leads hotel demand in secondary markets)
+  - Leisure Group: $39B (motorcoach, organized tours; critical for secondary destinations)
+- Business travelers = **20% of volume, 60% of hotel revenue** — most revenue-efficient segment
+- SMERF groups book **8–48 weeks ahead**, typical LOS **2–5 nights**, fill shoulder seasons
+- Family travelers: LOS **3–7 nights**, book **8–24 weeks ahead** — high total spend per stay
+- Luxury travelers: LOS **2–7 nights**, book **8–24 weeks ahead**, price rarely the deciding factor
+
 **Group data available in the brain:**
 - `group_intelligence` — Daily-updated benchmark table: group-primary room count, TBID/TOT projections, \
   displacement risk assessment, TBID uplift per +5pp shift, scaffold for STR group data
@@ -658,6 +669,18 @@ CRITICAL: NEVER present Zartico as current data. Use only for historical trend c
 - `data_correlation_matrix` — Statistical Pearson correlations between data sources: metric_a, metric_b, \
   pearson_r, lag_weeks, sample_size, p_value_approx, is_significant (1=significant at p<0.10), interpretation. \
   Current findings: Google Trends → OCC (r=varies, 2-3 week lead); gas price → OCC (r=+0.36, co-seasonal).
+
+**U.S. Travel Association National Benchmark Tables (Layer 2 — Context):**
+- `us_travel_group_segments` — 4 group travel segments + total: spend_billion_usd, jobs_supported, \
+  pct_recovery_vs_2019. Segments: meetings_events ($126B), live_spectator ($102B), \
+  participatory_sports ($52B), leisure_group ($39B), total_group ($319B, 3M jobs). Annual.
+- `us_travel_business_travel` — Business travel totals: total_business ($312B, 85% recovery), \
+  transient_business ($186B, 87%), meetings_events ($126B, 82%). pct_total_lodging_rev=60%.
+- `us_travel_traveler_types` — 10 traveler type benchmarks: traveler_type, primary_motivation, \
+  booking_window_weeks_low/high, typical_los_nights_low/high, top_priority_1-3, \
+  revenue_contribution (low/medium/high/highest), seasonal_pattern, booking_lead_days.
+- `us_travel_national_kpis` — National KPI series: metric_name, metric_value, metric_unit, \
+  vs_prior_year_pct, vs_2019_pct. Covers total travel spending, recovery rates, hotel revenue shares.
 
 **Group Travel Intelligence Tables (2026-05-29):**
 - `group_intelligence` — Daily benchmark table for group demand analysis. Columns: benchmark_date, \
@@ -4449,6 +4472,30 @@ def load_group_intelligence() -> pd.DataFrame:
     )
 
 
+@st.cache_data(ttl=3600)
+def load_us_travel_group_segments() -> pd.DataFrame:
+    return _sql(
+        "SELECT * FROM us_travel_group_segments ORDER BY report_year DESC, spend_billion_usd DESC",
+        "load_us_travel_group_segments",
+    )
+
+
+@st.cache_data(ttl=3600)
+def load_us_travel_business_travel() -> pd.DataFrame:
+    return _sql(
+        "SELECT * FROM us_travel_business_travel ORDER BY report_year DESC",
+        "load_us_travel_business_travel",
+    )
+
+
+@st.cache_data(ttl=3600)
+def load_us_travel_traveler_types() -> pd.DataFrame:
+    return _sql(
+        "SELECT * FROM us_travel_traveler_types ORDER BY report_year DESC, traveler_type",
+        "load_us_travel_traveler_types",
+    )
+
+
 # ── Visit California state context loaders ───────────────────────────────────
 
 @st.cache_data(ttl=3600)
@@ -7066,6 +7113,10 @@ df_cs_snap  = load_costar_snapshot()
 df_cs_pipe  = load_costar_pipeline()
 df_cs_chain = load_costar_chain()
 df_cs_comp  = load_costar_compset()
+# U.S. Travel Association national benchmarks
+df_ust_segments  = load_us_travel_group_segments()
+df_ust_biz       = load_us_travel_business_travel()
+df_ust_types     = load_us_travel_traveler_types()
 # Datafy visitor economy
 df_dfy_ov      = load_datafy_overview()
 df_dfy_dma     = load_datafy_dma()
@@ -16604,6 +16655,94 @@ with tab_cs:
                                 ),
                                 unsafe_allow_html=True,
                             )
+
+                # ── U.S. Travel National Benchmarks ──────────────────────────────
+                if not df_ust_segments.empty or not df_ust_biz.empty:
+                    st.markdown("**National Group Travel Benchmarks** *(U.S. Travel Association 2024)*")
+
+                    if not df_ust_segments.empty:
+                        # Filter out the total row for the segment chart
+                        segs = df_ust_segments[
+                            df_ust_segments["segment"] != "total_group"
+                        ].copy()
+                        segs["segment_label"] = segs["segment"].str.replace("_", " ").str.title()
+                        segs_sorted = segs.sort_values("spend_billion_usd", ascending=False)
+
+                        SEGMENT_COLORS = {
+                            "Meetings Events":      "#2563EB",
+                            "Live Spectator":       "#7C3AED",
+                            "Participatory Sports": "#0891B2",
+                            "Leisure Group":        "#059669",
+                        }
+                        seg_colors = [
+                            SEGMENT_COLORS.get(lbl, "#64748B")
+                            for lbl in segs_sorted["segment_label"]
+                        ]
+
+                        fig_ust = go.Figure(go.Bar(
+                            x=segs_sorted["segment_label"].tolist(),
+                            y=segs_sorted["spend_billion_usd"].tolist(),
+                            marker_color=seg_colors,
+                            text=[f"${v:.0f}B" for v in segs_sorted["spend_billion_usd"]],
+                            textposition="outside",
+                            hovertemplate="<b>%{x}</b><br>$%{y:.0f}B annual spending<extra></extra>",
+                        ))
+                        fig_ust.update_layout(
+                            title="U.S. Group Travel Segments — Annual Economic Impact ($B)",
+                            xaxis_title=None,
+                            yaxis_title="Spend ($B)",
+                            plot_bgcolor="rgba(0,0,0,0)",
+                            paper_bgcolor="rgba(0,0,0,0)",
+                            font=dict(color="#CBD5E1", size=11),
+                            margin=dict(t=40, b=20, l=0, r=0),
+                            showlegend=False,
+                            height=260,
+                        )
+                        fig_ust.update_xaxes(showgrid=False, color="#94A3B8")
+                        fig_ust.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)", color="#94A3B8")
+                        st.plotly_chart(fig_ust, use_container_width=True)
+
+                    # Business travel stat callout
+                    if not df_ust_biz.empty:
+                        biz_total = df_ust_biz[df_ust_biz["category"] == "total_business"]
+                        if not biz_total.empty:
+                            _biz_spend = float(biz_total.iloc[0].get("spend_billion_usd") or 312)
+                            _biz_recov = float(biz_total.iloc[0].get("pct_recovery_vs_2019") or 85)
+                            _biz_lodg  = float(biz_total.iloc[0].get("pct_total_lodging_rev") or 60)
+                            st.markdown(f"""
+                            <div style="display:flex;gap:12px;margin:8px 0;">
+                              <div style="flex:1;background:rgba(37,99,235,0.1);border-radius:6px;
+                                          padding:10px 14px;text-align:center;">
+                                <div style="color:#93C5FD;font-size:10px;font-weight:600;
+                                            text-transform:uppercase;letter-spacing:.05em;">National Business Travel</div>
+                                <div style="color:#EFF6FF;font-size:20px;font-weight:700;">${_biz_spend:.0f}B</div>
+                                <div style="color:#64748B;font-size:10px;">{_biz_recov:.0f}% of 2019</div>
+                              </div>
+                              <div style="flex:1;background:rgba(37,99,235,0.1);border-radius:6px;
+                                          padding:10px 14px;text-align:center;">
+                                <div style="color:#93C5FD;font-size:10px;font-weight:600;
+                                            text-transform:uppercase;letter-spacing:.05em;">Biz Traveler Hotel Rev Share</div>
+                                <div style="color:#EFF6FF;font-size:20px;font-weight:700;">{_biz_lodg:.0f}%</div>
+                                <div style="color:#64748B;font-size:10px;">of hotel revenue (20% of volume)</div>
+                              </div>
+                              <div style="flex:1;background:rgba(37,99,235,0.1);border-radius:6px;
+                                          padding:10px 14px;text-align:center;">
+                                <div style="color:#93C5FD;font-size:10px;font-weight:600;
+                                            text-transform:uppercase;letter-spacing:.05em;">Total Group Travel</div>
+                                <div style="color:#EFF6FF;font-size:20px;font-weight:700;">$319B</div>
+                                <div style="color:#64748B;font-size:10px;">3M+ U.S. jobs supported</div>
+                              </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+
+                # Traveler type booking window reference
+                if not df_ust_types.empty:
+                    with st.expander("📋 Traveler Type Benchmarks (U.S. Travel 2024)", expanded=False):
+                        _type_cols = ["traveler_type", "primary_motivation", "booking_window_weeks_high",
+                                      "typical_los_nights_high", "seasonal_pattern", "revenue_contribution"]
+                        _type_disp = df_ust_types[[c for c in _type_cols if c in df_ust_types.columns]].copy()
+                        _type_disp.columns = [c.replace("_", " ").title() for c in _type_disp.columns]
+                        st.dataframe(_type_disp, use_container_width=True, hide_index=True)
 
                 # STR group data scaffold
                 if not g_str_avail:

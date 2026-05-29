@@ -1573,6 +1573,206 @@ def gen_cross_compression_daytrip(comp: pd.DataFrame, overview: dict) -> dict:
     )
 
 
+def load_us_travel_benchmarks(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Load US Travel national benchmarks for group and business travel."""
+    result: dict[str, Any] = {}
+    try:
+        # Group segments
+        cur = conn.execute(
+            "SELECT segment, spend_billion_usd, jobs_supported, pct_recovery_vs_2019 "
+            "FROM us_travel_group_segments WHERE report_year = "
+            "(SELECT MAX(report_year) FROM us_travel_group_segments)"
+        )
+        cols = [d[0] for d in cur.description]
+        for row in cur.fetchall():
+            r = dict(zip(cols, row))
+            result[f"group_{r['segment']}_spend_b"] = r["spend_billion_usd"]
+            if r["segment"] == "total_group":
+                result["group_total_jobs_M"] = (r["jobs_supported"] or 0) / 1_000_000
+                result["group_total_spend_b"] = r["spend_billion_usd"]
+
+        # Business travel
+        cur2 = conn.execute(
+            "SELECT category, spend_billion_usd, pct_recovery_vs_2019, pct_total_lodging_rev "
+            "FROM us_travel_business_travel WHERE report_year = "
+            "(SELECT MAX(report_year) FROM us_travel_business_travel)"
+        )
+        cols2 = [d[0] for d in cur2.description]
+        for row in cur2.fetchall():
+            r = dict(zip(cols2, row))
+            result[f"biz_{r['category']}_spend_b"] = r["spend_billion_usd"]
+            result[f"biz_{r['category']}_recovery"] = r["pct_recovery_vs_2019"]
+            if r["category"] == "total_business":
+                result["biz_pct_lodging_rev"] = r["pct_total_lodging_rev"]
+
+        # Traveler type benchmarks for group/SMERF
+        cur3 = conn.execute(
+            "SELECT traveler_type, booking_window_weeks_low, booking_window_weeks_high, "
+            "typical_los_nights_low, typical_los_nights_high, seasonal_pattern, revenue_contribution "
+            "FROM us_travel_traveler_types WHERE report_year = "
+            "(SELECT MAX(report_year) FROM us_travel_traveler_types) "
+            "AND traveler_type IN ('group_smerf','business','leisure','family')"
+        )
+        cols3 = [d[0] for d in cur3.description]
+        for row in cur3.fetchall():
+            r = dict(zip(cols3, row))
+            t = r["traveler_type"]
+            result[f"type_{t}_bk_wk_high"] = r["booking_window_weeks_high"]
+            result[f"type_{t}_los_high"] = r["typical_los_nights_high"]
+            result[f"type_{t}_seasonal"] = r["seasonal_pattern"]
+
+    except Exception:
+        pass
+    return result
+
+
+def gen_dmo_group_national_context(
+    us_travel: dict[str, Any],
+    group: dict[str, Any],
+    kpi: pd.DataFrame,
+) -> dict:
+    """
+    Hidden signal: Dana Point group opportunity sized against US Travel national benchmarks.
+    $319B total group travel nationally, $126B in meetings alone — sets the macro context
+    for VDP's local group strategy and makes the TBID case in national terms.
+    """
+    if not us_travel or not group:
+        return {}
+
+    total_group_b = us_travel.get("group_total_spend_b", 319)
+    meetings_b    = us_travel.get("group_meetings_events_spend_b", 126)
+    sports_b      = us_travel.get("group_participatory_sports_spend_b", 52)
+    spectator_b   = us_travel.get("group_live_spectator_spend_b", 102)
+    jobs_m        = us_travel.get("group_total_jobs_M", 3.0)
+    bk_wk_high    = us_travel.get("type_group_smerf_bk_wk_high", 48)
+    smerf_seasonal = us_travel.get("type_group_smerf_seasonal", "shoulder")
+
+    tbid_low   = group.get("estimated_group_tbid_rev_low", 0)
+    tbid_high  = group.get("estimated_group_tbid_rev_high", 0)
+    uplift     = group.get("tbid_uplift_per_5pp_shift", 0)
+
+    biz_recovery = us_travel.get("biz_meetings_events_recovery", 82)
+    biz_pct_lodg = us_travel.get("biz_pct_lodging_rev", 60)
+
+    avg_adr = kpi["adr"].tail(30).mean() if not kpi.empty else 0
+
+    headline = (
+        f"HIDDEN OPPORTUNITY: National group travel = ${total_group_b:.0f}B/yr ({jobs_m:.0f}M jobs) — "
+        f"meetings alone ${meetings_b:.0f}B, {int(biz_recovery)}% recovered from 2019. "
+        f"Dana Point est. group TBID: ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M/yr"
+    )
+    body = (
+        f"U.S. Travel Association benchmark: group travel generates ${total_group_b:.0f}B annually "
+        f"across 4 segments — meetings & events (${meetings_b:.0f}B), live spectator (${spectator_b:.0f}B), "
+        f"participatory sports (${sports_b:.0f}B), and leisure group travel. "
+        f"Business travelers represent just 20% of travel volume but 60% of hotel revenue — "
+        f"the most revenue-efficient segment in any destination's mix. "
+        f"Meetings & business events recovered to {int(biz_recovery)}% of 2019 levels in 2024, "
+        f"projected to grow faster than transient travel through 2025. "
+        f"SMERF groups book {bk_wk_high} weeks ahead — targeting them now fills "
+        f"Q1/Q4 2026 shoulder season when Dana Point ADR runs 25-30% below peak. "
+        f"Dana Point estimated group TBID contribution: ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M/yr. "
+        f"Each +5pp group mix shift adds ~${uplift/1000:.0f}K annual TBID. "
+        f"Current STR ADR ${avg_adr:.0f} — group negotiated rate est. ${avg_adr*0.82:.0f}, "
+        f"still generating TBID at 100% margin vs. empty rooms."
+        + _5wh(
+            who="TBID board, VDP director of sales, hotel GMs",
+            what=f"National group travel ${total_group_b:.0f}B benchmark; Dana Point TBID opportunity ${tbid_low/1e6:.1f}M-${tbid_high/1e6:.1f}M/yr",
+            when=f"Act now — SMERF/group booking window is {bk_wk_high} weeks; Q4 2026 shoulder needs group sales now",
+            where="Dana Point upper-upscale and upscale hotels with meeting space (3,098 group-primary rooms)",
+            why="Group demand fills shoulder season vacancies with TBID-generating room revenue at 100% margin above empty",
+            how="Commission group RFP package for visitdanapoint.com. Target: 3 SMERF bookings per quarter in Q1/Q4. "
+                "Track progress against $721K TBID uplift target per +5pp group mix shift.",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=1, horizon_days=180,
+        data_sources="us_travel_group_segments,us_travel_business_travel,group_intelligence,kpi_daily_summary",
+        metric_basis={
+            "national_group_travel_spend_B": total_group_b,
+            "national_meetings_events_B": meetings_b,
+            "national_group_jobs_M": jobs_m,
+            "meetings_recovery_pct": biz_recovery,
+            "biz_pct_hotel_revenue": biz_pct_lodg,
+            "dana_point_group_tbid_low_M": round(tbid_low / 1e6, 2),
+            "dana_point_group_tbid_high_M": round(tbid_high / 1e6, 2),
+            "smerf_booking_window_weeks": bk_wk_high,
+        },
+    )
+
+
+def gen_cross_traveler_type_mix(
+    us_travel: dict[str, Any],
+    overview: dict[str, Any],
+    kpi: pd.DataFrame,
+) -> dict:
+    """
+    HIDDEN GAP: Dana Point visitor mix vs. national traveler type benchmarks.
+    Datafy shows avg LOS, overnight %, day-trip %; US Travel shows SMERF LOS=2-5nts,
+    family LOS=3-7nts, business LOS=1-3nts. Gap analysis reveals which traveler types
+    are over- or under-indexed in Dana Point's current mix.
+    """
+    if not us_travel or not overview:
+        return {}
+
+    dp_avg_los = overview.get("avg_los", 2.0)
+    dp_overnight_pct = overview.get("overnight_pct", 0)
+
+    smerf_los_low  = 2.0
+    smerf_los_high = 5.0
+    family_los_high = us_travel.get("type_family_los_high", 7.0)
+    biz_los_high    = us_travel.get("type_business_los_high", 3.0)
+
+    # Gap: Dana Point LOS vs SMERF benchmark
+    smerf_los_mid = (smerf_los_low + smerf_los_high) / 2  # 3.5
+    los_gap = round(smerf_los_mid - dp_avg_los, 1)
+
+    avg_adr = kpi["adr"].tail(30).mean() if not kpi.empty else 288
+    # LOS extension revenue opportunity (each +1 night = roughly 1 additional night ADR)
+    los_rev_opp = round(los_gap * avg_adr * 1_000, 0) if los_gap > 0 else 0  # per 1000 group bookings
+
+    headline = (
+        f"HIDDEN GAP: Dana Point avg LOS {dp_avg_los:.1f} nights vs SMERF benchmark {smerf_los_mid:.1f} — "
+        f"+{los_gap:.1f} night LOS gap = ${los_rev_opp/1000:.0f}K additional rev per 1,000 group bookings"
+    )
+    body = (
+        f"U.S. Travel benchmark traveler LOS: SMERF groups {smerf_los_low:.0f}–{smerf_los_high:.0f} nights, "
+        f"families {family_los_high:.0f} nights, business {biz_los_high:.0f} nights. "
+        f"Dana Point current avg LOS: {dp_avg_los:.1f} nights (Datafy). "
+        f"The {los_gap:.1f}-night LOS gap between current mix and SMERF benchmark represents "
+        f"${los_rev_opp/1000:.0f}K additional ADR revenue per 1,000 group bookings "
+        f"(at current ${avg_adr:.0f} blended ADR). "
+        f"Closing the gap requires shifting from day-trip and 1-night leisure toward "
+        f"multi-night group, family, and bleisure bookings. "
+        f"SMERF and family groups are the highest-LOS segments — both book in advance and "
+        f"stay through weekdays, the exact gap in Dana Point's occupancy pattern. "
+        f"Overnight guest share: {dp_overnight_pct:.0f}% — national SMERF benchmark suggests "
+        f"80%+ overnight for group stays."
+        + _5wh(
+            who="VDP marketing team, hotel revenue managers",
+            what=f"LOS gap {los_gap:.1f} nights vs SMERF/family benchmark; ${los_rev_opp/1000:.0f}K/1K bookings opportunity",
+            when="Immediate — LOS improvement shows in STR monthly data within 90 days of group strategy launch",
+            where="All Dana Point hotel properties, especially resort and upper-upscale with multi-night packages",
+            why="Longer stays generate more ADR, more TBID, and more dining/retail spending per visitor",
+            how="Create minimum 2-night packages for SMERF groups. Require 3-night minimum for peak adjacent dates. "
+                "Track avg LOS trend monthly in STR data.",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=2, horizon_days=90,
+        data_sources="us_travel_traveler_types,datafy_overview_kpis,kpi_daily_summary",
+        metric_basis={
+            "dp_avg_los": dp_avg_los,
+            "smerf_los_benchmark_mid": smerf_los_mid,
+            "family_los_benchmark_high": family_los_high,
+            "los_gap_nights": los_gap,
+            "rev_opp_per_1k_bookings": los_rev_opp,
+            "current_adr": round(avg_adr, 2),
+            "dp_overnight_pct": dp_overnight_pct,
+        },
+    )
+
+
 def load_group_intelligence(conn: sqlite3.Connection) -> dict[str, Any]:
     """Load group_intelligence benchmark row for today (or most recent)."""
     result: dict[str, Any] = {}
@@ -2506,6 +2706,7 @@ def main() -> None:
         correlations = load_correlation_top(conn)
         parks_data   = load_state_parks_recent(conn)
         group_data   = load_group_intelligence(conn)
+        us_travel    = load_us_travel_benchmarks(conn)
 
         print(f"  KPI rows: {len(kpi_recent)} (90d) | {len(kpi_all)} (all)")
         print(f"  Compression quarters: {len(comp)}")
@@ -2519,6 +2720,7 @@ def main() -> None:
         print(f"  Demand signal: {demand_sig.get('current_score','N/A')}/100 ({demand_sig.get('direction','N/A')})")
         print(f"  Correlations: {len(correlations)} significant pairs")
         print(f"  Group intelligence: {'loaded' if group_data else 'no data'}")
+        print(f"  US Travel benchmarks: {len(us_travel)} keys")
 
         # ── Generate insights ────────────────────────────────────────────────
         generators = {
@@ -2567,8 +2769,10 @@ def main() -> None:
             # Group travel intelligence (2026-05-29)
             ("dmo",  "group_revenue_opportunity"):  lambda: gen_dmo_group_revenue_opportunity(group_data, kpi_recent),
             ("dmo",  "group_displacement_risk"):    lambda: gen_dmo_group_displacement_risk(comp, group_data, kpi_recent),
+            ("dmo",  "group_national_context"):     lambda: gen_dmo_group_national_context(us_travel, group_data, kpi_recent),
             ("city", "group_adr_premium"):          lambda: gen_city_group_adr_premium(group_data, kpi_recent),
             ("city", "group_demand_trend"):         lambda: gen_city_group_demand_trend(group_data, comp),
+            ("cross","traveler_type_mix"):          lambda: gen_cross_traveler_type_mix(us_travel, overview, kpi_recent),
         }
 
         inserted = 0
