@@ -3,3 +3,6 @@ dockerfile = "Dockerfile"
 
 [deploy]
 restartPolicyType = "on_failure"
+
+[[services]]
+port = 8501
