@@ -1651,14 +1651,14 @@ def gen_dmo_group_national_context(
     tbid_high  = group.get("estimated_group_tbid_rev_high", 0)
     uplift     = group.get("tbid_uplift_per_5pp_shift", 0)
 
-    biz_recovery = us_travel.get("biz_meetings_events_recovery", 82)
-    biz_pct_lodg = us_travel.get("biz_pct_lodging_rev", 60)
+    biz_recovery = float(us_travel.get("biz_meetings_events_recovery") or 82)
+    biz_pct_lodg = float(us_travel.get("biz_pct_lodging_rev") or 60)
 
     avg_adr = kpi["adr"].tail(30).mean() if not kpi.empty else 0
 
     headline = (
         f"HIDDEN OPPORTUNITY: National group travel = ${total_group_b:.0f}B/yr ({jobs_m:.0f}M jobs) — "
-        f"meetings alone ${meetings_b:.0f}B, {int(biz_recovery)}% recovered from 2019. "
+        f"meetings alone ${meetings_b:.0f}B, {biz_recovery:.0f}% recovered from 2019. "
         f"Dana Point est. group TBID: ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M/yr"
     )
     body = (
@@ -2059,6 +2059,170 @@ def gen_city_group_demand_trend(
             "benchmark_group_share_pct_low": int(share_low * 100),
             "benchmark_group_share_pct_high": int(share_high * 100),
             "annual_compression_days": compression_days,
+        },
+    )
+
+
+def gen_cross_group_event_synergy(
+    group: dict[str, Any],
+    us_travel: dict[str, Any],
+    comp: pd.DataFrame,
+) -> dict:
+    """
+    CROSS insight: Events calendar × group displacement risk × SMERF booking window.
+    Identifies which shoulder periods are optimal for group sales outreach tied to
+    known Dana Point events (surf contests, regattas, festivals).
+    """
+    if not group:
+        return {}
+
+    compression_days = int(group.get("compression_days_annual", 0) or 0)
+    tbid_uplift = float(group.get("tbid_uplift_per_5pp_shift", 720_788) or 720_788)
+    group_adr   = float(group.get("estimated_group_adr", 236) or 236)
+    market_adr  = float(group.get("market_blended_adr", 288) or 288)
+
+    # SMERF booking window: 8–48 weeks = 2–12 months in advance
+    # Shoulder months: Q1 (Jan–Mar) and Q4 (Oct–Dec) based on compression data
+    safe_quarters: list[str] = []
+    if not comp.empty and "quarter" in comp.columns and "days_above_80_occ" in comp.columns:
+        for _, row in comp.iterrows():
+            q_str = str(row.get("quarter", ""))
+            days_high = int(row.get("days_above_80_occ") or 0)
+            if days_high < 10 and q_str:
+                safe_quarters.append(q_str.split("-")[-1])  # e.g. "Q1"
+    safe_q_str = " and ".join(safe_quarters) if safe_quarters else "Q1 and Q4"
+
+    # Known Dana Point anchor events for group synergy
+    anchor_events = [
+        ("Doheny Blues Festival", "May", "spectator/leisure group"),
+        ("Ohana Fest", "Sep", "music spectator — HIGH OCC caution"),
+        ("Dana Point Tall Ships Festival", "Oct", "participatory/leisure — shoulder OK"),
+        ("Doheny Surf Classic", "Jun", "participatory sports group"),
+        ("Harbor Lantern Parade", "Dec", "leisure SMERF — shoulder fill"),
+    ]
+    event_lines = "; ".join(
+        f"{e[0]} ({e[1]}): {e[2]}" for e in anchor_events
+    )
+
+    headline = (
+        f"HIDDEN OPPORTUNITY — GROUP EVENT SYNERGY: "
+        f"SMERF buyers book 8–48 weeks out; targeting {safe_q_str} fills shoulder gaps "
+        f"worth +${tbid_uplift/1000:.0f}K TBID per +5pp group mix shift"
+    )
+    body = (
+        f"CROSS-SIGNAL: Dana Point events calendar × SMERF booking window × displacement risk "
+        f"reveals a precision group sales calendar. SMERF groups (Social/Military/Educational/"
+        f"Religious/Fraternal) book 8–48 weeks in advance — meaning today's outreach fills "
+        f"{safe_q_str} shoulder nights. With {compression_days} annual compression days "
+        f"concentrated in peak months, group blocks in {safe_q_str} carry ZERO displacement "
+        f"cost. Each 5pp shift in group mix generates +${tbid_uplift/1000:.0f}K TBID. "
+        f"Dana Point anchor events for pre/post-event group blocks: {event_lines}. "
+        f"Target corporate pre-event buyouts 8–12 weeks before summer surf events; "
+        f"SMERF groups 20–48 weeks before fall/winter festivals."
+        + _5wh(
+            who="VDP group sales team, hotel convention sales managers",
+            what=f"Group outreach targeting {safe_q_str} shoulder periods tied to anchor events",
+            when=f"Start outreach now: 8–48-week SMERF window fills {safe_q_str}",
+            where="SMERF market: regional organizations within 500-mile drive radius (LA, Phoenix, LV)",
+            why=f"${tbid_uplift/1000:.0f}K incremental TBID per 5pp shift + zero displacement risk in shoulder",
+            how="Create SMERF group rate program, build event-tied group packages on visitdanapoint.com, "
+                "contact regional CVBs, religious organizations, military bases (Camp Pendleton) for referrals.",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=2, horizon_days=180,
+        data_sources="group_intelligence,kpi_compression_quarterly,vdp_events,us_travel_traveler_types",
+        metric_basis={
+            "safe_quarters": safe_q_str,
+            "smerf_booking_window_weeks": "8–48",
+            "tbid_uplift_5pp": round(tbid_uplift),
+            "compression_days": compression_days,
+            "group_adr": round(group_adr, 2),
+            "market_adr": round(market_adr, 2),
+        },
+    )
+
+
+def gen_cross_traveler_mix_revenue_gap(
+    us_travel: dict[str, Any],
+    overview: dict[str, Any],
+    kpi: pd.DataFrame,
+) -> dict:
+    """
+    CROSS insight: US Travel traveler type revenue tiers × Dana Point Datafy demographics
+    × STR ADR. Are we capturing highest-revenue traveler types (business, luxury) or
+    over-indexed on medium-revenue leisure?
+    """
+    if not us_travel:
+        return {}
+
+    avg_adr = 0.0
+    if kpi is not None and not kpi.empty and "adr" in kpi.columns:
+        avg_adr = float(kpi["adr"].dropna().tail(30).mean() or 0)
+    if avg_adr == 0.0:
+        avg_adr = 288.50
+
+    # Datafy visitor profile signals
+    out_of_state_pct = float((overview or {}).get("out_of_state_vd_pct", 35) or 35)
+    avg_los = float((overview or {}).get("avg_los", 2.0) or 2.0)
+    total_trips = float((overview or {}).get("total_trips", 2_000_000) or 2_000_000)
+
+    # US Travel revenue tier benchmarks
+    # Business = highest (60% of hotel rev from 20% of volume = 5× average)
+    # Luxury / Incentive = highest
+    # Family = high (LOS 5-7 nights, peak season)
+    # Leisure = high
+    # SMERF = medium
+    # Solo / Adventure = medium
+    biz_multiplier = 5.0   # business traveler generates 5× average lodging spend
+    est_biz_adr = round(avg_adr * biz_multiplier / 3, 2)  # shorter LOS but higher daily rate
+
+    # Day-trip vs overnight mix signals potential revenue capture gap
+    overnight_pct = float((overview or {}).get("overnight_pct", 65) or 65)
+    daytrip_pct   = 100 - overnight_pct
+    # If >35% day trippers, we're under-capturing overnight high-revenue types
+    daytrip_gap_signal = daytrip_pct > 35
+
+    headline = (
+        f"HIDDEN GAP — TRAVELER MIX REVENUE LEAK: "
+        f"{daytrip_pct:.0f}% day-trip share and ${avg_adr:.0f} ADR suggest under-indexing on "
+        f"business and luxury segment — highest-revenue types per national benchmarks"
+    )
+    body = (
+        f"CROSS-SIGNAL: U.S. Travel traveler type benchmarks × Dana Point Datafy visitor "
+        f"profile × STR ADR reveal a revenue-mix gap. Nationally, business travelers "
+        f"represent 20% of hotel volume but 60% of revenue — {biz_multiplier:.0f}× the average "
+        f"leisure spend. Dana Point's current profile shows "
+        f"{daytrip_pct:.0f}% day-trip share and {out_of_state_pct:.0f}% out-of-state visitors "
+        f"with avg LOS {avg_los:.1f} nights vs. business benchmark of 2-3 nights at highest ADR. "
+        f"{'High day-trip share signals leisure/family dominance rather than business mix. ' if daytrip_gap_signal else ''}"
+        f"At ${avg_adr:.0f} current ADR, capturing 5pp more business/incentive travelers "
+        f"(moving from medium to highest revenue tier) could add est. "
+        f"${avg_adr * biz_multiplier * total_trips * 0.05 / 1e6:.0f}M in incremental room revenue. "
+        f"CoStar Upper Upscale (Waldorf Astoria, Ritz-Carlton) are the natural vehicles for "
+        f"this segment — VDP marketing investment should include corporate planner outreach."
+        + _5wh(
+            who="VDP marketing team, hotel revenue managers, corporate sales managers",
+            what=f"Shift 5pp of visitor mix from leisure/day-trip to business/incentive (highest revenue tier)",
+            when="Immediate: corporate planner outreach cycles are 6-18 months for large groups",
+            where="Target corporate travel managers in LA, OC, Phoenix, San Diego — drive markets within 3 hours",
+            why=f"Business travelers generate {biz_multiplier:.0f}× average leisure revenue; "
+                f"ADR premium alone = est. ${est_biz_adr:.0f} vs ${avg_adr:.0f} blended",
+            how="Commission a meeting-planner site-inspection program. Build corporate "
+                "mini-site on visitdanapoint.com with RFP submission form. Target CVB partnership "
+                "with DMAI/MPI (Meeting Professionals International) for exposure to planners.",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=2, horizon_days=365,
+        data_sources="us_travel_traveler_types,us_travel_business_travel,datafy_overview_kpis,kpi_daily_summary",
+        metric_basis={
+            "current_adr": round(avg_adr, 2),
+            "est_business_adr_premium": round(est_biz_adr, 2),
+            "out_of_state_pct": round(out_of_state_pct, 1),
+            "avg_los": round(avg_los, 1),
+            "daytrip_pct": round(daytrip_pct, 1),
+            "business_revenue_multiplier": biz_multiplier,
         },
     )
 
@@ -2773,6 +2937,8 @@ def main() -> None:
             ("city", "group_adr_premium"):          lambda: gen_city_group_adr_premium(group_data, kpi_recent),
             ("city", "group_demand_trend"):         lambda: gen_city_group_demand_trend(group_data, comp),
             ("cross","traveler_type_mix"):          lambda: gen_cross_traveler_type_mix(us_travel, overview, kpi_recent),
+            ("cross","group_event_synergy"):        lambda: gen_cross_group_event_synergy(group_data, us_travel, comp),
+            ("cross","traveler_mix_revenue_gap"):   lambda: gen_cross_traveler_mix_revenue_gap(us_travel, overview, kpi_recent),
         }
 
         inserted = 0
