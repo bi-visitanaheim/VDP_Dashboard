@@ -5462,6 +5462,42 @@ def build_custom_prompt(question: str, m: dict) -> str:
         f"User question: {question.strip()}"
     )
 
+
+@st.cache_data(ttl=3600)
+def fetch_vdp_website_context(pages: list[str] | None = None) -> str:
+    """Fetch text content from visitdanapoint.com pages to enrich AI context."""
+    import urllib.request
+    import html
+    import re
+
+    _DEFAULT_PAGES = [
+        "https://www.visitdanapoint.com",
+        "https://www.visitdanapoint.com/events",
+        "https://www.visitdanapoint.com/hotels",
+        "https://www.visitdanapoint.com/groups",
+    ]
+    target_pages = pages or _DEFAULT_PAGES
+    chunks: list[str] = []
+
+    for url in target_pages:
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "VDP-PULSE-Dashboard/1.0 (data enrichment)"},
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                raw = resp.read().decode("utf-8", errors="replace")
+            # Strip HTML tags, collapse whitespace
+            text = re.sub(r"<[^>]+>", " ", raw)
+            text = html.unescape(text)
+            text = re.sub(r"\s+", " ", text).strip()
+            # Keep first 2000 chars per page
+            chunks.append(f"[{url}]\n{text[:2000]}")
+        except Exception:
+            chunks.append(f"[{url}] — could not fetch")
+
+    return "\n\n".join(chunks)
+
 # ─── Local fallback (no API key) ─────────────────────────────────────────────
 
 def _build_visitor_econ_local_fallback(m: dict) -> str:
@@ -5600,16 +5636,16 @@ def local_fallback(key: str, m: dict) -> str:
             f"before summer compression auto-fills the calendar\n"
             f"3. **Fly-market rate positioning** — Premium OOS feeder markets (SLC, Dallas, NYC) "
             f"justify higher rate floors; current ADR is leaving revenue on the table\n\n"
-            f"*Connect an API key in the sidebar for live Claude AI analysis.*"
+            f"*AI analysis is available on this dashboard — contact your VDP administrator.*"
         ),
     }
     return d.get(
         key,
-        f"**VDP Snapshot** *(local mode)*\n\n"
+        f"**VDP Snapshot** *(offline mode)*\n\n"
         f"• RevPAR: **${m.get('revpar_30',0):.0f}** ({m.get('revpar_delta',0):+.1f}%)\n"
         f"• ADR: **${m.get('adr_30',0):.0f}** | Occupancy: **{m.get('occ_30',0):.1f}%**\n"
         f"• Est. TBID monthly: **${m.get('tbid_monthly',0):,.0f}**\n\n"
-        f"💡 Add your Anthropic API key in the sidebar (VDP Analyst section) for live analysis.",
+        f"AI analysis requires configuration — contact your VDP administrator.",
     )
 
 # ─── Claude streaming generator ───────────────────────────────────────────────
@@ -9851,11 +9887,11 @@ with tab_ov:
 
         # Preset quick prompts
         _OV_PROMPTS = [
-            ("📊 Today's Brief", "morning_brief"),
-            ("💹 RevPAR Trends", "revpar"),
-            ("📋 Board Points", "board"),
-            ("👥 Visitor Insights", "visitor_econ"),
-            ("🔍 Anomalies", "anomaly"),
+            ("📊 Today's Brief",   "morning_brief"),
+            ("💹 RevPAR Trends",   "revpar"),
+            ("📋 Board Points",    "board"),
+            ("👥 Visitor Insights","visitor_econ"),
+            ("🔍 Anomalies",       "anomaly"),
             ("📈 30-Day Forecast", "forecast"),
         ]
         _ai_btn_cols = st.columns(3)
@@ -9867,18 +9903,31 @@ with tab_ov:
                     st.session_state.ai_result = ""
                     st.session_state.ai_needs_call = True
 
+        # Website search toggle
+        _ov_use_website = st.checkbox(
+            "🌐 Include visitdanapoint.com context",
+            value=st.session_state.get("ov_use_website", False),
+            key="ov_use_website",
+            help="Fetches live content from the VDP website (events, hotels, groups pages) to enrich AI answers.",
+        )
+
         # Custom input
         _ov_ai_c1, _ov_ai_c2 = st.columns([5, 1])
         with _ov_ai_c1:
             _ov_custom_q = st.text_input(
                 "_ov_custom_q", label_visibility="collapsed",
-                placeholder="💬 Ask anything…",
+                placeholder="💬 Ask anything about Dana Point tourism…",
                 key="ov_main_ai_input",
             )
         with _ov_ai_c2:
             if st.button("⚡ Ask", type="primary", use_container_width=True, key="ov_main_ai_btn"):
                 if _ov_custom_q.strip():
-                    st.session_state.ai_current_prompt = build_custom_prompt(_ov_custom_q, m)
+                    _base_prompt = build_custom_prompt(_ov_custom_q, m)
+                    if _ov_use_website:
+                        with st.spinner("Fetching visitdanapoint.com…"):
+                            _web_ctx = fetch_vdp_website_context()
+                        _base_prompt += f"\n\n--- LIVE CONTENT FROM VISITDANAPOINT.COM ---\n{_web_ctx}"
+                    st.session_state.ai_current_prompt = _base_prompt
                     st.session_state.ai_prompt_label = f"💬 {_ov_custom_q.strip()[:40]}"
                     st.session_state.ai_result = ""
                     st.session_state.ai_needs_call = True
@@ -9905,7 +9954,7 @@ with tab_ov:
                     with st.chat_message("assistant", avatar="🌊"):
                         st.markdown(_ov_resp)
                     st.session_state.ai_result = _ov_resp
-                    st.info("💡 Add an API key in the sidebar to activate AI responses.")
+                    st.info("🤖 AI analysis is available — contact your VDP administrator to enable.")
                 st.session_state.ai_needs_call = False
             elif st.session_state.get("ai_result"):
                 with st.chat_message("assistant", avatar="🌊"):
@@ -16106,7 +16155,7 @@ with tab_cs:
                     )
                 del st.session_state["li_pending_prompt"]
             else:
-                st.info("💡 Add an API key in the sidebar (Anthropic, OpenAI, Google AI, or Perplexity) to activate Live Intelligence.")
+                st.info("🤖 Live AI Intelligence is available — contact your VDP administrator to enable.")
                 del st.session_state["li_pending_prompt"]
 
         # ── Demand Intelligence: Signal Index ─────────────────────────────────────
