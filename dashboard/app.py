@@ -46,6 +46,7 @@ from utils import (
     combine_social_followers, safe_execute_with_logging, format_metric_delta,
 )
 from components_coastal import render_coastal_intelligence
+from components_group import render_group_tab
 
 
 def md_to_html(text: str) -> str:
@@ -6365,7 +6366,7 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
     fig.update_xaxes(
         showgrid    = False,
         zeroline    = False,
-        tickfont    = dict(size=11, family=_font, color="#64748B"),
+        tickfont    = dict(size=12, family=_font, color="#94A3B8"),
         linecolor   = "rgba(255,255,255,0.10)",
         linewidth   = 1,
         showline    = True,
@@ -6373,14 +6374,14 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         ticklen     = 3,
         tickcolor   = "rgba(255,255,255,0.08)",
         automargin  = True,
-        tickangle   = 0,
+        tickangle   = -30,
     )
     fig.update_yaxes(
         gridcolor   = "rgba(255,255,255,0.04)",   # Linear-standard ultra-thin
         gridwidth   = 1,
         griddash    = "dot",
         zeroline    = False,
-        tickfont    = dict(size=11, family="'JetBrains Mono', " + _font, color="#7A9EB8"),
+        tickfont    = dict(size=12, family="'JetBrains Mono', " + _font, color="#94A3B8"),
         showline    = False,
         ticks       = "",
         automargin  = True,
@@ -6724,9 +6725,35 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
     if top_dma != "—": row1_items.append(_item("TOP FEEDER DMA", top_dma))
     if ig_val != "—": row1_items.append(_item("IG FOLLOWING", ig_val))
 
+    # Group KPIs for ticker
+    _grp_tbid_str = "—"; _grp_uplift_str = "—"; _grp_risk_str = "—"
+    try:
+        import sqlite3 as _sq3
+        _gconn = _sq3.connect(DB_PATH, timeout=5)
+        _gconn.row_factory = _sq3.Row
+        _grow = _gconn.execute(
+            "SELECT estimated_group_tbid_rev_low, estimated_group_tbid_rev_high, "
+            "tbid_uplift_per_5pp_shift, compression_days_annual "
+            "FROM group_intelligence ORDER BY benchmark_date DESC LIMIT 1"
+        ).fetchone()
+        _gconn.close()
+        if _grow:
+            _tlow = float(_grow["estimated_group_tbid_rev_low"] or 0)
+            _thigh = float(_grow["estimated_group_tbid_rev_high"] or 0)
+            _uplft = float(_grow["tbid_uplift_per_5pp_shift"] or 0)
+            _cdays = int(_grow["compression_days_annual"] or 0)
+            _grp_tbid_str   = f"${_tlow/1e6:.1f}M–${_thigh/1e6:.1f}M"
+            _grp_uplift_str = f"+${_uplft/1000:.0f}K/5pp"
+            _grp_risk_str   = "HIGH" if _cdays >= 30 else ("MOD" if _cdays >= 10 else "LOW")
+    except Exception:
+        pass
+
     row2_items = [
         _item("TBID BLEND", "1.25%"),
         _item("TOT RATE", "10%"),
+        _item("GROUP TBID EST", _grp_tbid_str),
+        _item("GROUP MIX UPLIFT", _grp_uplift_str),
+        _item("GROUP DISPLACE RISK", _grp_risk_str),
         _item("OHANA FEST ADR LIFT", "+$139"),
         _item("SPEND MULTIPLIER", "3.2×"),
         _item("OOS VISITORS", "68%"),
@@ -8628,9 +8655,9 @@ Active destination goals with current progress vs. target. Updated automatically
 
   /* ── Insights ── */
   .insight-block {{ border-left: 3px solid #21808D; padding: 8px 14px; margin-bottom: 10px; }}
-  .insight-cat {{ font-size: 8pt; color: #21808D; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }}
-  .insight-hl {{ font-size: 10pt; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; }}
-  .insight-body {{ font-size: 9.5pt; color: #475569; line-height: 1.55; }}
+  .insight-cat {{ font-size: 9pt; color: #21808D; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 2px; }}
+  .insight-hl {{ font-size: 12pt; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; }}
+  .insight-body {{ font-size: 11.5pt; color: #475569; line-height: 1.65; }}
 
   /* ── Table ── */
   table {{ width: 100%; border-collapse: collapse; font-size: 9.5pt; }}
@@ -9027,7 +9054,7 @@ if _requested_tab:
     except:
         pass
 
-tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
+tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_gt, tab_dl = st.tabs([
     "🏠 Today's Overview",
     "🏨 Hotel Trends",
     "🔮 What's Next",
@@ -9036,11 +9063,12 @@ tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs
     "🎉 Event Impact",
     "🏗️ New Competition",
     "📈 Market Intel",
+    "👥 Group & Travel",
     "🗄️ Data & Downloads",
 ])
 
 # If a tab was requested, inject JavaScript to auto-click it
-if _requested_tab_idx is not None and 0 <= _requested_tab_idx < 9:
+if _requested_tab_idx is not None and 0 <= _requested_tab_idx < 10:
     st.markdown(f"""
     <script>
     window.addEventListener('load', function() {{
@@ -16577,7 +16605,7 @@ with tab_cs:
                         for _, r in chain_latest.iterrows()
                     ]
                     fig_grp = go.Figure()
-                    fig_grp.add_trace(go_grp.Bar(
+                    fig_grp.add_trace(go.Bar(
                         x=chain_latest["chain_scale"].tolist(),
                         y=chain_latest["supply_rooms"].tolist(),
                         name="Supply Rooms",
@@ -16773,6 +16801,19 @@ with tab_cs:
         st.markdown("")
         render_coastal_intelligence(df_kpi)
 
+
+    # TAB: GROUP & TRAVELER INTELLIGENCE
+    # ══════════════════════════════════════════════════════════════════════════════
+with tab_gt:
+    _tab_controls("gt")
+    try:
+        render_group_tab(
+            ai_keys=_ai_keys if "_ai_keys" in dir() else {},
+            selected_model=st.session_state.get("selected_model", "claude"),
+        )
+    except Exception as _gte:
+        _logger.debug("group tab render error: %s", _gte)
+        st.error(f"Group & Travel tab error: {_gte}")
 
     # TAB 5 — DATA LOG
     # ══════════════════════════════════════════════════════════════════════════════

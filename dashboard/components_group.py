@@ -1,0 +1,972 @@
+"""
+components_group.py — Group & Traveler Intelligence tab for Dana Point PULSE.
+
+Renders the dedicated 👥 Group & Travel tab with 4 sub-tabs:
+  1. Group Strategy    — TBID opportunity, displacement heatmap, executive brief
+  2. Traveler Types    — radar chart, booking windows, LOS benchmarks
+  3. National Context  — $319B funnel, segment donut, recovery rates
+  4. AI Analyst        — pre-loaded group travel prompts
+"""
+
+from __future__ import annotations
+
+import sqlite3
+import os
+from typing import Optional
+
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+
+# ── DB path ──────────────────────────────────────────────────────────────────
+_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "analytics.sqlite")
+
+# ── Thresholds (named constants) ─────────────────────────────────────────────
+OCC_GROUP_SAFE_MAX  = 65.0   # below this: group blocks welcome, low displacement risk
+OCC_GROUP_RISK_MIN  = 80.0   # above this: group blocks displace higher-rate transient
+OCC_GROUP_WARN_MIN  = 70.0   # amber zone
+TBID_RATE           = 0.0125
+TOT_RATE            = 0.10
+GROUP_SHARE_LOW     = 0.25
+GROUP_SHARE_HIGH    = 0.32
+GROUP_ADR_DISCOUNT  = 0.18   # group negotiated rate ~18% below blended ADR
+SMERF_BOOKING_WINDOW_LOW  = 8   # weeks
+SMERF_BOOKING_WINDOW_HIGH = 48
+CACHE_TTL_GROUP     = 1800   # 30 min — semi-live group data
+CACHE_TTL_NATIONAL  = 3600   # 1 hr  — historical benchmarks
+
+_DARK_BG   = "rgba(0,0,0,0)"
+_GRID_CLR  = "rgba(148,163,184,0.15)"
+_FONT_CLR  = "#CBD5E1"
+_LABEL_CLR = "#94A3B8"
+
+_COLORWAY = [
+    "#0891B2",  # teal
+    "#F5B940",  # gold
+    "#10B981",  # green
+    "#A78BFA",  # purple
+    "#FB923C",  # orange
+    "#EF4444",  # red
+    "#38BDF8",  # sky
+    "#6EE7B7",  # seafoam
+]
+
+
+# ── Small utilities ───────────────────────────────────────────────────────────
+
+def _dark_fig(height: int = 320) -> go.Figure:
+    fig = go.Figure()
+    fig.update_layout(
+        plot_bgcolor  = _DARK_BG,
+        paper_bgcolor = _DARK_BG,
+        font          = dict(color=_FONT_CLR, size=11.5),
+        height        = height,
+        margin        = dict(l=14, r=14, t=48, b=14),
+        colorway      = _COLORWAY,
+        legend        = dict(
+            orientation="h", yanchor="bottom", y=1.04,
+            xanchor="left", x=0,
+            font=dict(size=11, color=_LABEL_CLR),
+            bgcolor="rgba(0,0,0,0)",
+        ),
+        hoverlabel    = dict(
+            bgcolor="rgba(20,50,80,0.96)",
+            bordercolor="rgba(0,212,200,0.60)",
+            font=dict(size=13, color="#EFF6FF"),
+        ),
+    )
+    fig.update_xaxes(showgrid=False, color=_LABEL_CLR)
+    fig.update_yaxes(showgrid=True, gridcolor=_GRID_CLR, color=_LABEL_CLR)
+    return fig
+
+
+def _metric_box(label: str, value: str, note: str = "", color: str = "#0891B2",
+                action: str = "") -> str:
+    action_html = (
+        f'<div style="margin-top:8px;padding:6px 10px;background:rgba(255,255,255,0.06);'
+        f'border-radius:4px;font-size:10.5px;color:#93C5FD;line-height:1.5;">'
+        f'<strong>Action:</strong> {action}</div>'
+    ) if action else ""
+    return (
+        f'<div style="background:rgba(255,255,255,0.04);border-top:3px solid {color};'
+        f'border-radius:8px;padding:14px 16px;text-align:center;">'
+        f'<div style="color:{color};font-size:9.5px;font-weight:700;text-transform:uppercase;'
+        f'letter-spacing:.08em;margin-bottom:4px;">{label}</div>'
+        f'<div style="color:#EFF6FF;font-size:24px;font-weight:800;line-height:1.1;">{value}</div>'
+        f'<div style="color:#64748B;font-size:10.5px;margin-top:4px;">{note}</div>'
+        f'{action_html}'
+        f'</div>'
+    )
+
+
+def _action_card(icon: str, headline: str, body: str, action: str,
+                 accent: str = "#0891B2") -> str:
+    return (
+        f'<div style="background:rgba(255,255,255,0.04);border-left:4px solid {accent};'
+        f'border-radius:8px;padding:14px 18px;margin-bottom:10px;">'
+        f'<div style="display:flex;align-items:flex-start;gap:10px;">'
+        f'<span style="font-size:22px;margin-top:2px;">{icon}</span>'
+        f'<div style="flex:1;">'
+        f'<div style="color:#EFF6FF;font-weight:700;font-size:13.5px;margin-bottom:4px;">{headline}</div>'
+        f'<div style="color:#94A3B8;font-size:12px;line-height:1.6;margin-bottom:8px;">{body}</div>'
+        f'<div style="background:rgba(0,0,0,0.25);border-radius:4px;padding:6px 10px;'
+        f'font-size:11px;color:{accent};font-weight:600;">→ {action}</div>'
+        f'</div></div></div>'
+    )
+
+
+# ── Data loaders (cached inside this module) ──────────────────────────────────
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_group_intel() -> dict:
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(
+            "SELECT * FROM group_intelligence ORDER BY benchmark_date DESC LIMIT 1"
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else {}
+    except Exception:
+        return {}
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_monthly_occ() -> pd.DataFrame:
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        df = pd.read_sql_query(
+            """
+            SELECT substr(as_of_date,1,7) AS month,
+                   avg(occ_pct) AS avg_occ,
+                   avg(adr)     AS avg_adr,
+                   avg(revpar)  AS avg_revpar
+            FROM kpi_daily_summary
+            WHERE as_of_date >= date('now','-18 months')
+            GROUP BY month
+            ORDER BY month
+            """,
+            conn,
+        )
+        conn.close()
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_NATIONAL)
+def _load_ust_segments() -> pd.DataFrame:
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        df = pd.read_sql_query("SELECT * FROM us_travel_group_segments", conn)
+        conn.close()
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_NATIONAL)
+def _load_ust_biz() -> pd.DataFrame:
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        df = pd.read_sql_query("SELECT * FROM us_travel_business_travel", conn)
+        conn.close()
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_NATIONAL)
+def _load_traveler_types() -> pd.DataFrame:
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        df = pd.read_sql_query(
+            "SELECT * FROM us_travel_traveler_types ORDER BY revenue_contribution DESC",
+            conn,
+        )
+        conn.close()
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_group_insights() -> pd.DataFrame:
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        df = pd.read_sql_query(
+            """
+            SELECT audience, category, headline, body, priority
+            FROM insights_daily
+            WHERE category LIKE '%group%'
+               OR category LIKE '%traveler%'
+               OR category = 'group_event_synergy'
+               OR category = 'traveler_mix_revenue_gap'
+            ORDER BY priority ASC
+            LIMIT 12
+            """,
+            conn,
+        )
+        conn.close()
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_social_summary() -> dict:
+    """Latest IG + FB social metrics for group audience reach context."""
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        conn.row_factory = sqlite3.Row
+        ig = conn.execute(
+            "SELECT followers, reach, impressions FROM later_ig_profile_growth "
+            "ORDER BY data_date DESC LIMIT 1"
+        ).fetchone()
+        fb = conn.execute(
+            "SELECT page_followers, reach FROM later_fb_profile_growth "
+            "ORDER BY data_date DESC LIMIT 1"
+        ).fetchone()
+        # IG recent engagement rate
+        eng = conn.execute(
+            "SELECT avg(engagement_rate) as avg_eng FROM later_ig_posts "
+            "WHERE posted_at >= date('now','-30 days')"
+        ).fetchone()
+        conn.close()
+        return {
+            "ig_followers":  int(ig["followers"]  or 0) if ig and ig["followers"]  else 0,
+            "fb_followers":  int(fb["page_followers"] or 0) if fb and fb["page_followers"] else 0,
+            "ig_reach":      int(ig["reach"]       or 0) if ig and ig["reach"]       else 0,
+            "ig_eng":        float(eng["avg_eng"]   or 0) if eng and eng["avg_eng"]   else 0.0,
+        }
+    except Exception:
+        return {"ig_followers": 0, "fb_followers": 0, "ig_reach": 0, "ig_eng": 0.0}
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_costar_chain() -> pd.DataFrame:
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        df = pd.read_sql_query(
+            """
+            SELECT chain_scale, supply_rooms, occupancy_pct, adr_usd, revpar_usd
+            FROM costar_chain_scale_breakdown
+            ORDER BY revpar_usd DESC
+            """,
+            conn,
+        )
+        conn.close()
+        return df
+    except Exception:
+        return pd.DataFrame()
+
+
+# ── Chart builders ────────────────────────────────────────────────────────────
+
+def _chart_tbid_bar(g: dict) -> go.Figure:
+    """Side-by-side TBID bar: current range vs group contribution vs +5pp uplift."""
+    tbid_low   = g.get("estimated_group_tbid_rev_low",  3_603_940) / 1e6
+    tbid_high  = g.get("estimated_group_tbid_rev_high", 4_613_043) / 1e6
+    uplift     = g.get("tbid_uplift_per_5pp_shift",      720_788)  / 1e6
+    tbid_mid   = (tbid_low + tbid_high) / 2
+
+    categories = ["Group TBID\n(Low Est.)", "Group TBID\n(High Est.)", "+5pp Mix\nUplift"]
+    values     = [tbid_low, tbid_high, uplift]
+    colors     = ["#0891B2", "#10B981", "#F5B940"]
+    text       = [f"${v:.2f}M" for v in values]
+
+    fig = _dark_fig(height=300)
+    fig.add_trace(go.Bar(
+        x=categories,
+        y=values,
+        marker_color=colors,
+        text=text,
+        textposition="outside",
+        textfont=dict(size=13, color="#EFF6FF"),
+        hovertemplate="<b>%{x}</b><br>$%{y:.2f}M annual TBID<extra></extra>",
+    ))
+    fig.update_layout(
+        title=dict(text="TBID Revenue Opportunity — Group Business", font=dict(size=13, color="#EFF6FF")),
+        yaxis_title="$M / Year",
+        yaxis_tickprefix="$",
+        yaxis_ticksuffix="M",
+        showlegend=False,
+    )
+    return fig
+
+
+def _chart_occ_heatmap(df_monthly: pd.DataFrame) -> go.Figure:
+    """Monthly occupancy with group-safe/risk color bands."""
+    if df_monthly.empty:
+        return _dark_fig()
+
+    months = df_monthly["month"].tolist()
+    occs   = df_monthly["avg_occ"].tolist()
+
+    colors = []
+    for occ in occs:
+        if occ >= OCC_GROUP_RISK_MIN:
+            colors.append("#EF4444")   # red — group displaces transient
+        elif occ >= OCC_GROUP_WARN_MIN:
+            colors.append("#F59E0B")   # amber — monitor
+        else:
+            colors.append("#10B981")   # green — group blocks welcome
+
+    fig = _dark_fig(height=300)
+    fig.add_trace(go.Bar(
+        x=months,
+        y=occs,
+        marker_color=colors,
+        text=[f"{v:.0f}%" for v in occs],
+        textposition="outside",
+        textfont=dict(size=10.5, color="#EFF6FF"),
+        hovertemplate="<b>%{x}</b><br>Avg Occ: %{y:.1f}%<extra></extra>",
+    ))
+    # Reference lines
+    for level, color, label in [
+        (OCC_GROUP_RISK_MIN, "#EF4444", "80% — group risk"),
+        (OCC_GROUP_WARN_MIN, "#F59E0B", "70% — monitor"),
+        (OCC_GROUP_SAFE_MAX, "#10B981", "65% — group safe"),
+    ]:
+        fig.add_hline(
+            y=level, line_dash="dot", line_color=color, line_width=1.5,
+            annotation_text=label,
+            annotation_font_size=9,
+            annotation_font_color=color,
+            annotation_position="right",
+        )
+    fig.update_layout(
+        title=dict(
+            text="Monthly Occupancy — Group Safety Calendar  🟢 Safe  🟡 Monitor  🔴 Displace",
+            font=dict(size=12.5, color="#EFF6FF"),
+        ),
+        yaxis_title="Avg Occupancy %",
+        yaxis_range=[0, 100],
+        showlegend=False,
+    )
+    return fig
+
+
+def _chart_segment_donut(df_segs: pd.DataFrame) -> go.Figure:
+    """National $319B group travel segment donut."""
+    segs = df_segs[df_segs["segment"] != "total_group"].copy()
+    if segs.empty:
+        return _dark_fig()
+
+    segs["label"] = segs["segment"].str.replace("_", " ").str.title()
+    segs = segs.sort_values("spend_billion_usd", ascending=False)
+
+    fig = _dark_fig(height=340)
+    fig.add_trace(go.Pie(
+        labels=segs["label"].tolist(),
+        values=segs["spend_billion_usd"].tolist(),
+        hole=0.52,
+        marker=dict(colors=_COLORWAY[:len(segs)],
+                    line=dict(color="rgba(0,0,0,0.4)", width=2)),
+        texttemplate="<b>%{label}</b><br>$%{value:.0f}B",
+        textposition="outside",
+        hovertemplate="<b>%{label}</b><br>$%{value:.0f}B · %{percent}<extra></extra>",
+        pull=[0.04] * len(segs),
+    ))
+    fig.update_layout(
+        title=dict(text="U.S. Group Travel — $319B National Segments", font=dict(size=13, color="#EFF6FF")),
+        annotations=[dict(
+            text="$319B<br><span style='font-size:10px'>National Total</span>",
+            x=0.5, y=0.5, font_size=15, showarrow=False,
+            font=dict(color="#EFF6FF"),
+        )],
+        showlegend=True,
+        legend=dict(orientation="v", x=1.0, y=0.5),
+    )
+    return fig
+
+
+def _chart_revenue_funnel(g: dict) -> go.Figure:
+    """Revenue funnel: $319B national → South OC market → Dana Point group → TBID."""
+    national_group  = 319.0   # $B
+    # South OC ~1.15B room revenue; group share midpoint
+    annual_rev      = g.get("estimated_annual_room_rev", 1_153_261_000) / 1e9
+    group_rev_mid   = annual_rev * ((GROUP_SHARE_LOW + GROUP_SHARE_HIGH) / 2)
+    tbid_est        = group_rev_mid * TBID_RATE
+
+    labels = [
+        "U.S. Group Travel ($319B)",
+        f"South OC Room Revenue (${annual_rev:.1f}B)",
+        f"Dana Point Est. Group Rev (${group_rev_mid*1e3:.0f}M)",
+        f"Group TBID Contribution (${tbid_est*1e3:.1f}M)",
+    ]
+    values = [national_group, annual_rev, group_rev_mid, tbid_est]
+
+    fig = _dark_fig(height=320)
+    fig.add_trace(go.Funnel(
+        y=labels,
+        x=values,
+        textposition="inside",
+        texttemplate="<b>%{x:.2f}</b>",
+        marker=dict(color=["#0891B2", "#10B981", "#F5B940", "#A78BFA"],
+                    line=dict(width=2, color="rgba(0,0,0,0.3)")),
+        connector=dict(line=dict(color="#334155", dash="dot", width=1)),
+        hovertemplate="<b>%{y}</b><extra></extra>",
+    ))
+    fig.update_layout(
+        title=dict(text="Group Revenue Funnel — National to Dana Point TBID", font=dict(size=13, color="#EFF6FF")),
+        funnelmode="stack",
+    )
+    return fig
+
+
+def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
+    """Radar/spider chart comparing 4 key traveler types on 5 dimensions."""
+    if df_types.empty:
+        return _dark_fig()
+
+    # Score map (normalize to 0–10)
+    rev_score = {"highest": 10, "high": 7.5, "medium": 5, "low": 2.5}
+    sea_score = {"year_round": 10, "shoulder": 6, "peak": 4, "winter": 3}
+
+    TARGET_TYPES = ["business", "smerf", "family", "leisure"]
+    subset = df_types[df_types["traveler_type"].isin(TARGET_TYPES)].copy()
+    if subset.empty:
+        subset = df_types.head(4)
+
+    dims = ["Revenue Tier", "LOS Score", "Booking Window", "Seasonal Flex", "Group Fit"]
+
+    def _scores(row) -> list[float]:
+        rev  = rev_score.get(str(row.get("revenue_contribution", "medium")).lower(), 5)
+        los  = min(float(row.get("typical_los_nights_high") or 3) / 7 * 10, 10)
+        bkw  = min(float(row.get("booking_window_weeks_high") or 4) / 48 * 10, 10)
+        sea  = sea_score.get(str(row.get("seasonal_pattern", "peak")).lower(), 5)
+        grp_fit = 8 if row.get("traveler_type") in ("smerf", "business") else 5
+        return [rev, los, bkw, sea, grp_fit]
+
+    colors = ["#0891B2", "#F5B940", "#10B981", "#A78BFA"]
+    fig = _dark_fig(height=380)
+
+    for i, (_, row) in enumerate(subset.iterrows()):
+        scores = _scores(row)
+        scores.append(scores[0])  # close polygon
+        fig.add_trace(go.Scatterpolar(
+            r=scores,
+            theta=dims + [dims[0]],
+            fill="toself",
+            fillcolor=colors[i % len(colors)].replace(")", ",0.15)").replace("rgb", "rgba"),
+            line=dict(color=colors[i % len(colors)], width=2),
+            name=str(row.get("traveler_type", "")).title(),
+            hovertemplate="<b>%{theta}</b><br>Score: %{r:.1f}<extra></extra>",
+        ))
+
+    fig.update_layout(
+        title=dict(text="Traveler Type Profile — 5-Dimension Comparison", font=dict(size=13, color="#EFF6FF")),
+        polar=dict(
+            bgcolor="rgba(0,0,0,0)",
+            radialaxis=dict(visible=True, range=[0, 10], color=_LABEL_CLR,
+                            gridcolor=_GRID_CLR, tickfont=dict(size=9)),
+            angularaxis=dict(color=_LABEL_CLR, gridcolor=_GRID_CLR,
+                             tickfont=dict(size=11.5)),
+        ),
+        showlegend=True,
+    )
+    return fig
+
+
+# ── Sub-tab renderers ─────────────────────────────────────────────────────────
+
+def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
+                           df_chain: pd.DataFrame, insights: pd.DataFrame,
+                           social: dict) -> None:
+    # ── Executive Brief ───────────────────────────────────────────────────────
+    tbid_low   = g.get("estimated_group_tbid_rev_low",  3_603_940)
+    tbid_high  = g.get("estimated_group_tbid_rev_high", 4_613_043)
+    uplift     = g.get("tbid_uplift_per_5pp_shift",      720_788)
+    compression = int(g.get("compression_days_annual", 0) or 0)
+    market_adr  = float(g.get("market_blended_adr", 288.50) or 288.50)
+    group_adr   = float(g.get("estimated_group_adr", 236.57) or 236.57)
+    adr_gap     = market_adr - group_adr
+
+    if compression >= 30:
+        risk_label, risk_color, risk_action = "HIGH", "#EF4444", "Target Q1/Q4 shoulder exclusively"
+    elif compression >= 10:
+        risk_label, risk_color, risk_action = "MODERATE", "#F59E0B", "Focus shoulder + midweek group blocks"
+    else:
+        risk_label, risk_color, risk_action = "LOW", "#22C55E", "Group blocks viable year-round"
+
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,rgba(8,145,178,0.12),rgba(16,185,129,0.06));
+                border:1px solid rgba(8,145,178,0.3);border-radius:12px;padding:20px 24px;
+                margin-bottom:18px;">
+      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                  letter-spacing:.1em;margin-bottom:10px;">EXECUTIVE BRIEF — GROUP BUSINESS CASE</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:14px;">
+        <div style="text-align:center;">
+          <div style="color:#EFF6FF;font-size:26px;font-weight:800;">${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M</div>
+          <div style="color:#93C5FD;font-size:10.5px;margin-top:2px;">Est. Annual Group TBID</div>
+          <div style="color:#64748B;font-size:9.5px;">25–32% demand share benchmark</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:{risk_color};font-size:26px;font-weight:800;">{risk_label}</div>
+          <div style="color:#93C5FD;font-size:10.5px;margin-top:2px;">Displacement Risk</div>
+          <div style="color:#64748B;font-size:9.5px;">{compression} compression days/yr</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:#F5B940;font-size:26px;font-weight:800;">+${uplift/1000:.0f}K/yr</div>
+          <div style="color:#93C5FD;font-size:10.5px;margin-top:2px;">TBID Uplift per +5pp</div>
+          <div style="color:#64748B;font-size:9.5px;">each 5pp shift in group mix</div>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,0.2);border-radius:6px;padding:10px 14px;">
+        <div style="color:#FCD34D;font-size:10px;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.05em;margin-bottom:4px;">TOP RECOMMENDATION</div>
+        <div style="color:#CBD5E1;font-size:12px;line-height:1.6;">
+          {risk_action}. Group ADR is estimated at <strong>${group_adr:.0f}</strong> vs.
+          <strong>${market_adr:.0f}</strong> blended market ADR — a
+          <strong>${adr_gap:.0f}/room/night gap</strong>. Shoulder-season group bookings
+          maximize TBID without displacing peak transient revenue.
+        </div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── KPI row ───────────────────────────────────────────────────────────────
+    total_rooms  = int(g.get("total_market_rooms", 5120) or 5120)
+    group_rooms  = int(g.get("group_primary_rooms", 3098) or 3098)
+    group_pct    = float(g.get("group_primary_pct", 0.605) or 0.605)
+
+    c1, c2, c3, c4 = st.columns(4)
+    for col, lbl, val, note, color, action in [
+        (c1, "Group-Capable Rooms", f"{group_rooms:,}", f"{group_pct*100:.0f}% of {total_rooms:,} market rooms",
+         "#0891B2", "Upper Upscale + Upscale carry highest group amenity density"),
+        (c2, "Est. Annual Group TBID", f"${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M",
+         "industry benchmark range", "#10B981",
+         "Each 1pp growth in group demand mix = +$144K TBID/yr"),
+        (c3, "TBID per +5pp Shift", f"+${uplift/1000:.0f}K/yr",
+         "incremental on group mix growth", "#F5B940",
+         "Set 5pp group mix growth as a 12-month TBID goal"),
+        (c4, "Displacement Risk", f"{risk_label}", f"{compression} compression days/yr",
+         risk_color, risk_action),
+    ]:
+        with col:
+            st.markdown(_metric_box(lbl, val, note, color, action), unsafe_allow_html=True)
+
+    st.markdown("<div style='margin:18px 0 8px;'></div>", unsafe_allow_html=True)
+
+    # ── Charts ────────────────────────────────────────────────────────────────
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.plotly_chart(_chart_tbid_bar(g), use_container_width=True, key="gt_tbid_bar")
+    with col_b:
+        st.plotly_chart(_chart_occ_heatmap(df_monthly), use_container_width=True, key="gt_occ_heat")
+
+    # ── Chain scale context ───────────────────────────────────────────────────
+    if not df_chain.empty:
+        _GROUP_SCALES = {"Upper Upscale", "Upscale"}
+        chain_s = df_chain.drop_duplicates("chain_scale").sort_values("revpar_usd", ascending=False)
+        colors  = ["#0891B2" if str(r.get("chain_scale", "")) in _GROUP_SCALES else "#475569"
+                   for _, r in chain_s.iterrows()]
+        fig_ch = _dark_fig(height=260)
+        fig_ch.add_trace(go.Bar(
+            x=chain_s["chain_scale"].tolist(),
+            y=chain_s["supply_rooms"].tolist(),
+            marker_color=colors,
+            text=[f"{int(v):,}" for v in chain_s["supply_rooms"]],
+            textposition="outside",
+            hovertemplate="<b>%{x}</b><br>Rooms: %{y:,}<br>RevPAR: $%{customdata:.0f}<extra></extra>",
+            customdata=chain_s["revpar_usd"].tolist(),
+        ))
+        fig_ch.update_layout(
+            title=dict(text="Dana Point Supply by Chain Scale — Blue = Group-Primary", font=dict(size=12.5, color="#EFF6FF")),
+            showlegend=False,
+            yaxis_title="Supply Rooms",
+        )
+        st.plotly_chart(fig_ch, use_container_width=True, key="gt_chain_bar")
+
+    # ── Social reach context ──────────────────────────────────────────────────
+    ig_f = social.get("ig_followers", 0)
+    fb_f = social.get("fb_followers", 0)
+    ig_r = social.get("ig_reach", 0)
+    ig_e = social.get("ig_eng", 0.0)
+    if ig_f or fb_f:
+        st.markdown("""
+        <div style="margin-top:6px;margin-bottom:4px;color:#93C5FD;font-size:10px;
+                    font-weight:700;text-transform:uppercase;letter-spacing:.06em;">
+        SOCIAL AUDIENCE — GROUP OUTREACH CHANNEL
+        </div>
+        """, unsafe_allow_html=True)
+        cols = st.columns(4)
+        for col, lbl, val, note, color in [
+            (cols[0], "Instagram Followers", f"{ig_f:,}" if ig_f else "–", "VDP @visitdanapoint", "#E1306C"),
+            (cols[1], "Facebook Followers",  f"{fb_f:,}" if fb_f else "–", "VDP Facebook Page",   "#1877F2"),
+            (cols[2], "IG Monthly Reach",    f"{ig_r:,}" if ig_r else "–", "unique accounts reached", "#A78BFA"),
+            (cols[3], "IG Engagement Rate",  f"{ig_e:.1f}%" if ig_e else "–", "30-day avg", "#10B981"),
+        ]:
+            with col:
+                st.markdown(_metric_box(lbl, val, note, color), unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
+
+    # ── Actionable insights ───────────────────────────────────────────────────
+    if not insights.empty:
+        st.markdown("""
+        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.06em;margin-bottom:10px;">ACTIONABLE INTELLIGENCE</div>
+        """, unsafe_allow_html=True)
+        for _, row in insights.iterrows():
+            pri = int(row.get("priority") or 5)
+            accent = "#0891B2" if pri <= 2 else ("#F59E0B" if pri <= 4 else "#64748B")
+            icon   = "🎯" if pri <= 2 else ("⚠️" if pri <= 4 else "ℹ️")
+            st.markdown(_action_card(
+                icon=icon,
+                headline=str(row.get("headline", ""))[:120],
+                body=str(row.get("body", ""))[:400],
+                action="Review and integrate into sales strategy",
+                accent=accent,
+            ), unsafe_allow_html=True)
+
+    # ── STR scaffold notice ───────────────────────────────────────────────────
+    if not g.get("str_group_data_available"):
+        st.markdown("""
+        <div style="background:rgba(245,158,11,0.06);border:1px dashed rgba(245,158,11,0.35);
+                    border-radius:8px;padding:14px 18px;margin-top:12px;">
+          <div style="color:#FCD34D;font-weight:700;font-size:11.5px;margin-bottom:6px;">
+            📋 STR GROUP-SEGMENT DATA — PENDING INTEGRATION
+          </div>
+          <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
+            When STR provides group-segment demand exports, this panel will auto-populate with:
+            <strong>group demand rooms</strong> · <strong>group ADR actuals</strong>
+            · <strong>SMERF vs. corporate mix</strong> · <strong>group vs. transient trend</strong>.<br>
+            To enable: save STR group export → <code>data/str/str_group_daily.xlsx</code>
+            → <code>python scripts/run_pipeline.py</code>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+def _render_traveler_types(df_types: pd.DataFrame) -> None:
+    if df_types.empty:
+        st.info("Traveler type data not loaded. Run `python scripts/run_pipeline.py`.")
+        return
+
+    st.markdown("""
+    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:16px 20px;
+                margin-bottom:16px;">
+      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                  letter-spacing:.08em;margin-bottom:6px;">WHY THIS MATTERS</div>
+      <div style="color:#CBD5E1;font-size:12.5px;line-height:1.7;">
+        Not all travelers are equal. Business travelers generate <strong>highest revenue</strong>
+        but represent only 20% of volume — they fund 60% of hotel revenue nationally.
+        SMERF groups (shoulder-season buyers) are the <em>lowest displacement risk</em> because
+        they book 8–48 weeks out into periods when transient demand is soft.
+        Knowing which type Dana Point over- or under-indexes tells us where to invest marketing dollars.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Radar chart
+    st.plotly_chart(_chart_traveler_radar(df_types), use_container_width=True, key="gt_radar")
+
+    st.markdown("<div style='margin:12px 0 6px;'></div>", unsafe_allow_html=True)
+
+    # Revenue contribution breakdown
+    rev_order = {"highest": 0, "high": 1, "medium": 2, "low": 3}
+    df_sorted = df_types.copy()
+    df_sorted["_order"] = df_sorted["revenue_contribution"].map(rev_order).fillna(9)
+    df_sorted = df_sorted.sort_values("_order")
+
+    st.markdown("""
+    <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                letter-spacing:.06em;margin-bottom:10px;">TRAVELER TYPE PROFILES — SORTED BY REVENUE CONTRIBUTION</div>
+    """, unsafe_allow_html=True)
+
+    for _, row in df_sorted.iterrows():
+        t_type  = str(row.get("traveler_type", "")).title()
+        rev     = str(row.get("revenue_contribution", "medium")).title()
+        los_h   = row.get("typical_los_nights_high", 3)
+        bkw_l   = row.get("booking_window_weeks_low", 1)
+        bkw_h   = row.get("booking_window_weeks_high", 4)
+        season  = str(row.get("seasonal_pattern", "year_round")).replace("_", " ").title()
+        motiv   = str(row.get("primary_motivation", "")).replace("_", " ").title()
+        group_s = str(row.get("group_size_typical", "")).replace("_", " ")
+
+        rev_colors = {"Highest": "#10B981", "High": "#0891B2", "Medium": "#F5B940", "Low": "#EF4444"}
+        rc = rev_colors.get(rev, "#64748B")
+
+        # Booking window relative to SMERF (8–48 wks) for group outreach tip
+        try:
+            bkw_h_int = int(bkw_h)
+        except Exception:
+            bkw_h_int = 4
+        if bkw_h_int >= 8:
+            group_tip = f"✅ Book {bkw_l}–{bkw_h} wks out — ideal for group sales outreach"
+        else:
+            group_tip = f"⚡ Short booking window ({bkw_l}–{bkw_h} wks) — last-minute fill strategy"
+
+        st.markdown(f"""
+        <div style="background:rgba(255,255,255,0.03);border-left:3px solid {rc};
+                    border-radius:6px;padding:12px 16px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+            <div>
+              <span style="color:#EFF6FF;font-weight:700;font-size:14px;">{t_type}</span>
+              <span style="color:{rc};font-size:10px;font-weight:700;text-transform:uppercase;
+                           letter-spacing:.06em;margin-left:10px;">{rev} Revenue</span>
+            </div>
+            <div style="color:#64748B;font-size:10.5px;">{season}</div>
+          </div>
+          <div style="color:#94A3B8;font-size:11.5px;margin-top:4px;">{motiv}</div>
+          <div style="display:flex;gap:24px;margin-top:8px;flex-wrap:wrap;">
+            <div><span style="color:#64748B;font-size:10px;">LOS up to </span>
+                 <span style="color:#CBD5E1;font-weight:600;font-size:11px;">{los_h} nights</span></div>
+            <div><span style="color:#64748B;font-size:10px;">Books </span>
+                 <span style="color:#CBD5E1;font-weight:600;font-size:11px;">{bkw_l}–{bkw_h} wks out</span></div>
+            {f'<div><span style="color:#64748B;font-size:10px;">Group size: </span><span style="color:#CBD5E1;font-weight:600;font-size:11px;">{group_s}</span></div>' if group_s else ''}
+          </div>
+          <div style="margin-top:8px;font-size:10.5px;color:#93C5FD;">{group_tip}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
+                              g: dict) -> None:
+    # National summary callout
+    total_group = 319
+    meetings_b  = 126
+    spectator_b = 102
+    sports_b    = 52
+    leisure_b   = 39
+    meetings_rec = 82   # % recovery vs 2019
+
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,rgba(8,145,178,0.10),rgba(167,139,250,0.06));
+                border:1px solid rgba(8,145,178,0.25);border-radius:12px;padding:18px 22px;
+                margin-bottom:16px;">
+      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                  letter-spacing:.1em;margin-bottom:10px;">U.S. GROUP TRAVEL — NATIONAL PICTURE</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
+        <div style="text-align:center;">
+          <div style="color:#EFF6FF;font-size:22px;font-weight:800;">${total_group}B</div>
+          <div style="color:#93C5FD;font-size:10px;">Total Group Travel</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:#10B981;font-size:22px;font-weight:800;">{meetings_rec}%</div>
+          <div style="color:#93C5FD;font-size:10px;">Meetings Recovery (2019)</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:#F5B940;font-size:22px;font-weight:800;">3M+</div>
+          <div style="color:#93C5FD;font-size:10px;">U.S. Jobs Supported</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="color:#A78BFA;font-size:22px;font-weight:800;">$188B</div>
+          <div style="color:#93C5FD;font-size:10px;">Meetings 2026 Projected</div>
+        </div>
+      </div>
+      <div style="color:#CBD5E1;font-size:12px;line-height:1.7;">
+        Meetings & events ($126B) are the largest group segment and at 82% recovery — still growing.
+        Live spectator sports ($102B) and participatory sports ($52B) are segments where
+        Dana Point can directly compete via surf events (Doheny), sailing regattas,
+        and ocean-sports tourism. Leisure group travel ($39B) is fully recovered.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        if not df_segs.empty:
+            st.plotly_chart(_chart_segment_donut(df_segs), use_container_width=True, key="gt_donut")
+    with col_b:
+        st.plotly_chart(_chart_revenue_funnel(g), use_container_width=True, key="gt_funnel")
+
+    # Business travel context
+    if not df_biz.empty:
+        biz_total = df_biz[df_biz["category"] == "total_business"]
+        if not biz_total.empty:
+            biz_s   = biz_total.iloc[0]
+            biz_sp  = float(biz_s.get("spend_billion_usd") or 312)
+            biz_rec = float(biz_s.get("pct_recovery_vs_2019") or 85)
+            biz_lod = float(biz_s.get("pct_total_lodging_rev") or 60)
+            st.markdown(f"""
+            <div style="background:rgba(8,145,178,0.07);border-radius:10px;padding:16px 20px;
+                        margin-top:14px;">
+              <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                          letter-spacing:.08em;margin-bottom:10px;">BUSINESS TRAVEL — HOTEL IMPACT</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+                <div style="text-align:center;">
+                  <div style="color:#EFF6FF;font-size:22px;font-weight:800;">${biz_sp:.0f}B</div>
+                  <div style="color:#64748B;font-size:10px;">National Business Travel Spend</div>
+                  <div style="color:#94A3B8;font-size:9.5px;">{biz_rec:.0f}% of 2019 recovery</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="color:#EFF6FF;font-size:22px;font-weight:800;">{biz_lod:.0f}%</div>
+                  <div style="color:#64748B;font-size:10px;">of Hotel Revenue</div>
+                  <div style="color:#94A3B8;font-size:9.5px;">from just 20% of travelers</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="color:#F5B940;font-size:22px;font-weight:800;">5×</div>
+                  <div style="color:#64748B;font-size:10px;">Revenue per Traveler</div>
+                  <div style="color:#94A3B8;font-size:9.5px;">vs. average leisure visitor</div>
+                </div>
+              </div>
+              <div style="margin-top:10px;background:rgba(0,0,0,0.15);border-radius:6px;
+                          padding:8px 12px;color:#CBD5E1;font-size:11.5px;line-height:1.6;">
+                <strong>Dana Point implication:</strong> Corporate meeting planners evaluating
+                South OC coastal venues represent the highest-value group segment. Waldorf Astoria
+                and Ritz-Carlton carry national brand recognition that opens doors to corporate
+                contracting. TBID investment in group sales missions targeting these planners
+                has the highest potential ROI.
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # Dana Point opportunities
+    st.markdown("""
+    <div style="margin-top:16px;">
+      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                  letter-spacing:.08em;margin-bottom:10px;">DANA POINT SEGMENT OPPORTUNITIES</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    opportunities = [
+        ("🏄", "Participatory Sports ($52B)", "#0891B2",
+         "Doheny surf events, sailing regattas, ocean sports tours target this fast-growing segment. "
+         "Dana Point's natural assets position it as a West Coast hub.",
+         "Develop 'Sports & Adventure' group package with participating hotels + TBID co-investment"),
+        ("🎪", "Meetings & Events ($126B)", "#10B981",
+         "82% recovery and growing. Waldorf Astoria and Ritz-Carlton can compete for corporate "
+         "board retreats, incentive travel, and high-end association events.",
+         "Launch group sales mission targeting corporate meeting planners in LA, San Diego, Phoenix"),
+        ("👥", "SMERF Groups ($39B leisure group)", "#F5B940",
+         "Social, Military, Educational, Religious, Fraternal — primary shoulder-season buyer. "
+         "Books 8–48 weeks out into Q1/Q4 when displacement risk is lowest.",
+         "Create SMERF rate program for Jan–Mar and Oct–Dec with dedicated group blocks"),
+    ]
+    for icon, title, accent, body, action in opportunities:
+        st.markdown(_action_card(icon, title, body, action, accent), unsafe_allow_html=True)
+
+
+def _render_ai_analyst(ai_keys: dict, selected_model: str) -> None:
+    """AI Analyst sub-tab with group travel pre-loaded prompts."""
+    GROUP_PROMPTS = [
+        ("🎯 TBID Opportunity",
+         "Based on our group intelligence data, what is the estimated TBID revenue opportunity "
+         "from growing group demand share by 5 percentage points, and which traveler segments "
+         "should we prioritize to achieve this with the least displacement risk?"),
+        ("📅 Shoulder Season Strategy",
+         "Analyze our occupancy pattern and compression days. Which months have the lowest "
+         "displacement risk for group business? What types of groups (SMERF, corporate, sports) "
+         "should we target by quarter to maximize TBID without cannibalizing peak transient revenue?"),
+        ("🏆 National Benchmark Gap",
+         "Compare Dana Point's estimated group demand share to national benchmarks. "
+         "Are we above or below the STR/CBRE industry standard of 25–32% for upper-upscale "
+         "coastal resort markets? What would it take to reach the top of that range?"),
+        ("💼 Corporate Sales Pitch",
+         "Write a compelling one-paragraph pitch for a corporate meeting planner explaining "
+         "why Dana Point should be their next incentive travel destination, using our actual "
+         "ADR, occupancy, and amenity data."),
+        ("📊 Board Report Summary",
+         "Generate a board-ready executive summary of our group business intelligence, "
+         "including TBID opportunity, displacement risk assessment, and 3 recommended actions "
+         "for the next 12 months."),
+    ]
+
+    st.markdown("""
+    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:16px 20px;
+                margin-bottom:16px;">
+      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                  letter-spacing:.08em;margin-bottom:6px;">AI GROUP TRAVEL ANALYST</div>
+      <div style="color:#CBD5E1;font-size:12px;line-height:1.6;">
+        Ask the AI analyst a question about group travel strategy, or use one of the
+        pre-loaded prompts below. The AI has full access to our group intelligence data,
+        U.S. Travel benchmarks, and CoStar market data.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("**Pre-loaded Group Travel Prompts**")
+    prompt_cols = st.columns(len(GROUP_PROMPTS))
+    selected_prompt = ""
+    for i, (label, prompt_text) in enumerate(GROUP_PROMPTS):
+        with prompt_cols[i]:
+            if st.button(label, key=f"gt_prompt_{i}", use_container_width=True):
+                st.session_state["gt_ai_prompt"]     = prompt_text
+                st.session_state["gt_ai_needs_call"] = True
+
+    custom = st.text_area(
+        "Or type your own group travel question:",
+        value=st.session_state.get("gt_ai_prompt", ""),
+        height=100,
+        key="gt_ai_custom",
+        placeholder="E.g., What shoulder months should we target for SMERF group blocks?",
+    )
+    if custom:
+        st.session_state["gt_ai_prompt"] = custom
+
+    if st.button("🔍 Ask AI Analyst", type="primary", key="gt_ai_submit"):
+        st.session_state["gt_ai_needs_call"] = True
+
+    if st.session_state.get("gt_ai_needs_call") and st.session_state.get("gt_ai_prompt"):
+        # Delegate to the main app's AI panel by setting shared session keys
+        st.session_state["ai_current_prompt"] = st.session_state["gt_ai_prompt"]
+        st.session_state["ai_prompt_label"]   = "Group & Travel Analysis"
+        st.session_state["ai_needs_call"]     = True
+        st.session_state["gt_ai_needs_call"]  = False
+        st.info("Prompt queued for AI Analyst. Switch to **Today's Overview → AI Assistant** tab to see the response, or scroll up if already there.")
+
+
+# ── Main entry point ──────────────────────────────────────────────────────────
+
+def render_group_tab(ai_keys: dict | None = None, selected_model: str = "claude") -> None:
+    """Render the full Group & Traveler Intelligence tab."""
+
+    # Load all data
+    g           = _load_group_intel()
+    df_monthly  = _load_monthly_occ()
+    df_segs     = _load_ust_segments()
+    df_biz      = _load_ust_biz()
+    df_types    = _load_traveler_types()
+    insights    = _load_group_insights()
+    social      = _load_social_summary()
+    df_chain    = _load_costar_chain()
+
+    # Hero banner
+    tbid_low  = g.get("estimated_group_tbid_rev_low",  3_603_940)
+    tbid_high = g.get("estimated_group_tbid_rev_high", 4_613_043)
+    st.markdown(f"""
+    <div class="hero-banner" style="margin-bottom:0;">
+      <div class="hero-title">👥 Group &amp; Traveler Intelligence</div>
+      <div class="hero-subtitle">
+        Est. Group TBID Contribution: <strong>${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M/yr</strong>
+        · U.S. Group Travel: <strong>$319B</strong> national market
+        · Shoulder-Season Group Strategy · SMERF &amp; Corporate Targeting
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+
+    # Data quality notice
+    if not g:
+        st.warning("Group intelligence data not loaded. Run `python scripts/run_pipeline.py`.")
+        return
+
+    st.info(
+        "📌 **Data context:** Group demand estimates use CoStar chain-scale supply + "
+        "industry benchmarks (STR/CBRE 2024 upper-upscale coastal resort averages). "
+        "Actual STR group-segment data will replace benchmarks when provided. "
+        "U.S. Travel benchmarks sourced from U.S. Travel Association 2024 reports."
+    )
+
+    sub_strategy, sub_types, sub_national, sub_ai = st.tabs([
+        "🎯 Group Strategy",
+        "🧭 Traveler Types",
+        "🌐 National Context",
+        "🤖 AI Analyst",
+    ])
+
+    with sub_strategy:
+        _render_group_strategy(g, df_monthly, df_chain, insights, social)
+
+    with sub_types:
+        _render_traveler_types(df_types)
+
+    with sub_national:
+        _render_national_context(df_segs, df_biz, g)
+
+    with sub_ai:
+        _render_ai_analyst(ai_keys or {}, selected_model)
