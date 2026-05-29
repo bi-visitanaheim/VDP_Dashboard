@@ -387,6 +387,8 @@ San Francisco Bay Area (fly market via John Wayne Airport — JWA).
 - Music and cultural events: Ohana Fest (annual September, headliner-driven, 3-day festival)
 - Sports tourism: surf competitions, sailing regattas, Ocean Institute programming
 - Corporate/SMERF: shoulder-season meetings and social events at harbor venues
+- Group travel (SMERF + corporate incentive): a strategic growth segment for VDP — generates TBID \
+  in shoulder Q1/Q4 when transient demand is softest
 - Holiday travel: Memorial Day, Fourth of July, Labor Day — all high-compression periods
 
 **Seasonal Performance Patterns:**
@@ -501,6 +503,37 @@ in which case, say so once and move to what IS clear.
   city council (TOT/economic impact), or destination marketing staff (demand/campaign targeting)
 - Anchor every recommendation in the data provided, not in generic best practices
 - End with a single, clear, time-bound call to action that a board member could act on immediately
+
+## Group Travel Intelligence — Strategic Priority (2026)
+Group business is a TOP priority for Visit Dana Point and the TBID board. Key facts:
+- VDP earns TBID assessment revenue on ALL room revenue, including group bookings
+- Group demand estimated at **25–32% of total hotel demand** in South OC (industry benchmark, \
+  STR/CBRE 2024 upper-upscale coastal resort markets)
+- Group negotiated rates average **~18% below blended market ADR** — but group bookings in \
+  Q1/Q4 shoulder fill rooms that would otherwise be vacant, generating TBID at 100% margin above zero
+- **Group displacement risk is HIGH in Q3** (30+ compression days): group blocks on peak dates \
+  displace higher-rate transient leisure at $400+ ADR — avoid Q3 group commitments on compression weekends
+- **Optimal group strategy:** Target SMERF + corporate incentive groups for Q1/Q4 shoulder season. \
+  Each +5pp shift in group demand mix adds ~$180K in annual TBID revenue.
+- **TBID impact:** Est. $3.6M–$4.6M annual TBID from group demand at current benchmark share
+- **TOT impact:** Est. $28.8M–$36.8M annual TOT from group demand at current benchmark share
+
+**Group data available in the brain:**
+- `group_intelligence` — Daily-updated benchmark table: group-primary room count, TBID/TOT projections, \
+  displacement risk assessment, TBID uplift per +5pp shift, scaffold for STR group data
+- `events_visitor_mix` — Per-event group_travel_pct, family_group_pct, avg_party_size (populated as events are analyzed)
+- `events_economic_impact` — Event room revenue, TBID/TOT attribution, daytrip vs. overnight split
+- `costar_chain_scale_breakdown` — Upper Upscale (1,842 rooms) + Upscale (1,256 rooms) = 3,098 group-primary rooms (60% of market)
+- `datafy_attribution_media_groups` — Media attribution by property type: Resorts (211 trips, 2.8 LOS) vs Hotels (145 trips, 3.1 LOS)
+
+**STR group-segment data is not yet available.** Current group intelligence uses CoStar chain-scale supply data \
+and industry benchmarks. When STR provides group demand segmentation exports, the `group_intelligence` table \
+`str_group_*` columns will be populated and `str_group_data_available` will be set to 1.
+
+When answering group travel questions, always:
+1. Distinguish between benchmark estimates and actual data
+2. Frame group strategy in terms of TBID revenue impact and shoulder-season fill
+3. Note the Q3 displacement risk — groups are most valuable when transient demand is soft
 
 ## Full Database Schema (analytics.sqlite — 57 tables)
 
@@ -625,6 +658,15 @@ CRITICAL: NEVER present Zartico as current data. Use only for historical trend c
 - `data_correlation_matrix` — Statistical Pearson correlations between data sources: metric_a, metric_b, \
   pearson_r, lag_weeks, sample_size, p_value_approx, is_significant (1=significant at p<0.10), interpretation. \
   Current findings: Google Trends → OCC (r=varies, 2-3 week lead); gas price → OCC (r=+0.36, co-seasonal).
+
+**Group Travel Intelligence Tables (2026-05-29):**
+- `group_intelligence` — Daily benchmark table for group demand analysis. Columns: benchmark_date, \
+  total_market_rooms, group_primary_rooms, group_primary_pct, benchmark_group_demand_share_low/high, \
+  benchmark_group_adr_discount_pct, market_blended_adr, market_blended_occ_pct, estimated_group_adr, \
+  estimated_annual_room_rev, estimated_group_room_rev_low/high, estimated_group_tbid_rev_low/high, \
+  estimated_group_tot_rev_low/high, tbid_uplift_per_5pp_shift, compression_days_annual, \
+  group_displacement_note, str_group_demand_rooms (NULL until STR group data), \
+  str_group_adr (NULL), str_group_room_rev (NULL), str_group_data_available (0=benchmark, 1=STR-sourced).
 
 **Intelligence Tables (Generated Daily):**
 - `insights_daily` — Forward-looking insights for 5 audiences (dmo, city, visitor, resident, cross). \
@@ -4398,6 +4440,13 @@ def load_costar_chain() -> pd.DataFrame:
 def load_costar_compset() -> pd.DataFrame:
     return _sql("SELECT * FROM costar_competitive_set ORDER BY revpar_usd DESC", "load_costar_compset")
 
+
+@st.cache_data(ttl=1800)
+def load_group_intelligence() -> pd.DataFrame:
+    return _sql(
+        "SELECT * FROM group_intelligence ORDER BY benchmark_date DESC LIMIT 1",
+        "load_group_intelligence",
+    )
 
 
 # ── Visit California state context loaders ───────────────────────────────────
@@ -16394,6 +16443,192 @@ with tab_cs:
                     unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
+
+        # ── Group Business Intelligence ───────────────────────────────────────────
+        st.markdown(sec_div("👥 Group Business Intelligence"), unsafe_allow_html=True)
+        try:
+            df_grp = load_group_intelligence()
+            if not df_grp.empty:
+                g = df_grp.iloc[0]
+                g_total_rooms = int(g.get("total_market_rooms") or 5120)
+                g_group_rooms = int(g.get("group_primary_rooms") or 3098)
+                g_group_pct   = float(g.get("group_primary_pct") or 0.605)
+                g_tbid_low    = float(g.get("estimated_group_tbid_rev_low") or 0)
+                g_tbid_high   = float(g.get("estimated_group_tbid_rev_high") or 0)
+                g_tot_low     = float(g.get("estimated_group_tot_rev_low") or 0)
+                g_tot_high    = float(g.get("estimated_group_tot_rev_high") or 0)
+                g_uplift      = float(g.get("tbid_uplift_per_5pp_shift") or 0)
+                g_group_adr   = float(g.get("estimated_group_adr") or 0)
+                g_market_adr  = float(g.get("market_blended_adr") or 0)
+                g_disc        = float(g.get("benchmark_group_adr_discount_pct") or 0.18)
+                g_share_low   = float(g.get("benchmark_group_demand_share_low") or 0.25)
+                g_share_high  = float(g.get("benchmark_group_demand_share_high") or 0.32)
+                g_compression = int(g.get("compression_days_annual") or 0)
+                g_str_avail   = bool(g.get("str_group_data_available") or False)
+
+                st.markdown("""
+                <div style="background:rgba(37,99,235,0.08);border-left:3px solid #2563EB;
+                            border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#93C5FD;">
+                ℹ️ <strong>Data context:</strong> Group demand estimates use CoStar chain-scale supply data
+                + industry benchmarks (STR/CBRE 2024 upper-upscale coastal resort averages).
+                Actual STR group-segment data will replace benchmarks when available.
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Hero KPIs
+                c1, c2, c3, c4 = st.columns(4)
+                with c1:
+                    st.markdown(kpi_card(
+                        "Group-Capable Rooms",
+                        f"{g_group_rooms:,}",
+                        f"{g_group_pct*100:.0f}% of {g_total_rooms:,} market rooms",
+                        positive=True,
+                        tooltip="Upper Upscale + Upscale properties — highest group amenity density",
+                    ), unsafe_allow_html=True)
+                with c2:
+                    st.markdown(kpi_card(
+                        "Est. Annual Group TBID",
+                        f"${g_tbid_low/1e6:.1f}M–${g_tbid_high/1e6:.1f}M",
+                        f"{int(g_share_low*100)}–{int(g_share_high*100)}% demand share benchmark",
+                        positive=True,
+                        tooltip="TBID generated by group demand at industry-benchmark share rates",
+                    ), unsafe_allow_html=True)
+                with c3:
+                    st.markdown(kpi_card(
+                        "TBID per +5pp Group Mix",
+                        f"+${g_uplift/1000:.0f}K/yr",
+                        "incremental if group share grows 5pp",
+                        positive=True,
+                        tooltip="Each 5 percentage-point shift in group demand mix adds this much annual TBID",
+                    ), unsafe_allow_html=True)
+                with c4:
+                    st.markdown(kpi_card(
+                        "Group ADR Benchmark",
+                        f"${g_group_adr:.0f}",
+                        f"~{int(g_disc*100)}% below ${g_market_adr:.0f} blended ADR",
+                        positive=False,
+                        tooltip="Negotiated group rates average ~18% below blended market ADR in upper-upscale coastal markets",
+                    ), unsafe_allow_html=True)
+
+                # Chain scale breakdown — group capacity view
+                if not df_cs_chain.empty:
+                    chain_latest = df_cs_chain.copy()
+                    # Use most recent year
+                    if "year" in chain_latest.columns:
+                        years = chain_latest["year"].dropna().unique()
+                        if len(years) > 0:
+                            chain_latest = chain_latest[chain_latest["year"] == sorted(years)[-1]]
+                    chain_latest = chain_latest.sort_values("revpar_usd", ascending=False)
+
+                    _GROUP_SCALES = {"Upper Upscale", "Upscale"}
+                    colors = [
+                        "#2563EB" if str(r.get("chain_scale","")) in _GROUP_SCALES else "#475569"
+                        for _, r in chain_latest.iterrows()
+                    ]
+                    fig_grp = go.Figure()
+                    fig_grp.add_trace(go_grp.Bar(
+                        x=chain_latest["chain_scale"].tolist(),
+                        y=chain_latest["supply_rooms"].tolist(),
+                        name="Supply Rooms",
+                        marker_color=colors,
+                        text=[f"{int(v):,}" for v in chain_latest["supply_rooms"]],
+                        textposition="outside",
+                        hovertemplate="<b>%{x}</b><br>Rooms: %{y:,}<br>ADR: $%{customdata[0]:.0f}<br>Occ: %{customdata[1]:.1f}%<extra></extra>",
+                        customdata=list(zip(chain_latest["adr_usd"], chain_latest["occupancy_pct"])),
+                    ))
+                    fig_grp.update_layout(
+                        title="Supply by Chain Scale — Blue = Group-Primary Properties",
+                        xaxis_title=None,
+                        yaxis_title="Supply Rooms",
+                        plot_bgcolor="rgba(0,0,0,0)",
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        font=dict(color="#CBD5E1", size=11),
+                        margin=dict(t=40, b=20, l=0, r=0),
+                        showlegend=False,
+                        height=280,
+                    )
+                    fig_grp.update_xaxes(showgrid=False, color="#94A3B8")
+                    fig_grp.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)", color="#94A3B8")
+                    st.plotly_chart(fig_grp, use_container_width=True)
+
+                # Group displacement risk callout
+                if g_compression >= 30:
+                    risk_color = "#EF4444"
+                    risk_label = "HIGH"
+                elif g_compression >= 10:
+                    risk_color = "#F59E0B"
+                    risk_label = "MODERATE"
+                else:
+                    risk_color = "#22C55E"
+                    risk_label = "LOW"
+
+                st.markdown(f"""
+                <div style="background:rgba(0,0,0,0.2);border-left:3px solid {risk_color};
+                            border-radius:6px;padding:12px 16px;margin:8px 0;">
+                  <div style="color:{risk_color};font-weight:700;font-size:11px;letter-spacing:.05em;
+                              text-transform:uppercase;margin-bottom:4px;">
+                    GROUP DISPLACEMENT RISK: {risk_label}
+                  </div>
+                  <div style="color:#CBD5E1;font-size:12px;line-height:1.6;">
+                    <strong>{g_compression} compression days/year</strong> (80%+ occupancy).
+                    On peak nights, group blocks at est. <strong>${g_group_adr:.0f} ADR</strong> displace
+                    transient leisure at <strong>${g_market_adr:.0f}+ ADR</strong> — a
+                    <strong>${g_market_adr - g_group_adr:.0f}/room/night</strong> revenue gap.
+                    Optimal strategy: target group business in <strong>Q1/Q4 shoulder</strong> when
+                    transient demand is softest.
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Group insights from insights_daily
+                grp_insights = load_insights(audience=None)
+                if grp_insights is not None and not grp_insights.empty:
+                    grp_cats = ["group_revenue_opportunity", "group_displacement_risk",
+                                "group_adr_premium", "group_demand_trend"]
+                    grp_rows = grp_insights[grp_insights["category"].isin(grp_cats)]
+                    if not grp_rows.empty:
+                        st.markdown(
+                            '<div style="font-weight:600;color:#93C5FD;font-size:12px;'
+                            'text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px;">',
+                            unsafe_allow_html=True,
+                        )
+                        st.markdown("**Group Intelligence Insights**")
+                        for _, row in grp_rows.iterrows():
+                            from utils import format_insight_card
+                            st.markdown(
+                                format_insight_card(
+                                    icon="👥",
+                                    title=row.get("headline", "")[:90] + ("…" if len(str(row.get("headline",""))) > 90 else ""),
+                                    body=row.get("body", "")[:400] + ("…" if len(str(row.get("body",""))) > 400 else ""),
+                                    accent="#2563EB",
+                                ),
+                                unsafe_allow_html=True,
+                            )
+
+                # STR group data scaffold
+                if not g_str_avail:
+                    st.markdown("""
+                    <div style="background:rgba(245,158,11,0.08);border:1px dashed rgba(245,158,11,0.4);
+                                border-radius:8px;padding:14px 18px;margin-top:12px;">
+                      <div style="color:#FCD34D;font-weight:700;font-size:12px;margin-bottom:6px;">
+                        📋 STR GROUP DATA — AWAITING INTEGRATION
+                      </div>
+                      <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
+                        When STR provides group-segment demand exports, this section will automatically
+                        populate with: <strong>group demand rooms</strong> · <strong>group ADR</strong>
+                        · <strong>group room revenue</strong> · <strong>group vs. transient mix trend</strong>
+                        · <strong>SMERF segment breakdown</strong>.<br><br>
+                        To enable: run STR group export → save to
+                        <code>data/str/str_group_daily.xlsx</code> →
+                        <code>python scripts/run_pipeline.py</code>.
+                        The <code>group_intelligence</code> table will update automatically.
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("Group intelligence data not yet loaded. Run `python scripts/run_pipeline.py` to generate.")
+        except Exception as _ge:
+            _logger.debug("group intelligence section error: %s", _ge)
 
         # ── Coastal Intelligence: Beach + Whale + Revenue ────────────────────────
         st.markdown("")

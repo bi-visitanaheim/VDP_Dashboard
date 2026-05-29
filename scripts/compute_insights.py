@@ -1573,6 +1573,296 @@ def gen_cross_compression_daytrip(comp: pd.DataFrame, overview: dict) -> dict:
     )
 
 
+def load_group_intelligence(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Load group_intelligence benchmark row for today (or most recent)."""
+    result: dict[str, Any] = {}
+    try:
+        cur = conn.execute(
+            "SELECT * FROM group_intelligence ORDER BY benchmark_date DESC LIMIT 1"
+        )
+        cols = [d[0] for d in cur.description]
+        row = cur.fetchone()
+        if row:
+            result = dict(zip(cols, row))
+    except Exception:
+        pass
+    return result
+
+
+def gen_dmo_group_revenue_opportunity(
+    group: dict[str, Any],
+    kpi: pd.DataFrame,
+) -> dict:
+    """
+    TBID/TOT revenue opportunity from optimizing group business mix.
+    Uses CoStar chain-scale group-capacity estimates + industry benchmark demand share.
+    Key insight for the TBID board: groups fund VDP marketing when they fill hotel rooms.
+    """
+    if not group:
+        return {}
+
+    annual_rev = group.get("estimated_annual_room_rev", 0)
+    tbid_low = group.get("estimated_group_tbid_rev_low", 0)
+    tbid_high = group.get("estimated_group_tbid_rev_high", 0)
+    uplift = group.get("tbid_uplift_per_5pp_shift", 0)
+    share_low = group.get("benchmark_group_demand_share_low", 0.25)
+    share_high = group.get("benchmark_group_demand_share_high", 0.32)
+    group_adr = group.get("estimated_group_adr", 0)
+    market_adr = group.get("market_blended_adr", 0)
+    discount = group.get("benchmark_group_adr_discount_pct", 0.18)
+    str_available = bool(group.get("str_group_data_available", 0))
+
+    avg_adr = kpi["adr"].tail(30).mean() if not kpi.empty else market_adr
+    data_note = "STR group-segment data" if str_available else "CoStar market estimates + industry benchmarks"
+
+    headline = (
+        f"GROUP REVENUE OPPORTUNITY: Est. ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M/yr TBID "
+        f"from group demand ({int(share_low*100)}–{int(share_high*100)}% of room revenue) — "
+        f"+${ uplift/1000:.0f}K TBID per +5pp group mix growth"
+    )
+    body = (
+        f"Based on {data_note}: group business accounts for an estimated "
+        f"{int(share_low*100)}–{int(share_high*100)}% of South OC hotel demand, "
+        f"generating ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M in annual TBID assessments "
+        f"(${tbid_low*0.0125/1e3:.0f}K–${tbid_high*0.0125/1e3:.0f}K in TOT to the city). "
+        f"Group negotiated rates average ~{int(discount*100)}% below blended ADR "
+        f"(est. ${group_adr:.0f}/night vs. ${avg_adr:.0f} current STR blended ADR). "
+        f"Each +5 percentage point shift in group mix delivers ~${uplift/1000:.0f}K incremental annual TBID. "
+        f"Group business is most valuable in Q1/Q4 shoulder when transient demand is softest — "
+        f"filling those rooms at a discounted rate still generates TBID at 100% margin for VDP."
+        + _5wh(
+            who="TBID board, VDP director of sales, hotel GMs",
+            what=f"Group demand est. {int(share_low*100)}-{int(share_high*100)}% of hotel revenue; "
+                 f"TBID contribution ${tbid_low/1e6:.1f}M-${tbid_high/1e6:.1f}M/yr",
+            when="Ongoing — group booking windows are 3-12 months; action now affects Q3/Q4 2026",
+            where="Dana Point hotels — esp. upper-upscale and upscale properties with meeting space",
+            why="TBID is funded by room revenue; growing group mix in shoulder season grows TBID without cannibalizing peak leisure",
+            how="Commission a group RFP program targeting SMERF + corporate. Add group-amenity listing to visitdanapoint.com. "
+                "Await STR group-segment data for precise demand share tracking.",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=1, horizon_days=180,
+        data_sources="group_intelligence,costar_market_snapshot,kpi_daily_summary",
+        metric_basis={
+            "estimated_annual_room_rev": round(annual_rev / 1e6, 2),
+            "group_tbid_rev_low_M": round(tbid_low / 1e6, 2),
+            "group_tbid_rev_high_M": round(tbid_high / 1e6, 2),
+            "tbid_uplift_per_5pp_K": round(uplift / 1000, 1),
+            "benchmark_group_share_low": share_low,
+            "benchmark_group_share_high": share_high,
+            "estimated_group_adr": group_adr,
+            "market_blended_adr": market_adr,
+            "str_group_data_available": str_available,
+        },
+    )
+
+
+def gen_dmo_group_displacement_risk(
+    comp: pd.DataFrame,
+    group: dict[str, Any],
+    kpi: pd.DataFrame,
+) -> dict:
+    """
+    On compression days (80%+ occ), group room blocks displace higher-rate transient leisure.
+    This insight quantifies the trade-off and recommends shoulder-season group targeting.
+    """
+    if comp.empty or not group:
+        return {}
+
+    compression_days = group.get("compression_days_annual", 0)
+    share_low = group.get("benchmark_group_demand_share_low", 0.25)
+    group_adr = group.get("estimated_group_adr", 0)
+    market_adr = group.get("market_blended_adr", 288)
+    discount = group.get("benchmark_group_adr_discount_pct", 0.18)
+
+    avg_adr = kpi["adr"].tail(30).mean() if not kpi.empty else market_adr
+    adr_gap = avg_adr - group_adr if group_adr > 0 else avg_adr * discount
+
+    # Revenue cost per room per compression night if group displaces leisure
+    rev_cost_per_room = round(adr_gap, 2)
+
+    # Worst compression quarter
+    worst_q = "Q3"
+    q3_days = 0
+    if not comp.empty:
+        q3 = comp[comp["quarter"].str.contains("Q3", na=False)]
+        q3_days = int(q3["days_above_80_occ"].max()) if not q3.empty else 0
+
+    if compression_days < 10:
+        risk_tier = "LOW"
+        risk_note = "compression is moderate; group blocks rarely displace leisure on peak dates"
+    elif compression_days < 30:
+        risk_tier = "MODERATE"
+        risk_note = f"{compression_days} compression days/yr; limit group blocks to non-compression periods"
+    else:
+        risk_tier = "HIGH"
+        risk_note = (
+            f"{compression_days} compression days/yr ({q3_days} in {worst_q} alone); "
+            "avoid group commitments on peak Q3 weekends — protect $500+ transient rate opportunities"
+        )
+
+    headline = (
+        f"GROUP DISPLACEMENT RISK ({risk_tier}): {compression_days} compression days/yr — "
+        f"group blocks on peak nights cost ~${rev_cost_per_room:.0f}/room vs. transient rate"
+    )
+    body = (
+        f"Displacement risk assessment: {compression_days} annual compression days (80%+ market occ). "
+        f"Group negotiated ADR est. ${group_adr:.0f} vs. current STR blended ADR ${avg_adr:.0f} — "
+        f"a ${rev_cost_per_room:.0f}/room/night revenue gap when groups fill rooms that transient "
+        f"leisure travelers would have paid full rack rate. "
+        f"Risk tier: {risk_tier} — {risk_note}. "
+        f"Recommendation: concentrate group sales outreach on Q1 (4 compression days) and Q4 "
+        f"shoulder seasons where group demand fills rooms that would otherwise sell at 60-70% occ. "
+        f"On Q3 weekends with 90%+ occ forecasted, do not accept group blocks — protect the transient rate."
+        + _5wh(
+            who="Hotel GMs, revenue managers, VDP group sales team",
+            what=f"{compression_days} compression days/yr; group ADR ~${adr_gap:.0f} below transient on peak dates",
+            when="Q3 peak (July–September) = high displacement risk; Q1/Q4 shoulder = ideal group window",
+            where="Upper-upscale and resort properties with meeting space",
+            why="Groups booked into compression nights reduce total room revenue; optimal strategy is shoulder-season group focus",
+            how="Revenue management calendar: block group sales 30 days before Q3 peak weekends; open group inventory in Q1/Q4",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=2, horizon_days=90,
+        data_sources="group_intelligence,kpi_compression_quarterly,kpi_daily_summary",
+        metric_basis={
+            "compression_days_annual": compression_days,
+            "q3_compression_days": q3_days,
+            "risk_tier": risk_tier,
+            "group_adr_est": group_adr,
+            "transient_adr_30d": round(avg_adr, 2),
+            "adr_gap_per_room": rev_cost_per_room,
+        },
+    )
+
+
+def gen_city_group_adr_premium(
+    group: dict[str, Any],
+    kpi: pd.DataFrame,
+) -> dict:
+    """
+    City audience: group business and its TOT revenue implications.
+    City council cares about TOT (10% of room revenue) — group mix affects total TOT collections.
+    """
+    if not group:
+        return {}
+
+    group_tot_low = group.get("estimated_group_tot_rev_low", 0)
+    group_tot_high = group.get("estimated_group_tot_rev_high", 0)
+    annual_rev = group.get("estimated_annual_room_rev", 0)
+    share_low = group.get("benchmark_group_demand_share_low", 0.25)
+    share_high = group.get("benchmark_group_demand_share_high", 0.32)
+    group_adr = group.get("estimated_group_adr", 0)
+    market_adr = group.get("market_blended_adr", 0)
+    uplift = group.get("tbid_uplift_per_5pp_shift", 0)
+    tot_uplift = round(uplift * 8, 2)  # TBID=1.25% → TOT=10% → 8× multiple
+
+    avg_adr = kpi["adr"].tail(30).mean() if not kpi.empty else market_adr
+
+    headline = (
+        f"GROUP TOT IMPACT: ${group_tot_low/1e6:.0f}M–${group_tot_high/1e6:.0f}M/yr city TOT "
+        f"from group demand — +${ tot_uplift/1000:.0f}K TOT per +5pp group mix growth"
+    )
+    body = (
+        f"Group business generates an estimated ${group_tot_low/1e6:.0f}M–${group_tot_high/1e6:.0f}M "
+        f"in annual Transient Occupancy Tax (TOT) for the City of Dana Point "
+        f"({int(share_low*100)}–{int(share_high*100)}% of the total hotel market). "
+        f"Group negotiated ADR (est. ${group_adr:.0f}) is ~{int(group.get('benchmark_group_adr_discount_pct', 0.18)*100)}% "
+        f"below blended market ADR (${avg_adr:.0f} current STR), meaning group bookings generate "
+        f"lower per-room TOT than transient leisure — but they fill shoulder-season nights that "
+        f"would otherwise be vacant, generating TOT from rooms that would produce $0. "
+        f"Each +5 percentage-point shift in group mix adds ~${tot_uplift/1000:.0f}K in annual TOT. "
+        f"A city group-travel incentive program (convention center access, parking waivers, marketing co-op) "
+        f"could accelerate shoulder-season group bookings with near-zero city budget impact."
+        + _5wh(
+            who="City Council, City Manager, Finance Director",
+            what=f"Group TOT est. ${group_tot_low/1e6:.0f}M-${group_tot_high/1e6:.0f}M/yr; +5pp group mix = +${tot_uplift/1000:.0f}K TOT",
+            when="Annual TOT collections; Q1/Q4 shoulder quarter impact most visible",
+            where="City of Dana Point general fund; hotel TOT remittance",
+            why="Group bookings fill shoulder-season vacancies and generate TOT at 100% margin above zero",
+            how="City council resolution: create a Group Travel Task Force with VDP + hotel GMs. "
+                "Model TOT uplift scenario in next city budget cycle.",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=2, horizon_days=180,
+        data_sources="group_intelligence,costar_market_snapshot,kpi_daily_summary",
+        metric_basis={
+            "annual_room_rev_M": round(annual_rev / 1e6, 1),
+            "group_tot_low_M": round(group_tot_low / 1e6, 2),
+            "group_tot_high_M": round(group_tot_high / 1e6, 2),
+            "tot_uplift_per_5pp_K": round(tot_uplift / 1000, 1),
+            "estimated_group_adr": group_adr,
+            "current_str_adr_30d": round(avg_adr, 2),
+        },
+    )
+
+
+def gen_city_group_demand_trend(
+    group: dict[str, Any],
+    comp: pd.DataFrame,
+) -> dict:
+    """
+    City audience: group demand capacity context derived from CoStar chain-scale data.
+    Upper Upscale + Upscale properties = the primary group-capable hotel supply.
+    This is the foundational supply-side picture for a city group tourism strategy.
+    """
+    if not group:
+        return {}
+
+    total_rooms = group.get("total_market_rooms", 5120)
+    group_rooms = group.get("group_primary_rooms", 3098)
+    group_pct = group.get("group_primary_pct", 0.605)
+    compression_days = group.get("compression_days_annual", 0)
+    share_low = group.get("benchmark_group_demand_share_low", 0.25)
+    share_high = group.get("benchmark_group_demand_share_high", 0.32)
+
+    # Estimate group-capable meeting capacity (upper-upscale properties avg ~1 meeting room / 50 keys)
+    est_meeting_rooms = round(group_rooms / 50)
+
+    headline = (
+        f"GROUP DEMAND CAPACITY: {group_rooms:,} of {total_rooms:,} South OC rooms ({group_pct*100:.0f}%) "
+        f"in group-primary properties — est. {est_meeting_rooms} meeting spaces available"
+    )
+    body = (
+        f"Supply-side group capacity: {group_rooms:,} rooms in Upper Upscale and Upscale properties "
+        f"({group_pct*100:.0f}% of the {total_rooms:,}-room South OC market) represent the primary "
+        f"group-amenity supply. At industry-benchmark group demand share ({int(share_low*100)}–{int(share_high*100)}%), "
+        f"an estimated {int(total_rooms * share_low * 365 / 1000)}K–{int(total_rooms * share_high * 365 / 1000)}K "
+        f"room-nights per year are booked by group travelers. "
+        f"Estimated ~{est_meeting_rooms} meeting/event spaces available across the market based on "
+        f"upper-upscale room count (industry avg: 1 meeting room per 50 keys). "
+        f"With {compression_days} annual compression days, Dana Point has limited group absorption capacity "
+        f"in Q3 peak — the strategic opportunity is positioning the destination as a Q1/Q4 "
+        f"meetings and incentive destination to reduce seasonal concentration. "
+        f"NOTE: Actual group demand data will be available when STR provides group-segment exports."
+        + _5wh(
+            who="City Council, Visit Dana Point, hotel GMs, meeting planners",
+            what=f"{group_rooms:,} group-capable rooms ({group_pct*100:.0f}% of market); ~{est_meeting_rooms} meeting spaces",
+            when="Immediate capacity assessment; group strategy planning for 2026-2027 shoulder seasons",
+            where="Upper-upscale and upscale hotel properties in Dana Point/Laguna Beach submarket",
+            why="Understanding group supply capacity is prerequisite to a city group-travel economic development strategy",
+            how="Commission hotel property survey: confirm meeting space sqft, max group size, AV capability, F&B capacity. "
+                "Use results to build a group-travel RFP package on visitdanapoint.com.",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=3, horizon_days=365,
+        data_sources="group_intelligence,costar_chain_scale_breakdown",
+        metric_basis={
+            "total_market_rooms": total_rooms,
+            "group_primary_rooms": group_rooms,
+            "group_primary_pct": round(group_pct, 3),
+            "estimated_meeting_spaces": est_meeting_rooms,
+            "benchmark_group_share_pct_low": int(share_low * 100),
+            "benchmark_group_share_pct_high": int(share_high * 100),
+            "annual_compression_days": compression_days,
+        },
+    )
+
+
 def load_fred_signals(conn: sqlite3.Connection) -> dict[str, Any]:
     """Load key FRED macro signals for insight generation."""
     result: dict[str, Any] = {}
@@ -2215,6 +2505,7 @@ def main() -> None:
         demand_sig   = load_demand_signal_current(conn)
         correlations = load_correlation_top(conn)
         parks_data   = load_state_parks_recent(conn)
+        group_data   = load_group_intelligence(conn)
 
         print(f"  KPI rows: {len(kpi_recent)} (90d) | {len(kpi_all)} (all)")
         print(f"  Compression quarters: {len(comp)}")
@@ -2227,6 +2518,7 @@ def main() -> None:
         print(f"  Surf: {surf_data.get('water_temp_f','N/A')}°F water | {surf_data.get('surf_quality','N/A')} surf")
         print(f"  Demand signal: {demand_sig.get('current_score','N/A')}/100 ({demand_sig.get('direction','N/A')})")
         print(f"  Correlations: {len(correlations)} significant pairs")
+        print(f"  Group intelligence: {'loaded' if group_data else 'no data'}")
 
         # ── Generate insights ────────────────────────────────────────────────
         generators = {
@@ -2271,6 +2563,12 @@ def main() -> None:
             ("cross",   "demand_index"):            lambda: gen_cross_demand_index(demand_sig, kpi_recent),
             ("cross",   "statistical_correlation"): lambda: gen_cross_statistical_correlation(correlations, kpi_recent),
             ("visitor", "beach_conditions"):        lambda: gen_visitor_beach_conditions(surf_data, parks_data),
+
+            # Group travel intelligence (2026-05-29)
+            ("dmo",  "group_revenue_opportunity"):  lambda: gen_dmo_group_revenue_opportunity(group_data, kpi_recent),
+            ("dmo",  "group_displacement_risk"):    lambda: gen_dmo_group_displacement_risk(comp, group_data, kpi_recent),
+            ("city", "group_adr_premium"):          lambda: gen_city_group_adr_premium(group_data, kpi_recent),
+            ("city", "group_demand_trend"):         lambda: gen_city_group_demand_trend(group_data, comp),
         }
 
         inserted = 0

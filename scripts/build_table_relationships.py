@@ -912,6 +912,27 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
      "STVR pricing intelligence informs AI insights on hotel rate positioning and competitive gaps"),
     ("airbnb_market_data",    "airbnb_market_summary",             "derived_from",  "report_date+city",
      "Listing-level Airbnb data aggregated into summary stats by city and report period"),
+
+    # ── group_intelligence (2026-05-29) ──────────────────────────────────────
+    ("costar_chain_scale_breakdown", "group_intelligence",           "derived_from",  "year",
+     "Chain-scale room counts (Upper Upscale + Upscale) used to estimate group-primary supply capacity"),
+    ("costar_market_snapshot",       "group_intelligence",           "derived_from",  "report_period",
+     "Annual room revenue and blended ADR/occ from market snapshot used in group TBID/TOT projections"),
+    ("kpi_compression_quarterly",    "group_intelligence",           "derived_from",  "quarter",
+     "Annual compression days used to assess group displacement risk on peak dates"),
+    ("group_intelligence",           "insights_daily",               "derived_from",  "benchmark_date",
+     "Group benchmarks generate 4 insights: group_revenue_opportunity, group_displacement_risk, "
+     "group_adr_premium, group_demand_trend — for dmo and city audiences"),
+    ("group_intelligence",           "kpi_daily_summary",            "context",       "benchmark_date",
+     "STR blended ADR from kpi_daily_summary compared against group estimated ADR to measure discount gap"),
+    ("group_intelligence",           "costar_monthly_performance",   "context",       "benchmark_date",
+     "CoStar monthly ADR/occ trends provide market context for group demand share estimates"),
+    ("events_economic_impact",       "group_intelligence",           "cross_ref",     "event_date",
+     "Event room revenue and attendee mix (group_travel_pct) provides event-level group demand context"),
+    ("events_visitor_mix",           "group_intelligence",           "cross_ref",     "event_date",
+     "Event visitor mix group_travel_pct and avg_party_size will enrich group intelligence when populated"),
+    ("datafy_attribution_media_groups", "group_intelligence",        "context",       "report_period_start",
+     "Media attribution by property type (Destination/Resorts/Hotels) provides channel context for group bookings"),
 ]
 
 
