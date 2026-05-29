@@ -812,6 +812,9 @@ st.markdown("""
   }
   .block-container {
     background-color: transparent !important;
+    padding-left: 2.5rem !important;
+    padding-right: 2.5rem !important;
+    max-width: 100% !important;
   }
 
   /* ── Sidebar light theme ───────────────────────────────────────────────── */
@@ -1116,6 +1119,7 @@ st.markdown("""
   [data-testid="stHeader"]              { display: none !important; visibility: hidden !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; overflow: hidden !important; position: absolute !important; top: 0 !important; pointer-events: none !important; }
   header                                { display: none !important; height: 0 !important; }
   /* ── Kill ALL Streamlit floating bottom chrome ───────────────────────── */
+  footer *                               { display: none !important; }
   [data-testid="stBottom"]              { display: none !important; }
   [data-testid="stAppDeployButton"]     { display: none !important; }
   [data-testid="stDeployButton"]        { display: none !important; }
@@ -1125,18 +1129,24 @@ st.markdown("""
   [data-testid="appCreatorName"]        { display: none !important; }
   .stDeployButton                       { display: none !important; }
   [data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
+  [data-testid="manage-app-button"]     { display: none !important; }
+  [data-testid="stCaptionContainer"]    { display: none !important; }
+  /* Streamlit Community Cloud branding badges — nuke all class variants */
   [class*="_profileImage_"]             { display: none !important; }
-  [class*="_link_gzau"]                 { display: none !important; }
-  [class*="_container_gzau"]            { display: none !important; }
+  [class*="_link_"]                     { display: none !important; }
+  [class*="_container_"]                { display: none !important; }
   [class*="_darkThemeShadow_"]          { display: none !important; }
   [class*="appCreator"]                 { display: none !important; }
   [class*="deployButton"]               { display: none !important; }
   [class*="viewerBadge"]                { display: none !important; }
   [class*="viewerBadge" i]              { display: none !important; }
   [class*="profileContainer" i]         { display: none !important; }
+  [class*="badge"]                      { display: none !important; }
   .viewerBadge_container__1QSob        { display: none !important; }
   .styles_viewerBadge__CvC9N           { display: none !important; }
-  [data-testid="manage-app-button"]     { display: none !important; }
+  /* Fixed-position bottom-right badges (kite + manage app) */
+  div[class*="fixed"][class*="bottom"]  { display: none !important; }
+  div[style*="position: fixed"][style*="bottom"] { display: none !important; }
   a[href*="streamlit.io"]               { display: none !important; }
   a[href*="streamlit.app" i]            { display: none !important; }
   a[href*="share.streamlit" i]          { display: none !important; }
