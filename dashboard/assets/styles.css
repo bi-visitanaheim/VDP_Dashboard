@@ -78,6 +78,9 @@
   }
   .block-container {
     background-color: transparent !important;
+    padding-left: 2.5rem !important;
+    padding-right: 2.5rem !important;
+    max-width: 100% !important;
   }
 
   /* ── Global dark overrides ─────────────────────────────────────────────── */
@@ -335,12 +338,13 @@
   .insight-icon { display: inline-block; vertical-align: middle; margin-right: 6px; line-height: 0; }
 
   /* ── Hide Streamlit Chrome ─────────────────────────────────────────────── */
-  #MainMenu                              { visibility: hidden !important; }
-  footer                                 { visibility: hidden !important; }
-  [data-testid="stToolbar"]             { visibility: hidden !important; }
-  [data-testid="stDecoration"]          { display:    none    !important; }
-  [data-testid="stStatusWidget"]        { visibility: hidden !important; }
-  [data-testid="stHeader"]              { background: transparent !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; }
+  #MainMenu                              { display: none !important; }
+  footer                                 { display: none !important; }
+  footer *                               { display: none !important; }
+  [data-testid="stToolbar"]             { display: none !important; }
+  [data-testid="stDecoration"]          { display: none !important; }
+  [data-testid="stStatusWidget"]        { display: none !important; }
+  [data-testid="stHeader"]              { display: none !important; height: 0 !important; min-height: 0 !important; padding: 0 !important; margin: 0 !important; overflow: hidden !important; }
   [data-testid="stBottom"]              { display: none !important; }
   [data-testid="stAppDeployButton"]     { display: none !important; }
   [data-testid="stDeployButton"]        { display: none !important; }
@@ -350,16 +354,23 @@
   [data-testid="appCreatorName"]        { display: none !important; }
   .stDeployButton                       { display: none !important; }
   [data-testid="stBaseButton-headerNoPadding"] { display: none !important; }
+  /* Streamlit Community Cloud branding badges */
   [class*="_profileImage_"]             { display: none !important; }
-  [class*="_link_gzau"]                 { display: none !important; }
-  [class*="_container_gzau"]            { display: none !important; }
+  [class*="_link_"]                     { display: none !important; }
+  [class*="_container_"]                { display: none !important; }
   [class*="_darkThemeShadow_"]          { display: none !important; }
   [class*="appCreator"]                 { display: none !important; }
   [class*="deployButton"]               { display: none !important; }
   [class*="viewerBadge"]                { display: none !important; }
+  [class*="badge"]                      { display: none !important; }
   .viewerBadge_container__1QSob        { display: none !important; }
   .styles_viewerBadge__CvC9N           { display: none !important; }
+  /* Hide "Hosted with Streamlit" and "Created by" bottom-right badges */
+  [data-testid="stCaptionContainer"]    { display: none !important; }
+  div[class*="fixed"][class*="bottom"]  { display: none !important; }
+  div[style*="position: fixed"][style*="bottom"] { display: none !important; }
   a[href*="streamlit.io"]               { display: none !important; }
+  a[href*="streamlit.app"]              { display: none !important; }
   a[href*="github.com/streamlit"]       { display: none !important; }
   button[title*="Deploy"]               { display: none !important; }
   button[aria-label*="deploy"]          { display: none !important; }
