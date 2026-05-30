@@ -12,6 +12,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+# Brand Streamlit's static loading screen so the first paint is Dana Point PULSE
+# (custom title, favicon, and splash) instead of the default Streamlit flash.
+RUN python scripts/patch_streamlit_splash.py || true
+
 EXPOSE 8501
 
 CMD ["streamlit", "run", "dashboard/app.py", \
