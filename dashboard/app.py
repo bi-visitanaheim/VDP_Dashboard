@@ -7130,14 +7130,36 @@ def tab_intro(title: str, desc: str, bullets: list[str]) -> str:
 
 
 def callout(icon: str, headline: str, body: str, style: str = "teal") -> str:
-    """Plain-language insight callout box. style: teal | amber | purple | green"""
-    _cls = {"teal": "dp-callout", "amber": "dp-callout-amber",
-            "purple": "dp-callout-purple", "green": "dp-callout-green"}.get(style, "dp-callout")
+    """Sleek explainer card — gradient icon tile + headline + body.
+    style: teal | amber | purple | green | blue | red"""
+    _accent = {
+        "teal": "#0891B2", "amber": "#D97706", "purple": "#7C3AED",
+        "green": "#059669", "blue": "#2563EB", "red": "#DC2626",
+    }.get(style, "#0891B2")
+    _hx = _accent.lstrip("#")
+    try:
+        _r, _g, _b = (int(_hx[i:i+2], 16) for i in (0, 2, 4))
+        _tint = f"rgba({_r},{_g},{_b},0.06)"
+        _deep = f"rgb({int(_r*0.55)},{int(_g*0.55)},{int(_b*0.55)})"
+    except Exception:
+        _tint, _deep = "rgba(8,145,178,0.06)", "#075E6B"
     return (
-        f'<div class="{_cls}">'
-        f'<div class="dp-callout-head">{icon} {headline}</div>'
-        f'<p>{body}</p>'
-        f'</div>'
+        f'<div style="background:linear-gradient(180deg,{_tint} 0%,#FFFFFF 60%);'
+        f'border:1px solid #E2E8F0;border-left:5px solid {_accent};border-radius:13px;'
+        f'padding:15px 19px 16px 17px;margin:16px 0;'
+        f'box-shadow:0 1px 3px rgba(15,23,42,0.06),0 6px 18px rgba(15,23,42,0.05);">'
+        f'<div style="display:flex;align-items:flex-start;gap:13px;">'
+        f'<div style="flex-shrink:0;width:40px;height:40px;border-radius:11px;'
+        f'background:linear-gradient(135deg,{_accent} 0%,{_deep} 100%);display:flex;'
+        f'align-items:center;justify-content:center;font-size:20px;'
+        f'box-shadow:0 4px 11px {_accent}40;">{icon}</div>'
+        f'<div style="flex:1;min-width:0;">'
+        f'<div style="font-family:\'Outfit\',sans-serif;font-size:13.5px;font-weight:800;'
+        f'color:#0F172A;-webkit-text-fill-color:#0F172A;letter-spacing:-0.005em;'
+        f'margin-bottom:5px;line-height:1.3;">{headline}</div>'
+        f'<div style="font-size:13px;color:#334155;-webkit-text-fill-color:#334155;'
+        f'line-height:1.65;">{body}</div>'
+        f'</div></div></div>'
     )
 
 
