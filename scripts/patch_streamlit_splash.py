@@ -57,13 +57,12 @@ def _favicon_data_uri() -> str:
 
 
 def _splash_html(data_uri: str) -> str:
-    """Full-screen branded overlay + self-removing script. Paints before React."""
-    logo = (
-        f'<img src="{data_uri}" alt="" '
-        f'style="width:60px;height:60px;border-radius:14px;'
-        f'box-shadow:0 8px 28px rgba(0,200,224,0.35);" />'
-        if data_uri else ""
-    )
+    """Full-screen branded overlay + self-removing script. Paints before React.
+
+    The logo is an inline animated SVG pulse wave (two teal waves flowing
+    through a breathing tile) — matches the PULSE brand mark and needs no image
+    request, so it animates instantly on first paint.
+    """
     return f"""
 <style id="{MARKER}-style">
   #{MARKER} {{
@@ -77,27 +76,94 @@ def _splash_html(data_uri: str) -> str:
     transition:opacity .55s ease, visibility .55s ease; opacity:1;
   }}
   #{MARKER}.dp-hide {{ opacity:0; visibility:hidden; pointer-events:none; }}
+
+  /* Breathing tile */
+  #{MARKER} .dp-logo {{ animation:dp-breathe 2.8s ease-in-out infinite; }}
+  #{MARKER} .dp-tile {{
+    filter:drop-shadow(0 10px 30px rgba(0,200,224,0.28));
+    animation:dp-glow 2.8s ease-in-out infinite;
+  }}
+  @keyframes dp-breathe {{
+    0%,100% {{ transform:translateY(0) scale(1); }}
+    50%     {{ transform:translateY(-3px) scale(1.03); }}
+  }}
+  @keyframes dp-glow {{
+    0%,100% {{ filter:drop-shadow(0 10px 24px rgba(0,200,224,0.22)); }}
+    50%     {{ filter:drop-shadow(0 14px 40px rgba(0,200,224,0.45)); }}
+  }}
+
+  /* Flowing waves — two parallax layers translating one full period, seamless */
+  #{MARKER} .dp-wave1 {{ animation:dp-flow1 2.4s linear infinite; }}
+  #{MARKER} .dp-wave2 {{ animation:dp-flow2 3.6s linear infinite; }}
+  @keyframes dp-flow1 {{ to {{ transform:translateX(-96px); }} }}
+  @keyframes dp-flow2 {{ to {{ transform:translateX(96px); }} }}
+
+  /* Pulse dot riding the crest */
+  #{MARKER} .dp-pulsedot {{ animation:dp-pulse 1.4s ease-out infinite; transform-origin:center; }}
+  @keyframes dp-pulse {{
+    0%   {{ opacity:.9; r:3; }}
+    70%  {{ opacity:0;  r:13; }}
+    100% {{ opacity:0;  r:13; }}
+  }}
+
   #{MARKER} .dp-wordmark {{
     font-size:30px; font-weight:900; letter-spacing:-0.02em; color:#FFFFFF;
     text-align:center; line-height:1.1;
+    animation:dp-rise .7s ease both;
   }}
   #{MARKER} .dp-wordmark span {{ color:#00C8E0; }}
   #{MARKER} .dp-sub {{
     font-size:12px; font-weight:600; letter-spacing:.22em; text-transform:uppercase;
-    color:rgba(196,219,247,0.7);
+    color:rgba(196,219,247,0.7); animation:dp-rise .7s .1s ease both;
   }}
-  #{MARKER} .dp-ring {{
-    width:34px; height:34px; border-radius:50%;
-    border:3px solid rgba(255,255,255,0.15); border-top-color:#00C8E0;
-    animation:dp-spin .8s linear infinite; margin-top:6px;
+  @keyframes dp-rise {{ from {{ opacity:0; transform:translateY(8px); }} to {{ opacity:1; transform:translateY(0); }} }}
+
+  /* Loading track */
+  #{MARKER} .dp-track {{
+    width:148px; height:3px; border-radius:3px; overflow:hidden;
+    background:rgba(255,255,255,0.10); margin-top:4px;
   }}
-  @keyframes dp-spin {{ to {{ transform:rotate(360deg); }} }}
+  #{MARKER} .dp-track i {{
+    display:block; height:100%; width:40%; border-radius:3px;
+    background:linear-gradient(90deg,transparent,#00C8E0,transparent);
+    animation:dp-slide 1.2s ease-in-out infinite;
+  }}
+  @keyframes dp-slide {{ 0% {{ transform:translateX(-120%); }} 100% {{ transform:translateX(320%); }} }}
+
+  @media (prefers-reduced-motion: reduce) {{
+    #{MARKER} .dp-logo, #{MARKER} .dp-tile, #{MARKER} .dp-wave1,
+    #{MARKER} .dp-wave2, #{MARKER} .dp-pulsedot, #{MARKER} .dp-track i {{ animation:none !important; }}
+  }}
 </style>
 <div id="{MARKER}">
-  {logo}
+  <div class="dp-logo">
+    <svg width="100" height="100" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dana Point PULSE">
+      <defs>
+        <linearGradient id="dpTileGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#13314F"/>
+          <stop offset="1" stop-color="#0B2138"/>
+        </linearGradient>
+        <linearGradient id="dpWaveGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#0EA5C4"/>
+          <stop offset="0.5" stop-color="#00C8E0"/>
+          <stop offset="1" stop-color="#6EE7F0"/>
+        </linearGradient>
+        <clipPath id="dpClip"><rect x="6" y="6" width="84" height="84" rx="22"/></clipPath>
+      </defs>
+      <rect class="dp-tile" x="6" y="6" width="84" height="84" rx="22"
+            fill="url(#dpTileGrad)" stroke="rgba(0,200,224,0.35)" stroke-width="1.5"/>
+      <g clip-path="url(#dpClip)">
+        <path class="dp-wave dp-wave2" d="M -96 52 Q -72 62 -48 52 T 0 52 T 48 52 T 96 52 T 144 52 T 192 52"
+              stroke="#1E6E86" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.55"/>
+        <path class="dp-wave dp-wave1" d="M -96 46 Q -72 36 -48 46 T 0 46 T 48 46 T 96 46 T 144 46 T 192 46"
+              stroke="url(#dpWaveGrad)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <circle class="dp-pulsedot" cx="48" cy="46" r="3" fill="#9DF2FA"/>
+      </g>
+    </svg>
+  </div>
   <div class="dp-wordmark">Dana Point <span>PULSE</span></div>
   <div class="dp-sub">Tourism Intelligence</div>
-  <div class="dp-ring"></div>
+  <div class="dp-track"><i></i></div>
 </div>
 <script id="{MARKER}-js">
 (function(){{
