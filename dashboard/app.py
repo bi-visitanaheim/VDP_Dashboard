@@ -2052,7 +2052,7 @@ st.markdown("""
   }
 
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
-  .block-container { padding-top: 0 !important; margin-top: 0 !important; padding-left: 1rem !important; padding-right: 1rem !important; overflow: visible !important; }
+  .block-container { padding-top: 0 !important; margin-top: 0 !important; padding-left: 3rem !important; padding-right: 3rem !important; overflow: visible !important; }
   [data-testid="stAppViewContainer"] > section > div:first-child { padding-top: 0 !important; margin-top: 0 !important; }
   [data-testid="stMain"] { padding-top: 0 !important; margin-top: 0 !important; }
   [data-testid="stMainBlockContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
@@ -2063,10 +2063,10 @@ st.markdown("""
   [data-testid="stMainBlockContainer"] > div:first-child { padding-top: 0 !important; margin-top: 0 !important; }
   .stMainBlockContainer > div { padding-top: 0 !important; margin-top: 0 !important; }
   @media (max-width: 768px) {
-    .block-container { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+    .block-container { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
   }
   @media (max-width: 480px) {
-    .block-container { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+    .block-container { padding-left: 1rem !important; padding-right: 1rem !important; }
   }
   [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; width: 100% !important; }
   [data-testid="stPlotlyChart"] > div { width: 100% !important; }
@@ -9269,7 +9269,7 @@ with tab_ov:
             _status_bg, _status_tx, _status_label = "#FEE2E2", "#B91C1C", "WATCH"
 
         st.markdown(f"""
-<div style="margin-bottom:36px;padding:0;">
+<div style="margin-bottom:36px;padding:0;max-width:960px;margin-left:auto;margin-right:auto;">
   <!-- Status + Date row -->
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
     <span style="background:{_status_bg};color:{_status_tx};font-size:11px;font-weight:800;
@@ -9279,7 +9279,7 @@ with tab_ov:
       text-transform:uppercase;">{_today}</span>
   </div>
   <!-- KPI snapshot row -->
-  <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px;">
+  <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px;justify-content:flex-start;">
     <div>
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.10em;
         color:#94A3B8;margin-bottom:4px;">Occupancy (30d)</div>
@@ -9347,7 +9347,7 @@ with tab_ov:
 
             if _brief_cards:
                 st.markdown("""
-                <div style="margin-bottom:6px;margin-top:4px;">
+                <div style="margin-bottom:6px;margin-top:16px;max-width:960px;margin-left:auto;margin-right:auto;">
                   <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.10em;
                               color:#64748B;margin-bottom:12px;">STAKEHOLDER INTELLIGENCE BRIEF</div>
                 </div>
