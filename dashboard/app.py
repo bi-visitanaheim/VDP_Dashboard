@@ -110,7 +110,7 @@ _ENV_PERPLEXITY_KEY = os.getenv("PERPLEXITY_API_KEY", "")
 # ─── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Dana Point PULSE",
-    page_icon="🌊",
+    page_icon="dashboard/static/favicon.png",
     layout="wide",
     initial_sidebar_state="expanded",
 )
