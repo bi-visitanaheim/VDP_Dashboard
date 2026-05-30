@@ -17017,14 +17017,14 @@ with tab_cs:
                 for _dot, _lbl, _msg in _checks:
                     _rows_html += (
                         f'<div style="display:flex;align-items:center;gap:10px;padding:5px 0;'
-                        f'border-bottom:1px solid rgba(0,0,0,0.05);">'
+                        f'border-bottom:1px solid #E2E8F0;">'
                         f'<span style="font-size:14px;">{_dot}</span>'
-                        f'<span style="font-weight:600;color:#EFF6FF;min-width:160px;font-size:13px;">{_lbl}</span>'
-                        f'<span style="color:#5A7A95;font-size:12px;">{_msg}</span>'
+                        f'<span style="font-weight:700;color:#0F172A;min-width:160px;font-size:13px;">{_lbl}</span>'
+                        f'<span style="color:#64748B;font-size:12px;">{_msg}</span>'
                         f'</div>'
                     )
                 st.markdown(
-                    f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 14px;">'
+                    f'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:10px 14px;">'
                     f'{_rows_html}</div>',
                     unsafe_allow_html=True)
 
