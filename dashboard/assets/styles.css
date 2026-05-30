@@ -337,6 +337,24 @@
   /* ── Insight Icon ──────────────────────────────────────────────────────── */
   .insight-icon { display: inline-block; vertical-align: middle; margin-right: 6px; line-height: 0; }
 
+  /* ── Hide Streamlit loading animation (running man) ───────────────────── */
+  [data-testid="stSkeleton"]             { display: none !important; }
+  [data-testid="stSpinner"]              { display: none !important; }
+  .stSpinner                             { display: none !important; }
+  [class*="loaderWrapper"]               { display: none !important; }
+  [class*="loader_"]                     { display: none !important; }
+  [class*="_loader"]                     { display: none !important; }
+  [class*="splash"]                      { display: none !important; }
+  [class*="Splash"]                      { display: none !important; }
+  [class*="AppSkeleton"]                 { display: none !important; }
+  [class*="appSkeleton"]                 { display: none !important; }
+  /* Running man specifically */
+  [data-testid="stAppRunningMan"]        { display: none !important; }
+  [class*="runningMan"]                  { display: none !important; }
+  [class*="RunningMan"]                  { display: none !important; }
+  [class*="loading-spinner"]             { display: none !important; }
+  svg[class*="running"]                  { display: none !important; }
+
   /* ── Hide Streamlit Chrome ─────────────────────────────────────────────── */
   #MainMenu                              { display: none !important; }
   footer                                 { display: none !important; }
