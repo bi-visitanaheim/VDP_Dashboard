@@ -10498,6 +10498,49 @@ with tab_tr:
                 ),
             )
             st.plotly_chart(style_fig(fig, height=420), width="stretch", config=PLOTLY_CONFIG)
+
+            # ── Infographic analysis band under the monthly trend ────────────────
+            try:
+                def _vfmt_tr(v):
+                    if _tick_sfx == "%":
+                        return f"{v:.1f}%"
+                    if _str_metric_label == "Revenue":
+                        return f"${v/1e6:.1f}M" if abs(v) >= 1e6 else f"${v/1e3:.0f}K"
+                    if _tick_pfx == "$":
+                        return f"${v:,.0f}"
+                    return f"{v:,.0f}"
+                _tr_series = monthly[_main_col].dropna()
+                if not _tr_series.empty:
+                    _tr_latest = float(_tr_series.iloc[-1])
+                    _tr_latest_m = str(monthly["month_label"].iloc[-1])
+                    _tr_peak_i = int(_tr_series.values.argmax())
+                    _tr_peak = float(_tr_series.iloc[_tr_peak_i])
+                    _tr_peak_m = str(monthly.loc[_tr_series.index[_tr_peak_i], "month_label"])
+                    _tr_vs_avg = (_tr_latest - _avg_main) / _avg_main * 100 if _avg_main else 0.0
+                    _tr_above = int((_tr_series >= _avg_main).sum())
+                    _tr_n = len(_tr_series)
+                    # YoY from full (unwindowed) history
+                    _tr_yoy_txt = "n/a"
+                    _yoy_src_col = f"{_str_metric_col}_yoy"
+                    if _yoy_src_col in monthly_full.columns and not monthly_full[_yoy_src_col].dropna().empty:
+                        _tr_yoy_txt = f"{float(monthly_full[_yoy_src_col].dropna().iloc[-1]):+.1f}%"
+                    _tr_dir = "above" if _tr_vs_avg >= 0 else "below"
+                    st.markdown(format_stat_band(
+                        "📈", f"{_str_metric_label} is running {_tr_dir} its {_str_range_label.lower()} average",
+                        [
+                            f"Latest reading ({_tr_latest_m}) is <strong>{_vfmt_tr(_tr_latest)}</strong>, "
+                            f"{abs(_tr_vs_avg):.0f}% {_tr_dir} the period average of {_vfmt_tr(_avg_main)}.",
+                            f"Peak in this window was <strong>{_vfmt_tr(_tr_peak)}</strong> in {_tr_peak_m}; "
+                            f"{_tr_above} of {_tr_n} months ran above average.",
+                            f"Year-over-year, {_str_metric_label} is tracking <strong>{_tr_yoy_txt}</strong> vs the same month last year.",
+                        ],
+                        eyebrow="What this trend says",
+                        accent=("teal" if _tr_vs_avg >= 0 else "red"),
+                        stats=[("Latest", _vfmt_tr(_tr_latest)), ("Avg", _vfmt_tr(_avg_main)), ("YoY", _tr_yoy_txt)],
+                        status=(f"{_tr_vs_avg:+.0f}% vs avg", "pos" if _tr_vs_avg >= 0 else "neg"),
+                    ), unsafe_allow_html=True)
+            except Exception as _e:
+                _logger.debug(f"monthly trend analysis band failed: {_e}")
         else:
             st.markdown(empty_state(
                 "📊", f"No data for {_str_metric_label}.",
@@ -10543,6 +10586,32 @@ with tab_tr:
                 ),
             )
             st.plotly_chart(style_fig(fig, height=420), width="stretch", config=PLOTLY_CONFIG)
+
+            # ── YoY growth-momentum analysis band ────────────────────────────────
+            try:
+                _yy = yoy[_yoy_metric_col].dropna()
+                if not _yy.empty:
+                    _yy_latest = float(_yy.iloc[-1]); _yy_m = str(yoy["month_label"].iloc[-1])
+                    _yy_pos = int((_yy >= 0).sum()); _yy_n = len(_yy)
+                    _yy_avg = float(_yy.mean())
+                    _yy_best_i = int(_yy.values.argmax())
+                    _yy_best = float(_yy.iloc[_yy_best_i])
+                    _yy_best_m = str(yoy.loc[_yy.index[_yy_best_i], "month_label"])
+                    _yy_dir = "growing" if _yy_latest >= 0 else "contracting"
+                    st.markdown(format_stat_band(
+                        "🔄", f"{_str_metric_label} is {_yy_dir} year-over-year",
+                        [
+                            f"Most recent month ({_yy_m}) posted <strong>{_yy_latest:+.1f}%</strong> vs the same month a year earlier.",
+                            f"{_yy_pos} of {_yy_n} months in view showed positive YoY growth; the window averages <strong>{_yy_avg:+.1f}%</strong>.",
+                            f"Strongest YoY swing was <strong>{_yy_best:+.1f}%</strong> in {_yy_best_m}.",
+                        ],
+                        eyebrow="Growth momentum",
+                        accent=("teal" if _yy_latest >= 0 else "red"),
+                        stats=[("Latest YoY", f"{_yy_latest:+.0f}%"), ("Avg YoY", f"{_yy_avg:+.0f}%"), ("Up months", f"{_yy_pos}/{_yy_n}")],
+                        status=(f"{_yy_latest:+.0f}% YoY", "pos" if _yy_latest >= 0 else "neg"),
+                    ), unsafe_allow_html=True)
+            except Exception as _e:
+                _logger.debug(f"yoy analysis band failed: {_e}")
 
         st.markdown("---")
         c1, c2 = st.columns(2)
