@@ -370,69 +370,137 @@ def _chart_tbid_bar(g: dict) -> go.Figure:
     uplift     = g.get("tbid_uplift_per_5pp_shift",      720_788)  / 1e6
     tbid_mid   = (tbid_low + tbid_high) / 2
 
-    categories = ["Group TBID\n(Low Est.)", "Group TBID\n(High Est.)", "+5pp Mix\nUplift"]
+    categories = ["Group TBID<br><sup>Low Estimate</sup>", "Group TBID<br><sup>High Estimate</sup>", "+5pp Mix<br><sup>Incremental Uplift</sup>"]
     values     = [tbid_low, tbid_high, uplift]
-    colors     = ["#0891B2", "#10B981", "#F5B940"]
-    text       = [f"${v:.2f}M" for v in values]
+    bar_colors = ["#0891B2", "#06B6D4", "#F5B940"]
+    line_colors= ["#38BDF8", "#22D3EE", "#FCD34D"]
+    # Inside label: dollar amount; outside annotation: % of mid
+    pct_of_mid = [v / tbid_mid * 100 for v in values]
+    sub_labels = ["baseline range", "upside scenario", f"{pct_of_mid[2]:.0f}% of midpoint"]
 
-    fig = _dark_fig(height=300)
+    fig = _dark_fig(height=320)
     fig.add_trace(go.Bar(
         x=categories,
         y=values,
-        marker_color=colors,
-        text=text,
-        textposition="outside",
-        textfont=dict(size=13, color="#EFF6FF"),
-        hovertemplate="<b>%{x}</b><br>$%{y:.2f}M annual TBID<extra></extra>",
+        marker=dict(
+            color=bar_colors,
+            line=dict(color=line_colors, width=2),
+            opacity=0.92,
+        ),
+        text=[f"<b>${v:.2f}M</b>" for v in values],
+        textposition="inside",
+        insidetextanchor="middle",
+        textfont=dict(size=14, color="#FFFFFF", family="'Outfit',sans-serif"),
+        hovertemplate=(
+            "<b>%{x}</b><br>"
+            "<span style='color:#38BDF8'>$%{y:.3f}M</span> annual TBID<br>"
+            "<extra></extra>"
+        ),
+        customdata=sub_labels,
     ))
+    # Annotation above each bar with sub-label
+    for i, (cat, val, sub) in enumerate(zip(categories, values, sub_labels)):
+        fig.add_annotation(
+            x=i, y=val,
+            text=f"<i style='font-size:10px;color:#94A3B8'>{sub}</i>",
+            showarrow=False,
+            yshift=14,
+            font=dict(size=10, color="#94A3B8"),
+        )
+    # Midpoint reference line
+    fig.add_hline(
+        y=tbid_mid,
+        line_dash="dot", line_color="#38BDF8", line_width=1.5,
+        annotation_text=f"  midpoint ${tbid_mid:.2f}M",
+        annotation_font_size=10, annotation_font_color="#38BDF8",
+        annotation_position="right",
+    )
     fig.update_layout(
         title=dict(text="TBID Revenue Opportunity — Group Business", font=dict(size=13, color="#EFF6FF")),
         yaxis_title="$M / Year",
         yaxis_tickprefix="$",
         yaxis_ticksuffix="M",
+        yaxis=dict(gridcolor="rgba(148,163,184,0.12)", zeroline=False),
         showlegend=False,
+        margin=dict(l=14, r=80, t=52, b=14),
     )
     return fig
 
 
 def _chart_occ_heatmap(df_monthly: pd.DataFrame) -> go.Figure:
-    """Monthly occupancy with group-safe/risk color bands."""
+    """Monthly occupancy with group-safe/risk color bands + ADR overlay line."""
     if df_monthly.empty:
         return _dark_fig()
 
     months = df_monthly["month"].tolist()
     occs   = df_monthly["avg_occ"].tolist()
+    adrs   = df_monthly["avg_adr"].tolist() if "avg_adr" in df_monthly.columns else []
 
-    colors = []
+    # Shorten month labels: "2025-01" → "Jan '25"
+    import calendar
+    short_months = []
+    for m in months:
+        try:
+            y, mo = m.split("-")
+            short_months.append(f"{calendar.month_abbr[int(mo)]} '{y[2:]}")
+        except Exception:
+            short_months.append(m)
+
+    bar_colors, border_colors, zone_labels = [], [], []
     for occ in occs:
         if occ >= OCC_GROUP_RISK_MIN:
-            colors.append("#EF4444")   # red — group displaces transient
+            bar_colors.append("#EF4444")
+            border_colors.append("#FCA5A5")
+            zone_labels.append("Displace")
         elif occ >= OCC_GROUP_WARN_MIN:
-            colors.append("#F59E0B")   # amber — monitor
+            bar_colors.append("#F59E0B")
+            border_colors.append("#FCD34D")
+            zone_labels.append("Monitor")
         else:
-            colors.append("#10B981")   # green — group blocks welcome
+            bar_colors.append("#10B981")
+            border_colors.append("#6EE7B7")
+            zone_labels.append("Safe")
 
-    fig = _dark_fig(height=300)
+    fig = _dark_fig(height=320)
+    # Occupancy bars
     fig.add_trace(go.Bar(
-        x=months,
+        name="Avg Occupancy",
+        x=short_months,
         y=occs,
-        marker_color=colors,
-        text=[f"{v:.0f}%" for v in occs],
-        textposition="outside",
-        textfont=dict(size=10.5, color="#EFF6FF"),
-        hovertemplate="<b>%{x}</b><br>Avg Occ: %{y:.1f}%<extra></extra>",
+        marker=dict(color=bar_colors, line=dict(color=border_colors, width=1.5), opacity=0.88),
+        text=[f"<b>{v:.1f}%</b>" for v in occs],
+        textposition="inside",
+        insidetextanchor="middle",
+        textfont=dict(size=11, color="#FFFFFF", family="'Outfit',sans-serif"),
+        hovertemplate="<b>%{x}</b><br>Occ: <b>%{y:.1f}%</b><br>Zone: %{customdata}<extra></extra>",
+        customdata=zone_labels,
+        yaxis="y",
     ))
+    # ADR overlay line (right axis)
+    if adrs:
+        fig.add_trace(go.Scatter(
+            name="ADR ($)",
+            x=short_months,
+            y=adrs,
+            mode="lines+markers+text",
+            line=dict(color="#A78BFA", width=2.5, dash="solid"),
+            marker=dict(size=6, color="#A78BFA", line=dict(color="#C4B5FD", width=1.5)),
+            text=[f"${v:.0f}" for v in adrs],
+            textposition="top center",
+            textfont=dict(size=9, color="#C4B5FD"),
+            hovertemplate="<b>%{x}</b><br>ADR: <b>$%{y:.0f}</b><extra></extra>",
+            yaxis="y2",
+        ))
     # Reference lines
     for level, color, label in [
-        (OCC_GROUP_RISK_MIN, "#EF4444", "80% — group risk"),
-        (OCC_GROUP_WARN_MIN, "#F59E0B", "70% — monitor"),
-        (OCC_GROUP_SAFE_MAX, "#10B981", "65% — group safe"),
+        (OCC_GROUP_RISK_MIN, "#EF4444", "80% displace risk"),
+        (OCC_GROUP_WARN_MIN, "#F59E0B", "70% monitor"),
+        (OCC_GROUP_SAFE_MAX, "#10B981", "65% group safe"),
     ]:
         fig.add_hline(
             y=level, line_dash="dot", line_color=color, line_width=1.5,
-            annotation_text=label,
-            annotation_font_size=9,
-            annotation_font_color=color,
+            annotation_text=f"  {label}",
+            annotation_font_size=9, annotation_font_color=color,
             annotation_position="right",
         )
     fig.update_layout(
@@ -440,9 +508,13 @@ def _chart_occ_heatmap(df_monthly: pd.DataFrame) -> go.Figure:
             text="Monthly Occupancy — Group Safety Calendar  🟢 Safe  🟡 Monitor  🔴 Displace",
             font=dict(size=12.5, color="#EFF6FF"),
         ),
-        yaxis_title="Avg Occupancy %",
-        yaxis_range=[0, 100],
-        showlegend=False,
+        yaxis=dict(title="Avg Occupancy %", range=[0, 105], gridcolor="rgba(148,163,184,0.12)"),
+        yaxis2=dict(title="ADR ($)", overlaying="y", side="right", showgrid=False,
+                    tickprefix="$", color="#A78BFA") if adrs else {},
+        showlegend=bool(adrs),
+        legend=dict(orientation="h", y=1.08, x=0, font=dict(size=10)),
+        margin=dict(l=14, r=80, t=52, b=14),
+        barmode="group",
     )
     return fig
 
@@ -456,27 +528,33 @@ def _chart_segment_donut(df_segs: pd.DataFrame) -> go.Figure:
     segs["label"] = segs["segment"].str.replace("_", " ").str.title()
     segs = segs.sort_values("spend_billion_usd", ascending=False)
 
-    fig = _dark_fig(height=340)
+    DONUT_COLORS = ["#0891B2", "#10B981", "#F5B940", "#A78BFA", "#FB923C", "#EF4444", "#38BDF8", "#6EE7B7"]
+    fig = _dark_fig(height=360)
     fig.add_trace(go.Pie(
         labels=segs["label"].tolist(),
         values=segs["spend_billion_usd"].tolist(),
-        hole=0.52,
-        marker=dict(colors=_COLORWAY[:len(segs)],
-                    line=dict(color="rgba(0,0,0,0.4)", width=2)),
-        texttemplate="<b>%{label}</b><br>$%{value:.0f}B",
+        hole=0.54,
+        marker=dict(
+            colors=DONUT_COLORS[:len(segs)],
+            line=dict(color="rgba(15,23,42,0.8)", width=3),
+        ),
+        texttemplate="<b>%{label}</b><br>$%{value:.0f}B · %{percent}",
         textposition="outside",
-        hovertemplate="<b>%{label}</b><br>$%{value:.0f}B · %{percent}<extra></extra>",
-        pull=[0.04] * len(segs),
+        textfont=dict(size=11, color="#CBD5E1"),
+        hovertemplate="<b>%{label}</b><br>$%{value:.0f}B&nbsp;&nbsp;(%{percent})<extra></extra>",
+        pull=[0.06 if i == 0 else 0.02 for i in range(len(segs))],
+        rotation=20,
     ))
     fig.update_layout(
         title=dict(text="U.S. Group Travel — $319B National Segments", font=dict(size=13, color="#EFF6FF")),
         annotations=[dict(
-            text="$319B<br><span style='font-size:10px'>National Total</span>",
-            x=0.5, y=0.5, font_size=15, showarrow=False,
+            text="<b>$319B</b><br><span style='font-size:9px;color:#94A3B8'>National<br>Group Travel</span>",
+            x=0.5, y=0.5, font_size=16, showarrow=False,
             font=dict(color="#EFF6FF"),
         )],
         showlegend=True,
-        legend=dict(orientation="v", x=1.0, y=0.5),
+        legend=dict(orientation="v", x=1.02, y=0.5, font=dict(size=10)),
+        margin=dict(l=10, r=150, t=52, b=10),
     )
     return fig
 
@@ -484,33 +562,51 @@ def _chart_segment_donut(df_segs: pd.DataFrame) -> go.Figure:
 def _chart_revenue_funnel(g: dict) -> go.Figure:
     """Revenue funnel: $319B national → South OC market → Dana Point group → TBID."""
     national_group  = 319.0   # $B
-    # South OC ~1.15B room revenue; group share midpoint
     annual_rev      = g.get("estimated_annual_room_rev", 1_153_261_000) / 1e9
     group_rev_mid   = annual_rev * ((GROUP_SHARE_LOW + GROUP_SHARE_HIGH) / 2)
     tbid_est        = group_rev_mid * TBID_RATE
 
     labels = [
-        "U.S. Group Travel ($319B)",
-        f"South OC Room Revenue (${annual_rev:.1f}B)",
-        f"Dana Point Est. Group Rev (${group_rev_mid*1e3:.0f}M)",
-        f"Group TBID Contribution (${tbid_est*1e3:.1f}M)",
+        "U.S. Group Travel",
+        "South OC Room Revenue",
+        "Dana Point Group Rev (est.)",
+        "Group TBID Contribution",
     ]
-    values = [national_group, annual_rev, group_rev_mid, tbid_est]
+    values    = [national_group, annual_rev, group_rev_mid, tbid_est]
+    value_fmt = ["$319B national market", f"${annual_rev:.2f}B total rev",
+                 f"${group_rev_mid*1e3:.0f}M est. group", f"${tbid_est*1e3:.1f}M TBID"]
+    funnel_colors = ["#0891B2", "#06B6D4", "#F5B940", "#A78BFA"]
+    border_colors = ["#38BDF8", "#22D3EE", "#FCD34D", "#C4B5FD"]
 
-    fig = _dark_fig(height=320)
+    fig = _dark_fig(height=340)
     fig.add_trace(go.Funnel(
         y=labels,
         x=values,
         textposition="inside",
-        texttemplate="<b>%{x:.2f}</b>",
-        marker=dict(color=["#0891B2", "#10B981", "#F5B940", "#A78BFA"],
-                    line=dict(width=2, color="rgba(0,0,0,0.3)")),
-        connector=dict(line=dict(color="#334155", dash="dot", width=1)),
-        hovertemplate="<b>%{y}</b><extra></extra>",
+        texttemplate="<b>%{customdata}</b>",
+        customdata=value_fmt,
+        textfont=dict(size=13, color="#FFFFFF", family="'Outfit',sans-serif"),
+        marker=dict(
+            color=funnel_colors,
+            line=dict(width=2.5, color=border_colors),
+            opacity=0.92,
+        ),
+        connector=dict(line=dict(color="rgba(148,163,184,0.25)", dash="dot", width=1.5)),
+        hovertemplate="<b>%{y}</b><br>%{customdata}<extra></extra>",
     ))
+    # Pct-of-national annotations on the right
+    for i, (lbl, val) in enumerate(zip(labels, values)):
+        pct = val / national_group * 100
+        fig.add_annotation(
+            x=val, y=lbl,
+            text=f"  {pct:.2f}% of U.S." if i > 0 else "  100% baseline",
+            xanchor="left", showarrow=False,
+            font=dict(size=9.5, color="#94A3B8"),
+        )
     fig.update_layout(
-        title=dict(text="Group Revenue Funnel — National to Dana Point TBID", font=dict(size=13, color="#EFF6FF")),
+        title=dict(text="Group Revenue Funnel — National → Dana Point TBID", font=dict(size=13, color="#EFF6FF")),
         funnelmode="stack",
+        margin=dict(l=14, r=200, t=52, b=14),
     )
     return fig
 
@@ -520,7 +616,6 @@ def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
     if df_types.empty:
         return _dark_fig()
 
-    # Score map (normalize to 0–10)
     rev_score = {"highest": 10, "high": 7.5, "medium": 5, "low": 2.5}
     sea_score = {"year_round": 10, "shoulder": 6, "peak": 4, "winter": 3}
 
@@ -529,7 +624,7 @@ def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
     if subset.empty:
         subset = df_types.head(4)
 
-    dims = ["Revenue Tier", "LOS Score", "Booking Window", "Seasonal Flex", "Group Fit"]
+    dims = ["Revenue Tier", "Length of Stay", "Booking Window", "Seasonal Flex", "Group Fit"]
 
     def _scores(row) -> list[float]:
         rev  = rev_score.get(str(row.get("revenue_contribution", "medium")).lower(), 5)
@@ -539,85 +634,123 @@ def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
         grp_fit = 8 if row.get("traveler_type") in ("smerf", "business") else 5
         return [rev, los, bkw, sea, grp_fit]
 
-    colors = ["#0891B2", "#F5B940", "#10B981", "#A78BFA"]
-    fig = _dark_fig(height=380)
+    RADAR_COLORS = ["#0891B2", "#F5B940", "#10B981", "#A78BFA"]
+    FILL_COLORS  = ["rgba(8,145,178,0.18)", "rgba(245,185,64,0.18)",
+                    "rgba(16,185,129,0.18)", "rgba(167,139,250,0.18)"]
+    fig = _dark_fig(height=400)
 
     for i, (_, row) in enumerate(subset.iterrows()):
         scores = _scores(row)
-        scores.append(scores[0])  # close polygon
+        scores_closed = scores + [scores[0]]
+        type_label = str(row.get("traveler_type", "")).title()
+        # peak score for label
+        peak_dim = dims[scores.index(max(scores))]
         fig.add_trace(go.Scatterpolar(
-            r=scores,
+            r=scores_closed,
             theta=dims + [dims[0]],
             fill="toself",
-            fillcolor=colors[i % len(colors)].replace(")", ",0.15)").replace("rgb", "rgba"),
-            line=dict(color=colors[i % len(colors)], width=2),
-            name=str(row.get("traveler_type", "")).title(),
-            hovertemplate="<b>%{theta}</b><br>Score: %{r:.1f}<extra></extra>",
+            fillcolor=FILL_COLORS[i % len(FILL_COLORS)],
+            line=dict(color=RADAR_COLORS[i % len(RADAR_COLORS)], width=2.5),
+            marker=dict(size=7, color=RADAR_COLORS[i % len(RADAR_COLORS)],
+                        line=dict(color="#0F172A", width=1.5)),
+            name=f"{type_label} (peak: {peak_dim})",
+            hovertemplate=f"<b>{type_label}</b><br>%{{theta}}: <b>%{{r:.1f}}/10</b><extra></extra>",
         ))
 
     fig.update_layout(
         title=dict(text="Traveler Type Profile — 5-Dimension Comparison", font=dict(size=13, color="#EFF6FF")),
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
-            radialaxis=dict(visible=True, range=[0, 10], color=_LABEL_CLR,
-                            gridcolor=_GRID_CLR, tickfont=dict(size=9)),
-            angularaxis=dict(color=_LABEL_CLR, gridcolor=_GRID_CLR,
-                             tickfont=dict(size=11.5)),
+            radialaxis=dict(
+                visible=True, range=[0, 10], color=_LABEL_CLR,
+                gridcolor=_GRID_CLR, tickfont=dict(size=9),
+                tickvals=[2.5, 5, 7.5, 10],
+                ticktext=["Low", "Med", "High", "Best"],
+            ),
+            angularaxis=dict(
+                color="#CBD5E1", gridcolor=_GRID_CLR,
+                tickfont=dict(size=12, color="#CBD5E1"),
+            ),
         ),
         showlegend=True,
+        legend=dict(orientation="h", y=-0.12, x=0.5, xanchor="center",
+                    font=dict(size=11)),
+        margin=dict(l=40, r=40, t=52, b=60),
     )
     return fig
 
 
 def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
-    """ADR vs Occupancy scatter per property — coloured by chain scale."""
+    """ADR vs Occupancy bubble per property — size = RevPAR, color = chain scale."""
     if df.empty:
         return _dark_fig()
 
     scale_color = {
-        "Luxury":       "#F5B940",
-        "Upper Upscale": "#0891B2",
-        "Upscale":      "#10B981",
+        "Luxury":         "#F5B940",
+        "Upper Upscale":  "#0891B2",
+        "Upscale":        "#10B981",
         "Upper Midscale": "#A78BFA",
-        "Midscale":     "#FB923C",
-        "Economy":      "#6EE7B7",
+        "Midscale":       "#FB923C",
+        "Economy":        "#6EE7B7",
     }
-    colors = [scale_color.get(str(s), "#64748B") for s in df["chain_scale"]]
 
-    fig = _dark_fig(height=360)
+    # Normalize RevPAR to bubble sizes 14–42
+    rvp_vals = df["revpar_usd"].fillna(0)
+    rvp_min, rvp_max = rvp_vals.min(), rvp_vals.max()
+    rvp_range = rvp_max - rvp_min if rvp_max != rvp_min else 1
+    bubble_sizes = [14 + (v - rvp_min) / rvp_range * 28 for v in rvp_vals]
+
+    fig = _dark_fig(height=380)
     for scale in df["chain_scale"].unique():
-        sub = df[df["chain_scale"] == scale]
+        sub  = df[df["chain_scale"] == scale]
+        idxs = sub.index.tolist()
+        clr  = scale_color.get(str(scale), "#64748B")
+        sizes = [bubble_sizes[df.index.get_loc(i)] for i in idxs]
         fig.add_trace(go.Scatter(
             x=sub["occupancy_pct"].tolist(),
             y=sub["adr_usd"].tolist(),
             mode="markers+text",
-            marker=dict(color=scale_color.get(str(scale), "#64748B"), size=14,
-                        line=dict(width=1, color="rgba(255,255,255,0.3)")),
-            text=sub["property_name"].str[:18].tolist(),
+            marker=dict(
+                color=clr, size=sizes,
+                line=dict(width=2, color="rgba(255,255,255,0.35)"),
+                opacity=0.88,
+            ),
+            text=sub["property_name"].str[:16].tolist(),
             textposition="top center",
-            textfont=dict(size=9, color="#CBD5E1"),
+            textfont=dict(size=9.5, color="#CBD5E1"),
             name=str(scale),
             hovertemplate=(
-                "<b>%{text}</b><br>Occ: %{x:.1f}%<br>ADR: $%{y:.0f}"
-                "<br>RevPAR: $%{customdata:.0f}<extra></extra>"
+                "<b>%{text}</b><br>"
+                "Occ: <b>%{x:.1f}%</b><br>"
+                "ADR: <b>$%{y:.0f}</b><br>"
+                "RevPAR: <b>$%{customdata:.0f}</b><extra></extra>"
             ),
             customdata=sub["revpar_usd"].tolist(),
         ))
+    # Market average crosshairs
+    avg_occ = df["occupancy_pct"].mean()
+    avg_adr = df["adr_usd"].mean()
+    fig.add_vline(x=avg_occ, line_dash="dot", line_color="rgba(148,163,184,0.4)", line_width=1)
+    fig.add_hline(y=avg_adr, line_dash="dot", line_color="rgba(148,163,184,0.4)", line_width=1)
+    fig.add_annotation(x=avg_occ, y=avg_adr,
+                       text=f" Mkt avg ({avg_occ:.0f}% / ${avg_adr:.0f})",
+                       showarrow=False, font=dict(size=9, color="#64748B"), xanchor="left")
     fig.update_layout(
         title=dict(
-            text="Competitive Set — ADR vs Occupancy (bubble = RevPAR)",
+            text="Competitive Set — ADR vs Occupancy  ·  bubble size = RevPAR",
             font=dict(size=12.5, color="#EFF6FF"),
         ),
-        xaxis_title="Occupancy %",
-        yaxis_title="ADR ($)",
-        yaxis_tickprefix="$",
+        xaxis=dict(title="Occupancy %", ticksuffix="%", gridcolor=_GRID_CLR),
+        yaxis=dict(title="ADR ($)", tickprefix="$", gridcolor=_GRID_CLR),
         showlegend=True,
+        legend=dict(orientation="h", y=1.08, x=0, font=dict(size=10)),
+        margin=dict(l=14, r=14, t=60, b=14),
     )
     return fig
 
 
 def _chart_tbid_chain_waterfall(df_chain: pd.DataFrame, g: dict) -> go.Figure:
-    """TBID contribution waterfall by chain scale."""
+    """TBID contribution waterfall by chain scale — ranked bars with inside labels."""
     if df_chain.empty:
         return _dark_fig()
 
@@ -635,33 +768,56 @@ def _chart_tbid_chain_waterfall(df_chain: pd.DataFrame, g: dict) -> go.Figure:
         group_share * 365
     )
     subset["tbid_contribution"] = subset["group_rev"] * TBID_RATE
+    subset = subset.sort_values("tbid_contribution", ascending=False)
 
-    colors = ["#F5B940", "#0891B2", "#10B981", "#A78BFA", "#FB923C"]
+    BAR_COLORS    = ["#F5B940", "#0891B2", "#10B981", "#A78BFA", "#FB923C"]
+    BORDER_COLORS = ["#FCD34D", "#38BDF8", "#6EE7B7", "#C4B5FD", "#FDBA74"]
+    tbid_vals = (subset["tbid_contribution"] / 1e6).tolist()
+    total = sum(tbid_vals)
+    pct_labels = [f"{v/total*100:.0f}% of mix" for v in tbid_vals]
 
-    fig = _dark_fig(height=300)
+    fig = _dark_fig(height=320)
     fig.add_trace(go.Bar(
         x=subset["chain_scale"].tolist(),
-        y=(subset["tbid_contribution"] / 1e6).tolist(),
-        marker_color=colors[:len(subset)],
-        text=[f"${v/1e6:.2f}M" for v in subset["tbid_contribution"]],
-        textposition="outside",
-        textfont=dict(size=12.5, color="#EFF6FF"),
-        hovertemplate="<b>%{x}</b><br>Est. Group TBID: $%{y:.2f}M<extra></extra>",
+        y=tbid_vals,
+        marker=dict(
+            color=BAR_COLORS[:len(subset)],
+            line=dict(color=BORDER_COLORS[:len(subset)], width=2),
+            opacity=0.92,
+        ),
+        text=[f"<b>${v:.2f}M</b>" for v in tbid_vals],
+        textposition="inside",
+        insidetextanchor="middle",
+        textfont=dict(size=13, color="#FFFFFF", family="'Outfit',sans-serif"),
+        hovertemplate=(
+            "<b>%{x}</b><br>"
+            "Est. Group TBID: <b>$%{y:.3f}M</b><br>"
+            "%{customdata}<extra></extra>"
+        ),
+        customdata=pct_labels,
     ))
-    tbid_target = 4.1  # $4.1M midpoint target
+    # Outside pct label
+    for i, (scale, val, pct) in enumerate(zip(subset["chain_scale"], tbid_vals, pct_labels)):
+        fig.add_annotation(
+            x=scale, y=val,
+            text=f"<i style='color:#94A3B8'>{pct}</i>",
+            showarrow=False, yshift=14,
+            font=dict(size=9.5, color="#94A3B8"),
+        )
+    tbid_target = 4.1
     fig.add_hline(
         y=tbid_target, line_dash="dash", line_color="#F5B940", line_width=1.5,
-        annotation_text=f"${tbid_target:.1f}M TBID midpoint target",
-        annotation_font_size=9.5, annotation_font_color="#F5B940",
+        annotation_text=f"  ${tbid_target:.1f}M target",
+        annotation_font_size=10, annotation_font_color="#F5B940",
         annotation_position="right",
     )
     fig.update_layout(
         title=dict(text="TBID Waterfall by Chain Scale — rooms × ADR × 28% group share × 1.25%",
                    font=dict(size=12, color="#EFF6FF")),
-        yaxis_title="Est. TBID $M/yr",
-        yaxis_tickprefix="$",
-        yaxis_ticksuffix="M",
+        yaxis=dict(title="Est. TBID $M/yr", tickprefix="$", ticksuffix="M",
+                   gridcolor="rgba(148,163,184,0.12)"),
         showlegend=False,
+        margin=dict(l=14, r=80, t=52, b=14),
     )
     return fig
 
@@ -671,85 +827,111 @@ def _chart_supply_pipeline(df: pd.DataFrame) -> go.Figure:
     if df.empty:
         return _dark_fig()
 
-    scale_color = {
-        "Luxury":       "#F5B940",
-        "Upper Upscale": "#0891B2",
-        "Upscale":      "#10B981",
+    scale_color  = {
+        "Luxury":         "#F5B940",
+        "Upper Upscale":  "#0891B2",
+        "Upscale":        "#10B981",
         "Upper Midscale": "#A78BFA",
-        "Midscale":     "#FB923C",
-        "Economy":      "#6EE7B7",
+        "Midscale":       "#FB923C",
+        "Economy":        "#6EE7B7",
     }
-    colors = [scale_color.get(str(s), "#64748B") for s in df["chain_scale"]]
-    labels = [f"{r['property_name']} ({r.get('projected_open_date','?')})"
-              for _, r in df.iterrows()]
+    scale_border = {
+        "Luxury":         "#FCD34D",
+        "Upper Upscale":  "#38BDF8",
+        "Upscale":        "#6EE7B7",
+        "Upper Midscale": "#C4B5FD",
+        "Midscale":       "#FDBA74",
+        "Economy":        "#A7F3D0",
+    }
+    df = df.sort_values("rooms", ascending=True)
+    labels  = [f"{r['property_name']}  ({r.get('projected_open_date','TBD')})"
+               for _, r in df.iterrows()]
+    colors  = [scale_color.get(str(s), "#64748B") for s in df["chain_scale"]]
+    borders = [scale_border.get(str(s), "#94A3B8") for s in df["chain_scale"]]
 
-    fig = _dark_fig(height=max(260, len(df) * 55))
+    fig = _dark_fig(height=max(280, len(df) * 60))
     fig.add_trace(go.Bar(
         y=labels,
         x=df["rooms"].tolist(),
         orientation="h",
-        marker_color=colors,
-        text=[f"{int(v):,} rooms" for v in df["rooms"]],
+        marker=dict(color=colors, line=dict(color=borders, width=1.5), opacity=0.90),
+        text=[f"<b>{int(v):,} rooms</b>" for v in df["rooms"]],
         textposition="inside",
-        textfont=dict(size=11, color="#EFF6FF"),
-        hovertemplate="<b>%{y}</b><br>Rooms: %{x:,}<br>Scale: %{customdata}<extra></extra>",
+        insidetextanchor="middle",
+        textfont=dict(size=11.5, color="#FFFFFF", family="'Outfit',sans-serif"),
+        hovertemplate=(
+            "<b>%{y}</b><br>"
+            "Rooms: <b>%{x:,}</b><br>"
+            "Scale: %{customdata}<extra></extra>"
+        ),
         customdata=df["chain_scale"].tolist(),
     ))
+    # Outside annotation: % of total pipeline
+    total_rooms = df["rooms"].sum()
+    for i, (lbl, val) in enumerate(zip(labels, df["rooms"])):
+        fig.add_annotation(
+            x=val, y=lbl,
+            text=f"  {val/total_rooms*100:.0f}% of pipeline",
+            xanchor="left", showarrow=False,
+            font=dict(size=9, color="#94A3B8"),
+        )
     fig.update_layout(
         title=dict(text="Supply Pipeline — Upcoming Dana Point Hotel Openings",
                    font=dict(size=12.5, color="#EFF6FF")),
-        xaxis_title="New Rooms",
+        xaxis=dict(title="New Rooms", gridcolor="rgba(148,163,184,0.12)"),
         showlegend=False,
-        margin=dict(l=250, r=20, t=48, b=14),
+        margin=dict(l=260, r=160, t=52, b=14),
     )
     return fig
 
 
 def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go.Figure:
-    """Bar chart: website vs media attributed group trips and impact."""
+    """Grouped bar: website vs media attributed group trips and impact — dual axis."""
     if web_df.empty and med_df.empty:
         return _dark_fig()
 
-    TBID_TARGET_MID = 4_100_000  # $4.1M
+    TBID_TARGET_MID = 4_100_000
 
     channels, trips_vals, impact_vals = [], [], []
     if not web_df.empty:
-        channels.append("Website Attribution")
+        channels.append("Website")
         trips_vals.append(float(web_df["trips"].sum()))
         impact_vals.append(float(web_df["est_impact_usd"].sum()))
     if not med_df.empty:
-        channels.append("Media Attribution")
+        channels.append("Media")
         trips_vals.append(float(med_df["trips"].sum()))
         impact_vals.append(float(med_df["est_impact_usd"].sum()))
 
-    fig = _dark_fig(height=320)
+    fig = _dark_fig(height=340)
     fig.add_trace(go.Bar(
         name="Attributed Trips",
         x=channels,
         y=trips_vals,
-        marker_color="#0891B2",
+        marker=dict(color="#0891B2", line=dict(color="#38BDF8", width=2), opacity=0.90),
         yaxis="y",
-        text=[f"{int(v):,}" for v in trips_vals],
-        textposition="outside",
-        textfont=dict(size=12, color="#EFF6FF"),
-        hovertemplate="<b>%{x}</b><br>Trips: %{y:,}<extra></extra>",
+        text=[f"<b>{int(v):,}</b><br><span style='font-size:9px'>trips</span>" for v in trips_vals],
+        textposition="inside",
+        insidetextanchor="middle",
+        textfont=dict(size=12, color="#FFFFFF", family="'Outfit',sans-serif"),
+        hovertemplate="<b>%{x}</b><br>Trips: <b>%{y:,}</b><extra></extra>",
     ))
     fig.add_trace(go.Bar(
-        name="Est. Impact ($K)",
+        name="Est. Economic Impact",
         x=channels,
         y=[v / 1000 for v in impact_vals],
-        marker_color="#10B981",
+        marker=dict(color="#10B981", line=dict(color="#6EE7B7", width=2), opacity=0.90),
         yaxis="y2",
-        text=[f"${v/1000:.0f}K" for v in impact_vals],
-        textposition="outside",
-        textfont=dict(size=12, color="#EFF6FF"),
-        hovertemplate="<b>%{x}</b><br>Impact: $%{y:.0f}K<extra></extra>",
+        text=[f"<b>${v/1000:.0f}K</b><br><span style='font-size:9px'>impact</span>" for v in impact_vals],
+        textposition="inside",
+        insidetextanchor="middle",
+        textfont=dict(size=12, color="#FFFFFF", family="'Outfit',sans-serif"),
+        hovertemplate="<b>%{x}</b><br>Impact: <b>$%{y:.0f}K</b><extra></extra>",
     ))
     fig.add_hline(
         y=TBID_TARGET_MID / 1000, line_dash="dash",
         line_color="#F5B940", line_width=1.5,
-        annotation_text="$4.1M TBID midpoint target",
-        annotation_font_size=9.5, annotation_font_color="#F5B940",
+        annotation_text="  $4.1M TBID target",
+        annotation_font_size=10, annotation_font_color="#F5B940",
         annotation_position="right",
         yref="y2",
     )
@@ -757,29 +939,43 @@ def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go
         title=dict(text="Group Attribution — Website vs Media Channels",
                    font=dict(size=12.5, color="#EFF6FF")),
         barmode="group",
-        yaxis=dict(title="Attributed Trips", color=_LABEL_CLR),
+        yaxis=dict(title="Attributed Trips", color="#38BDF8", gridcolor="rgba(148,163,184,0.12)"),
         yaxis2=dict(title="Est. Impact ($K)", overlaying="y", side="right",
-                    color=_LABEL_CLR, tickprefix="$", ticksuffix="K"),
+                    color="#6EE7B7", tickprefix="$", ticksuffix="K", showgrid=False),
         showlegend=True,
+        legend=dict(orientation="h", y=1.08, x=0, font=dict(size=11)),
+        margin=dict(l=14, r=90, t=60, b=14),
     )
     return fig
 
 
 def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> go.Figure:
-    """Dual-axis line: CoStar monthly occ vs Datafy group attribution quarterly."""
-    fig = _dark_fig(height=340)
+    """Dual-axis line: CoStar monthly occ vs Datafy group attribution — area fill + markers."""
+    fig = _dark_fig(height=360)
 
     if not df_costar.empty and "as_of_date" in df_costar.columns:
+        occ_vals = df_costar["occupancy_pct"].tolist()
         fig.add_trace(go.Scatter(
             x=df_costar["as_of_date"].tolist(),
-            y=df_costar["occupancy_pct"].tolist(),
-            name="CoStar Mkt Occ %",
+            y=occ_vals,
+            name="CoStar Market Occ %",
             mode="lines+markers",
+            fill="tozeroy",
+            fillcolor="rgba(8,145,178,0.12)",
             line=dict(color="#0891B2", width=2.5),
-            marker=dict(size=6),
+            marker=dict(size=7, color="#0891B2",
+                        line=dict(color="#38BDF8", width=1.5)),
             yaxis="y",
-            hovertemplate="<b>%{x}</b><br>CoStar Occ: %{y:.1f}%<extra></extra>",
+            hovertemplate="<b>%{x}</b><br>CoStar Occ: <b>%{y:.1f}%</b><extra></extra>",
         ))
+        # Threshold bands
+        for lvl, clr, lbl in [
+            (OCC_GROUP_RISK_MIN, "#EF4444", "80% — displace risk"),
+            (OCC_GROUP_WARN_MIN, "#F59E0B", "70% — monitor"),
+        ]:
+            fig.add_hline(y=lvl, line_dash="dot", line_color=clr, line_width=1,
+                          annotation_text=f"  {lbl}", annotation_font_size=9,
+                          annotation_font_color=clr, annotation_position="right")
 
     if not web_df.empty and "est_impact_usd" in web_df.columns:
         q_totals = web_df.groupby("report_period_start")["est_impact_usd"].sum().reset_index()
@@ -787,20 +983,27 @@ def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> 
             x=q_totals["report_period_start"].tolist(),
             y=(q_totals["est_impact_usd"] / 1000).tolist(),
             name="Group Impact ($K)",
-            mode="lines+markers",
+            mode="lines+markers+text",
             line=dict(color="#10B981", width=2.5, dash="dot"),
-            marker=dict(size=8, symbol="diamond"),
+            marker=dict(size=10, symbol="diamond", color="#10B981",
+                        line=dict(color="#6EE7B7", width=1.5)),
+            text=[f"${v/1000:.0f}K" for v in q_totals["est_impact_usd"]],
+            textposition="top center",
+            textfont=dict(size=9.5, color="#6EE7B7"),
             yaxis="y2",
-            hovertemplate="<b>%{x}</b><br>Impact: $%{y:.0f}K<extra></extra>",
+            hovertemplate="<b>%{x}</b><br>Impact: <b>$%{y:.0f}K</b><extra></extra>",
         ))
 
     fig.update_layout(
-        title=dict(text="CoStar Monthly Occ vs Datafy Group Attribution",
+        title=dict(text="CoStar Monthly Occupancy vs Datafy Group Attribution",
                    font=dict(size=12.5, color="#EFF6FF")),
-        yaxis=dict(title="Occupancy %", color=_LABEL_CLR),
+        yaxis=dict(title="Occupancy %", ticksuffix="%", color="#38BDF8",
+                   gridcolor="rgba(148,163,184,0.12)"),
         yaxis2=dict(title="Group Impact ($K)", overlaying="y", side="right",
-                    color=_LABEL_CLR, tickprefix="$", ticksuffix="K"),
+                    color="#6EE7B7", tickprefix="$", ticksuffix="K", showgrid=False),
         showlegend=True,
+        legend=dict(orientation="h", y=1.08, x=0, font=dict(size=11)),
+        margin=dict(l=14, r=90, t=60, b=14),
     )
     return fig
 
@@ -1000,23 +1203,41 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
     # ── Chain scale context ───────────────────────────────────────────────────
     if not df_chain.empty:
         _GROUP_SCALES = {"Upper Upscale", "Upscale"}
-        chain_s = df_chain.drop_duplicates("chain_scale").sort_values("revpar_usd", ascending=False)
-        colors  = ["#0891B2" if str(r.get("chain_scale", "")) in _GROUP_SCALES else "#475569"
-                   for _, r in chain_s.iterrows()]
-        fig_ch = _dark_fig(height=260)
+        chain_s = df_chain.drop_duplicates("chain_scale").sort_values("supply_rooms", ascending=False)
+        bar_clrs   = ["#0891B2" if str(r.get("chain_scale", "")) in _GROUP_SCALES else "#475569"
+                      for _, r in chain_s.iterrows()]
+        bord_clrs  = ["#38BDF8" if str(r.get("chain_scale", "")) in _GROUP_SCALES else "#64748B"
+                      for _, r in chain_s.iterrows()]
+        rvp_vals = chain_s["revpar_usd"].tolist()
+        fig_ch = _dark_fig(height=300)
         fig_ch.add_trace(go.Bar(
             x=chain_s["chain_scale"].tolist(),
             y=chain_s["supply_rooms"].tolist(),
-            marker_color=colors,
-            text=[f"{int(v):,}" for v in chain_s["supply_rooms"]],
-            textposition="outside",
-            hovertemplate="<b>%{x}</b><br>Rooms: %{y:,}<br>RevPAR: $%{customdata:.0f}<extra></extra>",
-            customdata=chain_s["revpar_usd"].tolist(),
+            marker=dict(color=bar_clrs, line=dict(color=bord_clrs, width=2), opacity=0.90),
+            text=[f"<b>{int(v):,}</b>" for v in chain_s["supply_rooms"]],
+            textposition="inside",
+            insidetextanchor="middle",
+            textfont=dict(size=13, color="#FFFFFF", family="'Outfit',sans-serif"),
+            hovertemplate=(
+                "<b>%{x}</b><br>Rooms: <b>%{y:,}</b><br>"
+                "RevPAR: <b>$%{customdata:.0f}</b><extra></extra>"
+            ),
+            customdata=rvp_vals,
         ))
+        # RevPAR as annotation above each bar
+        for scale, rooms, rvp in zip(chain_s["chain_scale"], chain_s["supply_rooms"], rvp_vals):
+            fig_ch.add_annotation(
+                x=scale, y=rooms,
+                text=f"RevPAR ${rvp:.0f}",
+                showarrow=False, yshift=14,
+                font=dict(size=9.5, color="#94A3B8"),
+            )
         fig_ch.update_layout(
-            title=dict(text="Dana Point Supply by Chain Scale — Blue = Group-Primary", font=dict(size=12.5, color="#EFF6FF")),
+            title=dict(text="Dana Point Supply by Chain Scale  ·  Blue = Group-Primary",
+                       font=dict(size=12.5, color="#EFF6FF")),
             showlegend=False,
-            yaxis_title="Supply Rooms",
+            yaxis=dict(title="Supply Rooms", gridcolor="rgba(148,163,184,0.12)"),
+            margin=dict(l=14, r=14, t=52, b=14),
         )
         st.plotly_chart(fig_ch, use_container_width=True, key="gt_chain_bar")
 

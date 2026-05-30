@@ -10172,11 +10172,22 @@ with tab_tr:
                           annotation_text=f"avg {_tick_pfx}{_avg_main:.1f}{_tick_sfx}",
                           annotation_position="top right",
                           annotation_font=dict(size=11, color="#00D4C8"))
+            # Thin x-axis: show every 6th label when >30 bars, every 3rd when >15
+            _n_months = len(monthly)
+            _step = 6 if _n_months > 30 else (3 if _n_months > 15 else 1)
+            _tick_vals = monthly["month_label"].tolist()[::_step]
             fig.update_layout(
                 yaxis_tickprefix=_tick_pfx, yaxis_ticksuffix=_tick_sfx,
                 showlegend=False, transition={"duration": 800},
-                margin=dict(t=40, b=100, l=50, r=50),
-                xaxis=dict(tickfont=dict(size=11), tickangle=-45, automargin=True),
+                margin=dict(t=40, b=80, l=50, r=50),
+                xaxis=dict(
+                    tickmode="array",
+                    tickvals=_tick_vals,
+                    ticktext=_tick_vals,
+                    tickfont=dict(size=12),
+                    tickangle=-35,
+                    automargin=True,
+                ),
             )
             st.plotly_chart(style_fig(fig, height=420), width="stretch", config=PLOTLY_CONFIG)
         else:
@@ -10207,11 +10218,21 @@ with tab_tr:
                     f"<b>%{{x}}</b><br>YOY {_str_metric_label}: %{{y:+.1f}}%<extra></extra>"
                 ),
             ))
+            _n_yoy = len(yoy)
+            _yoy_step = 6 if _n_yoy > 30 else (3 if _n_yoy > 15 else 1)
+            _yoy_tick_vals = yoy["month_label"].tolist()[::_yoy_step]
             fig.update_layout(
                 yaxis_ticksuffix="%", showlegend=False,
                 transition={"duration": 800, "easing": "cubic-in-out"},
-                margin=dict(t=40, b=100, l=50, r=50),
-                xaxis=dict(tickfont=dict(size=11), tickangle=-45, automargin=True),
+                margin=dict(t=40, b=80, l=50, r=50),
+                xaxis=dict(
+                    tickmode="array",
+                    tickvals=_yoy_tick_vals,
+                    ticktext=_yoy_tick_vals,
+                    tickfont=dict(size=12),
+                    tickangle=-35,
+                    automargin=True,
+                ),
             )
             st.plotly_chart(style_fig(fig, height=420), width="stretch", config=PLOTLY_CONFIG)
 
@@ -10375,6 +10396,13 @@ with tab_tr:
         fig.update_yaxes(title_text="RevPAR / ADR ($)", tickprefix="$", secondary_y=False)
         fig.update_yaxes(title_text="Occ %", ticksuffix="%",
                          secondary_y=True, showgrid=False)
+        _fh_n = len(monthly)
+        _fh_step = 6 if _fh_n > 30 else (3 if _fh_n > 15 else 1)
+        _fh_ticks = monthly["month_label"].tolist()[::_fh_step]
+        fig.update_xaxes(
+            tickmode="array", tickvals=_fh_ticks, ticktext=_fh_ticks,
+            tickfont=dict(size=12), tickangle=-35, automargin=True,
+        )
         st.plotly_chart(style_fig(fig, height=380), width="stretch", config=PLOTLY_CONFIG)
 
         # ── Beeswarm: Daily RevPAR Distribution ───────────────────────────────
