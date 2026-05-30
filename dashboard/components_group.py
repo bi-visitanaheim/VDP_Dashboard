@@ -35,10 +35,13 @@ SMERF_BOOKING_WINDOW_HIGH = 48
 CACHE_TTL_GROUP     = 1800   # 30 min — semi-live group data
 CACHE_TTL_NATIONAL  = 3600   # 1 hr  — historical benchmarks
 
-_DARK_BG   = "rgba(0,0,0,0)"
-_GRID_CLR  = "rgba(148,163,184,0.15)"
-_FONT_CLR  = "#CBD5E1"
-_LABEL_CLR = "#94A3B8"
+# Light theme — these charts render on the app's WHITE page background.
+# (Text must be dark to be legible; transparent plot bg lets the page show.)
+_DARK_BG   = "rgba(0,0,0,0)"          # transparent — inherits white page
+_GRID_CLR  = "rgba(15,23,42,0.07)"    # subtle dark grid on white
+_FONT_CLR  = "#334155"                # slate-700 body text
+_LABEL_CLR = "#64748B"                # slate-500 axis labels
+_TITLE_CLR = "#0F172A"                # near-black chart titles
 
 _COLORWAY = [
     "#0891B2",  # teal
@@ -55,44 +58,49 @@ _COLORWAY = [
 # ── Small utilities ───────────────────────────────────────────────────────────
 
 def _dark_fig(height: int = 320) -> go.Figure:
+    """Base figure tuned for the app's LIGHT page (dark text, subtle grid)."""
     fig = go.Figure()
     fig.update_layout(
         plot_bgcolor  = _DARK_BG,
         paper_bgcolor = _DARK_BG,
-        font          = dict(color=_FONT_CLR, size=11.5),
+        font          = dict(color=_FONT_CLR, size=11.5, family="'Outfit',sans-serif"),
         height        = height,
         margin        = dict(l=14, r=14, t=48, b=14),
         colorway      = _COLORWAY,
         legend        = dict(
             orientation="h", yanchor="bottom", y=1.04,
             xanchor="left", x=0,
-            font=dict(size=11, color=_LABEL_CLR),
+            font=dict(size=11, color=_FONT_CLR),
             bgcolor="rgba(0,0,0,0)",
         ),
         hoverlabel    = dict(
-            bgcolor="rgba(20,50,80,0.96)",
-            bordercolor="rgba(0,212,200,0.60)",
-            font=dict(size=13, color="#EFF6FF"),
+            bgcolor="rgba(15,23,42,0.96)",
+            bordercolor="rgba(8,145,178,0.55)",
+            font=dict(size=13, color="#F8FAFC"),
         ),
     )
-    fig.update_xaxes(showgrid=False, color=_LABEL_CLR)
-    fig.update_yaxes(showgrid=True, gridcolor=_GRID_CLR, color=_LABEL_CLR)
+    fig.update_xaxes(showgrid=False, color=_LABEL_CLR, title_font=dict(color=_FONT_CLR))
+    fig.update_yaxes(showgrid=True, gridcolor=_GRID_CLR, color=_LABEL_CLR,
+                     title_font=dict(color=_FONT_CLR))
     return fig
 
 
 def _metric_box(label: str, value: str, note: str = "", color: str = "#0891B2",
                 action: str = "") -> str:
+    """Light-theme stat card — white bg, dark text, accent top-border."""
     action_html = (
-        f'<div style="margin-top:8px;padding:6px 10px;background:rgba(255,255,255,0.06);'
-        f'border-radius:4px;font-size:10.5px;color:#93C5FD;line-height:1.5;">'
-        f'<strong>Action:</strong> {action}</div>'
+        f'<div style="margin-top:8px;padding:6px 10px;background:{color}12;'
+        f'border-radius:5px;font-size:10.5px;color:#334155;line-height:1.5;">'
+        f'<strong style="color:{color};">Action:</strong> {action}</div>'
     ) if action else ""
     return (
-        f'<div style="background:rgba(255,255,255,0.04);border-top:3px solid {color};'
-        f'border-radius:8px;padding:14px 16px;text-align:center;">'
+        f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid {color};'
+        f'border-radius:9px;padding:14px 16px;text-align:center;'
+        f'box-shadow:0 1px 3px rgba(15,23,42,0.06);">'
         f'<div style="color:{color};font-size:9.5px;font-weight:700;text-transform:uppercase;'
         f'letter-spacing:.08em;margin-bottom:4px;">{label}</div>'
-        f'<div style="color:#EFF6FF;font-size:24px;font-weight:800;line-height:1.1;">{value}</div>'
+        f'<div style="color:#0F172A;font-family:\'Outfit\',sans-serif;font-size:24px;'
+        f'font-weight:900;letter-spacing:-0.02em;line-height:1.1;">{value}</div>'
         f'<div style="color:#64748B;font-size:10.5px;margin-top:4px;">{note}</div>'
         f'{action_html}'
         f'</div>'
@@ -101,16 +109,20 @@ def _metric_box(label: str, value: str, note: str = "", color: str = "#0891B2",
 
 def _action_card(icon: str, headline: str, body: str, action: str,
                  accent: str = "#0891B2") -> str:
+    """Light-theme action card — white bg, dark text, accent left bar + CTA."""
     return (
-        f'<div style="background:rgba(255,255,255,0.04);border-left:4px solid {accent};'
-        f'border-radius:8px;padding:14px 18px;margin-bottom:10px;">'
+        f'<div style="background:linear-gradient(180deg,{accent}08 0%,#FFFFFF 60%);'
+        f'border:1px solid #E2E8F0;border-left:4px solid {accent};'
+        f'border-radius:10px;padding:14px 18px;margin-bottom:10px;'
+        f'box-shadow:0 1px 3px rgba(15,23,42,0.06);">'
         f'<div style="display:flex;align-items:flex-start;gap:10px;">'
         f'<span style="font-size:22px;margin-top:2px;">{icon}</span>'
         f'<div style="flex:1;">'
-        f'<div style="color:#EFF6FF;font-weight:700;font-size:13.5px;margin-bottom:4px;">{headline}</div>'
-        f'<div style="color:#94A3B8;font-size:12px;line-height:1.6;margin-bottom:8px;">{body}</div>'
-        f'<div style="background:rgba(0,0,0,0.25);border-radius:4px;padding:6px 10px;'
-        f'font-size:11px;color:{accent};font-weight:600;">→ {action}</div>'
+        f'<div style="color:#0F172A;font-family:\'Outfit\',sans-serif;font-weight:800;'
+        f'font-size:13.5px;margin-bottom:4px;">{headline}</div>'
+        f'<div style="color:#475569;font-size:12px;line-height:1.6;margin-bottom:8px;">{body}</div>'
+        f'<div style="background:{accent}12;border-radius:5px;padding:6px 10px;'
+        f'font-size:11px;color:{accent};font-weight:700;">→ {action}</div>'
         f'</div></div></div>'
     )
 
@@ -416,7 +428,7 @@ def _chart_tbid_bar(g: dict) -> go.Figure:
         annotation_position="right",
     )
     fig.update_layout(
-        title=dict(text="TBID Revenue Opportunity — Group Business", font=dict(size=13, color="#EFF6FF")),
+        title=dict(text="TBID Revenue Opportunity — Group Business", font=dict(size=13, color="#0F172A")),
         yaxis_title="$M / Year",
         yaxis_tickprefix="$",
         yaxis_ticksuffix="M",
@@ -506,7 +518,7 @@ def _chart_occ_heatmap(df_monthly: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title=dict(
             text="Monthly Occupancy — Group Safety Calendar  🟢 Safe  🟡 Monitor  🔴 Displace",
-            font=dict(size=12.5, color="#EFF6FF"),
+            font=dict(size=12.5, color="#0F172A"),
         ),
         yaxis=dict(title="Avg Occupancy %", range=[0, 105], gridcolor="rgba(148,163,184,0.12)"),
         yaxis2=dict(title="ADR ($)", overlaying="y", side="right", showgrid=False,
@@ -546,11 +558,11 @@ def _chart_segment_donut(df_segs: pd.DataFrame) -> go.Figure:
         rotation=20,
     ))
     fig.update_layout(
-        title=dict(text="U.S. Group Travel — $319B National Segments", font=dict(size=13, color="#EFF6FF")),
+        title=dict(text="U.S. Group Travel — $319B National Segments", font=dict(size=13, color="#0F172A")),
         annotations=[dict(
             text="<b>$319B</b><br><span style='font-size:9px;color:#94A3B8'>National<br>Group Travel</span>",
             x=0.5, y=0.5, font_size=16, showarrow=False,
-            font=dict(color="#EFF6FF"),
+            font=dict(color="#0F172A"),
         )],
         showlegend=True,
         legend=dict(orientation="v", x=1.02, y=0.5, font=dict(size=10)),
@@ -604,7 +616,7 @@ def _chart_revenue_funnel(g: dict) -> go.Figure:
             font=dict(size=9.5, color="#94A3B8"),
         )
     fig.update_layout(
-        title=dict(text="Group Revenue Funnel — National → Dana Point TBID", font=dict(size=13, color="#EFF6FF")),
+        title=dict(text="Group Revenue Funnel — National → Dana Point TBID", font=dict(size=13, color="#0F172A")),
         funnelmode="stack",
         margin=dict(l=14, r=200, t=52, b=14),
     )
@@ -658,7 +670,7 @@ def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
         ))
 
     fig.update_layout(
-        title=dict(text="Traveler Type Profile — 5-Dimension Comparison", font=dict(size=13, color="#EFF6FF")),
+        title=dict(text="Traveler Type Profile — 5-Dimension Comparison", font=dict(size=13, color="#0F172A")),
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
             radialaxis=dict(
@@ -738,7 +750,7 @@ def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         title=dict(
             text="Competitive Set — ADR vs Occupancy  ·  bubble size = RevPAR",
-            font=dict(size=12.5, color="#EFF6FF"),
+            font=dict(size=12.5, color="#0F172A"),
         ),
         xaxis=dict(title="Occupancy %", ticksuffix="%", gridcolor=_GRID_CLR),
         yaxis=dict(title="ADR ($)", tickprefix="$", gridcolor=_GRID_CLR),
@@ -813,7 +825,7 @@ def _chart_tbid_chain_waterfall(df_chain: pd.DataFrame, g: dict) -> go.Figure:
     )
     fig.update_layout(
         title=dict(text="TBID Waterfall by Chain Scale — rooms × ADR × 28% group share × 1.25%",
-                   font=dict(size=12, color="#EFF6FF")),
+                   font=dict(size=12, color="#0F172A")),
         yaxis=dict(title="Est. TBID $M/yr", tickprefix="$", ticksuffix="M",
                    gridcolor="rgba(148,163,184,0.12)"),
         showlegend=False,
@@ -877,7 +889,7 @@ def _chart_supply_pipeline(df: pd.DataFrame) -> go.Figure:
         )
     fig.update_layout(
         title=dict(text="Supply Pipeline — Upcoming Dana Point Hotel Openings",
-                   font=dict(size=12.5, color="#EFF6FF")),
+                   font=dict(size=12.5, color="#0F172A")),
         xaxis=dict(title="New Rooms", gridcolor="rgba(148,163,184,0.12)"),
         showlegend=False,
         margin=dict(l=260, r=160, t=52, b=14),
@@ -937,7 +949,7 @@ def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go
     )
     fig.update_layout(
         title=dict(text="Group Attribution — Website vs Media Channels",
-                   font=dict(size=12.5, color="#EFF6FF")),
+                   font=dict(size=12.5, color="#0F172A")),
         barmode="group",
         yaxis=dict(title="Attributed Trips", color="#38BDF8", gridcolor="rgba(148,163,184,0.12)"),
         yaxis2=dict(title="Est. Impact ($K)", overlaying="y", side="right",
@@ -996,7 +1008,7 @@ def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> 
 
     fig.update_layout(
         title=dict(text="CoStar Monthly Occupancy vs Datafy Group Attribution",
-                   font=dict(size=12.5, color="#EFF6FF")),
+                   font=dict(size=12.5, color="#0F172A")),
         yaxis=dict(title="Occupancy %", ticksuffix="%", color="#38BDF8",
                    gridcolor="rgba(148,163,184,0.12)"),
         yaxis2=dict(title="Group Impact ($K)", overlaying="y", side="right",
@@ -1042,8 +1054,9 @@ def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> No
         "shoulder":   {"Q1": "Safe",    "Q4": "Safe",    "Q2": "Caution", "Q3": "Risk"},
         "winter":     {"Q1": "Safe",    "Q4": "Caution", "Q2": "Risk",  "Q3": "Risk"},
     }
-    _CELL_COLOR = {"Safe": "#14532D", "Caution": "#78350F", "Risk": "#7F1D1D"}
-    _TEXT_COLOR = {"Safe": "#4ADE80", "Caution": "#FCD34D", "Risk": "#FCA5A5"}
+    # Light-theme risk cells: soft tinted bg + dark readable text
+    _CELL_COLOR = {"Safe": "#DCFCE7", "Caution": "#FEF3C7", "Risk": "#FEE2E2"}
+    _TEXT_COLOR = {"Safe": "#15803D", "Caution": "#B45309", "Risk": "#B91C1C"}
 
     rows_html = ""
     for _, trow in subset.iterrows():
@@ -1062,12 +1075,12 @@ def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> No
             fg = _TEXT_COLOR[effective]
             cells += (
                 f'<td style="background:{bg};color:{fg};font-weight:700;font-size:11px;'
-                f'text-align:center;padding:8px 4px;border:1px solid rgba(255,255,255,0.06);">'
+                f'text-align:center;padding:8px 4px;border:1px solid #E2E8F0;">'
                 f'{effective}</td>'
             )
         rows_html += (
-            f'<tr><td style="color:#EFF6FF;font-size:11.5px;padding:8px 12px;'
-            f'border:1px solid rgba(255,255,255,0.06);font-weight:600;">{ttype}</td>'
+            f'<tr><td style="color:#0F172A;font-size:11.5px;padding:8px 12px;'
+            f'border:1px solid #E2E8F0;font-weight:700;">{ttype}</td>'
             f'{cells}</tr>'
         )
 
@@ -1076,24 +1089,24 @@ def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> No
         q_r = q_risk.get(q, "Safe")
         q_c = _TEXT_COLOR[q_r]
         header_cells_parts.append(
-            f'<th style="color:#93C5FD;font-size:10.5px;text-align:center;padding:8px;'
-            f'border:1px solid rgba(255,255,255,0.06);">{q}<br>'
-            f'<span style="color:{q_c};font-size:9px;">({q_r})</span></th>'
+            f'<th style="color:#475569;font-size:10.5px;text-align:center;padding:8px;'
+            f'border:1px solid #E2E8F0;background:#F8FAFC;">{q}<br>'
+            f'<span style="color:{q_c};font-size:9px;font-weight:700;">({q_r})</span></th>'
         )
     header_cells = "".join(header_cells_parts)
 
     st.markdown(f"""
-    <div style="margin-top:14px;margin-bottom:6px;color:#93C5FD;font-size:10px;
-                font-weight:700;text-transform:uppercase;letter-spacing:.08em;">
+    <div style="margin-top:14px;margin-bottom:6px;color:#0891B2;font-size:10px;
+                font-weight:800;text-transform:uppercase;letter-spacing:.08em;">
       SHOULDER SEASON ALIGNMENT MATRIX — Traveler Types × Quarters
     </div>
     <div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;background:rgba(0,0,0,0.2);
-                  border-radius:8px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;background:#FFFFFF;
+                  border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;">
       <thead>
         <tr>
-          <th style="color:#93C5FD;font-size:10.5px;text-align:left;padding:8px 12px;
-                     border:1px solid rgba(255,255,255,0.06);">Traveler Type</th>
+          <th style="color:#475569;font-size:10.5px;text-align:left;padding:8px 12px;
+                     border:1px solid #E2E8F0;background:#F8FAFC;">Traveler Type</th>
           {header_cells}
         </tr>
       </thead>
@@ -1135,35 +1148,35 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
         risk_label, risk_color, risk_action = "LOW", "#22C55E", "Group blocks viable year-round"
 
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,rgba(8,145,178,0.12),rgba(16,185,129,0.06));
-                border:1px solid rgba(8,145,178,0.3);border-radius:12px;padding:20px 24px;
-                margin-bottom:18px;">
-      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+    <div style="background:linear-gradient(135deg,rgba(8,145,178,0.08),rgba(16,185,129,0.05));
+                border:1px solid #BAE6FD;border-radius:12px;padding:20px 24px;
+                margin-bottom:18px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+      <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                   letter-spacing:.1em;margin-bottom:10px;">EXECUTIVE BRIEF — GROUP BUSINESS CASE</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:14px;">
         <div style="text-align:center;">
-          <div style="color:#EFF6FF;font-size:26px;font-weight:800;">${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M</div>
-          <div style="color:#93C5FD;font-size:10.5px;margin-top:2px;">Est. Annual Group TBID</div>
-          <div style="color:#64748B;font-size:9.5px;">25–32% demand share benchmark</div>
+          <div style="color:#0F172A;font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;letter-spacing:-0.02em;">${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M</div>
+          <div style="color:#475569;font-size:10.5px;margin-top:2px;font-weight:600;">Est. Annual Group TBID</div>
+          <div style="color:#94A3B8;font-size:9.5px;">25–32% demand share benchmark</div>
         </div>
         <div style="text-align:center;">
-          <div style="color:{risk_color};font-size:26px;font-weight:800;">{risk_label}</div>
-          <div style="color:#93C5FD;font-size:10.5px;margin-top:2px;">Displacement Risk</div>
-          <div style="color:#64748B;font-size:9.5px;">{compression} compression days/yr</div>
+          <div style="color:{risk_color};font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;letter-spacing:-0.02em;">{risk_label}</div>
+          <div style="color:#475569;font-size:10.5px;margin-top:2px;font-weight:600;">Displacement Risk</div>
+          <div style="color:#94A3B8;font-size:9.5px;">{compression} compression days/yr</div>
         </div>
         <div style="text-align:center;">
-          <div style="color:#F5B940;font-size:26px;font-weight:800;">+${uplift/1000:.0f}K/yr</div>
-          <div style="color:#93C5FD;font-size:10.5px;margin-top:2px;">TBID Uplift per +5pp</div>
-          <div style="color:#64748B;font-size:9.5px;">each 5pp shift in group mix</div>
+          <div style="color:#D97706;font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;letter-spacing:-0.02em;">+${uplift/1000:.0f}K/yr</div>
+          <div style="color:#475569;font-size:10.5px;margin-top:2px;font-weight:600;">TBID Uplift per +5pp</div>
+          <div style="color:#94A3B8;font-size:9.5px;">each 5pp shift in group mix</div>
         </div>
       </div>
-      <div style="background:rgba(0,0,0,0.2);border-radius:6px;padding:10px 14px;">
-        <div style="color:#FCD34D;font-size:10px;font-weight:700;text-transform:uppercase;
+      <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;padding:10px 14px;">
+        <div style="color:#B45309;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.05em;margin-bottom:4px;">TOP RECOMMENDATION</div>
-        <div style="color:#CBD5E1;font-size:12px;line-height:1.6;">
-          {risk_action}. Group ADR is estimated at <strong>${group_adr:.0f}</strong> vs.
-          <strong>${market_adr:.0f}</strong> blended market ADR — a
-          <strong>${adr_gap:.0f}/room/night gap</strong>. Shoulder-season group bookings
+        <div style="color:#334155;font-size:12px;line-height:1.6;">
+          {risk_action}. Group ADR is estimated at <strong style="color:#0F172A;">${group_adr:.0f}</strong> vs.
+          <strong style="color:#0F172A;">${market_adr:.0f}</strong> blended market ADR — a
+          <strong style="color:#0F172A;">${adr_gap:.0f}/room/night gap</strong>. Shoulder-season group bookings
           maximize TBID without displacing peak transient revenue.
         </div>
       </div>
@@ -1234,7 +1247,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
             )
         fig_ch.update_layout(
             title=dict(text="Dana Point Supply by Chain Scale  ·  Blue = Group-Primary",
-                       font=dict(size=12.5, color="#EFF6FF")),
+                       font=dict(size=12.5, color="#0F172A")),
             showlegend=False,
             yaxis=dict(title="Supply Rooms", gridcolor="rgba(148,163,184,0.12)"),
             margin=dict(l=14, r=14, t=52, b=14),
@@ -1248,8 +1261,8 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
     ig_e = social.get("ig_eng", 0.0)
     if ig_f or fb_f:
         st.markdown("""
-        <div style="margin-top:6px;margin-bottom:4px;color:#93C5FD;font-size:10px;
-                    font-weight:700;text-transform:uppercase;letter-spacing:.06em;">
+        <div style="margin-top:6px;margin-bottom:4px;color:#0891B2;font-size:10px;
+                    font-weight:800;text-transform:uppercase;letter-spacing:.06em;">
         SOCIAL AUDIENCE — GROUP OUTREACH CHANNEL
         </div>
         """, unsafe_allow_html=True)
@@ -1268,7 +1281,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
     # ── A. Competitive Set Positioning ───────────────────────────────────────
     if df_comp is not None and not df_comp.empty:
         st.markdown("""
-        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+        <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.06em;margin-bottom:10px;">
         A. COMPETITIVE SET POSITIONING — How Dana Point Properties Index Against the Set
         </div>
@@ -1296,7 +1309,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
 
     # ── B. TBID Waterfall by Chain Scale ─────────────────────────────────────
     st.markdown("""
-    <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+    <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                 letter-spacing:.06em;margin:14px 0 10px;">
     B. TBID WATERFALL BY CHAIN SCALE — rooms × ADR × 28% group share × 1.25% TBID rate
     </div>
@@ -1322,7 +1335,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
     # ── C. Supply Pipeline Timeline ───────────────────────────────────────────
     if df_pipeline is not None and not df_pipeline.empty:
         st.markdown("""
-        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+        <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.06em;margin:14px 0 10px;">
         C. SUPPLY PIPELINE TIMELINE — Upcoming Hotel Openings
         </div>
@@ -1347,7 +1360,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
     if (web_groups is not None and not web_groups.empty) or \
        (med_groups is not None and not med_groups.empty):
         st.markdown("""
-        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+        <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.06em;margin:14px 0 10px;">
         D. ATTRIBUTION CHANNEL CONTRIBUTION — Website vs Media Group Trips & Impact
         </div>
@@ -1470,12 +1483,12 @@ def _render_traveler_types(df_types: pd.DataFrame) -> None:
         return
 
     st.markdown("""
-    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:16px 20px;
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;
                 margin-bottom:16px;">
-      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+      <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                   letter-spacing:.08em;margin-bottom:6px;">WHY THIS MATTERS</div>
-      <div style="color:#CBD5E1;font-size:12.5px;line-height:1.7;">
-        Not all travelers are equal. Business travelers generate <strong>highest revenue</strong>
+      <div style="color:#334155;font-size:12.5px;line-height:1.7;">
+        Not all travelers are equal. Business travelers generate <strong style="color:#0F172A;">highest revenue</strong>
         but represent only 20% of volume — they fund 60% of hotel revenue nationally.
         SMERF groups (shoulder-season buyers) are the <em>lowest displacement risk</em> because
         they book 8–48 weeks out into periods when transient demand is soft.
@@ -1496,7 +1509,7 @@ def _render_traveler_types(df_types: pd.DataFrame) -> None:
     df_sorted = df_sorted.sort_values("_order")
 
     st.markdown("""
-    <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+    <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                 letter-spacing:.06em;margin-bottom:10px;">TRAVELER TYPE PROFILES — SORTED BY REVENUE CONTRIBUTION</div>
     """, unsafe_allow_html=True)
 
@@ -1524,25 +1537,27 @@ def _render_traveler_types(df_types: pd.DataFrame) -> None:
             group_tip = f"⚡ Short booking window ({bkw_l}–{bkw_h} wks) — last-minute fill strategy"
 
         st.markdown(f"""
-        <div style="background:rgba(255,255,255,0.03);border-left:3px solid {rc};
-                    border-radius:6px;padding:12px 16px;margin-bottom:8px;">
+        <div style="background:linear-gradient(180deg,{rc}08 0%,#FFFFFF 60%);
+                    border:1px solid #E2E8F0;border-left:3px solid {rc};
+                    border-radius:8px;padding:12px 16px;margin-bottom:8px;
+                    box-shadow:0 1px 2px rgba(15,23,42,0.05);">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
             <div>
-              <span style="color:#EFF6FF;font-weight:700;font-size:14px;">{t_type}</span>
-              <span style="color:{rc};font-size:10px;font-weight:700;text-transform:uppercase;
+              <span style="color:#0F172A;font-family:'Outfit',sans-serif;font-weight:800;font-size:14px;">{t_type}</span>
+              <span style="color:{rc};font-size:10px;font-weight:800;text-transform:uppercase;
                            letter-spacing:.06em;margin-left:10px;">{rev} Revenue</span>
             </div>
-            <div style="color:#64748B;font-size:10.5px;">{season}</div>
+            <div style="color:#64748B;font-size:10.5px;font-weight:600;">{season}</div>
           </div>
-          <div style="color:#94A3B8;font-size:11.5px;margin-top:4px;">{motiv}</div>
+          <div style="color:#475569;font-size:11.5px;margin-top:4px;line-height:1.5;">{motiv}</div>
           <div style="display:flex;gap:24px;margin-top:8px;flex-wrap:wrap;">
             <div><span style="color:#64748B;font-size:10px;">LOS up to </span>
-                 <span style="color:#CBD5E1;font-weight:600;font-size:11px;">{los_h} nights</span></div>
+                 <span style="color:#0F172A;font-weight:700;font-size:11px;">{los_h} nights</span></div>
             <div><span style="color:#64748B;font-size:10px;">Books </span>
-                 <span style="color:#CBD5E1;font-weight:600;font-size:11px;">{bkw_l}–{bkw_h} wks out</span></div>
-            {f'<div><span style="color:#64748B;font-size:10px;">Group size: </span><span style="color:#CBD5E1;font-weight:600;font-size:11px;">{group_s}</span></div>' if group_s else ''}
+                 <span style="color:#0F172A;font-weight:700;font-size:11px;">{bkw_l}–{bkw_h} wks out</span></div>
+            {f'<div><span style="color:#64748B;font-size:10px;">Group size: </span><span style="color:#0F172A;font-weight:700;font-size:11px;">{group_s}</span></div>' if group_s else ''}
           </div>
-          <div style="margin-top:8px;font-size:10.5px;color:#93C5FD;">{group_tip}</div>
+          <div style="margin-top:8px;font-size:10.5px;color:#0891B2;font-weight:600;">{group_tip}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1562,34 +1577,34 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
     meetings_rec = 82   # % recovery vs 2019
 
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,rgba(8,145,178,0.10),rgba(167,139,250,0.06));
-                border:1px solid rgba(8,145,178,0.25);border-radius:12px;padding:18px 22px;
-                margin-bottom:16px;">
-      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+    <div style="background:linear-gradient(135deg,rgba(8,145,178,0.07),rgba(167,139,250,0.05));
+                border:1px solid #BAE6FD;border-radius:12px;padding:18px 22px;
+                margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+      <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                   letter-spacing:.1em;margin-bottom:10px;">U.S. GROUP TRAVEL — NATIONAL PICTURE</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
         <div style="text-align:center;">
-          <div style="color:#EFF6FF;font-size:22px;font-weight:800;">${total_group}B</div>
-          <div style="color:#93C5FD;font-size:10px;">Total Group Travel</div>
+          <div style="color:#0F172A;font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;">${total_group}B</div>
+          <div style="color:#475569;font-size:10px;font-weight:600;">Total Group Travel</div>
         </div>
         <div style="text-align:center;">
-          <div style="color:#10B981;font-size:22px;font-weight:800;">{meetings_rec}%</div>
-          <div style="color:#93C5FD;font-size:10px;">Meetings Recovery (2019)</div>
+          <div style="color:#059669;font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;">{meetings_rec}%</div>
+          <div style="color:#475569;font-size:10px;font-weight:600;">Meetings Recovery (2019)</div>
         </div>
         <div style="text-align:center;">
-          <div style="color:#F5B940;font-size:22px;font-weight:800;">3M+</div>
-          <div style="color:#93C5FD;font-size:10px;">U.S. Jobs Supported</div>
+          <div style="color:#D97706;font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;">3M+</div>
+          <div style="color:#475569;font-size:10px;font-weight:600;">U.S. Jobs Supported</div>
         </div>
         <div style="text-align:center;">
-          <div style="color:#A78BFA;font-size:22px;font-weight:800;">$188B</div>
-          <div style="color:#93C5FD;font-size:10px;">Meetings 2026 Projected</div>
+          <div style="color:#7C3AED;font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;">$188B</div>
+          <div style="color:#475569;font-size:10px;font-weight:600;">Meetings 2026 Projected</div>
         </div>
       </div>
-      <div style="color:#CBD5E1;font-size:12px;line-height:1.7;">
-        Meetings & events ($126B) are the largest group segment and at 82% recovery — still growing.
-        Live spectator sports ($102B) and participatory sports ($52B) are segments where
+      <div style="color:#334155;font-size:12px;line-height:1.7;">
+        Meetings &amp; events (<strong style="color:#0F172A;">$126B</strong>) are the largest group segment and at 82% recovery — still growing.
+        Live spectator sports (<strong style="color:#0F172A;">$102B</strong>) and participatory sports (<strong style="color:#0F172A;">$52B</strong>) are segments where
         Dana Point can directly compete via surf events (Doheny), sailing regattas,
-        and ocean-sports tourism. Leisure group travel ($39B) is fully recovered.
+        and ocean-sports tourism. Leisure group travel (<strong style="color:#0F172A;">$39B</strong>) is fully recovered.
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -1610,30 +1625,31 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
             biz_rec = float(biz_s.get("pct_recovery_vs_2019") or 85)
             biz_lod = float(biz_s.get("pct_total_lodging_rev") or 60)
             st.markdown(f"""
-            <div style="background:rgba(8,145,178,0.07);border-radius:10px;padding:16px 20px;
-                        margin-top:14px;">
-              <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+            <div style="background:rgba(8,145,178,0.05);border:1px solid #BAE6FD;
+                        border-radius:10px;padding:16px 20px;margin-top:14px;
+                        box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+              <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                           letter-spacing:.08em;margin-bottom:10px;">BUSINESS TRAVEL — HOTEL IMPACT</div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
                 <div style="text-align:center;">
-                  <div style="color:#EFF6FF;font-size:22px;font-weight:800;">${biz_sp:.0f}B</div>
-                  <div style="color:#64748B;font-size:10px;">National Business Travel Spend</div>
+                  <div style="color:#0F172A;font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;">${biz_sp:.0f}B</div>
+                  <div style="color:#475569;font-size:10px;font-weight:600;">National Business Travel Spend</div>
                   <div style="color:#94A3B8;font-size:9.5px;">{biz_rec:.0f}% of 2019 recovery</div>
                 </div>
                 <div style="text-align:center;">
-                  <div style="color:#EFF6FF;font-size:22px;font-weight:800;">{biz_lod:.0f}%</div>
-                  <div style="color:#64748B;font-size:10px;">of Hotel Revenue</div>
+                  <div style="color:#0F172A;font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;">{biz_lod:.0f}%</div>
+                  <div style="color:#475569;font-size:10px;font-weight:600;">of Hotel Revenue</div>
                   <div style="color:#94A3B8;font-size:9.5px;">from just 20% of travelers</div>
                 </div>
                 <div style="text-align:center;">
-                  <div style="color:#F5B940;font-size:22px;font-weight:800;">5×</div>
-                  <div style="color:#64748B;font-size:10px;">Revenue per Traveler</div>
+                  <div style="color:#D97706;font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;">5×</div>
+                  <div style="color:#475569;font-size:10px;font-weight:600;">Revenue per Traveler</div>
                   <div style="color:#94A3B8;font-size:9.5px;">vs. average leisure visitor</div>
                 </div>
               </div>
-              <div style="margin-top:10px;background:rgba(0,0,0,0.15);border-radius:6px;
-                          padding:8px 12px;color:#CBD5E1;font-size:11.5px;line-height:1.6;">
-                <strong>Dana Point implication:</strong> Corporate meeting planners evaluating
+              <div style="margin-top:10px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;
+                          padding:8px 12px;color:#334155;font-size:11.5px;line-height:1.6;">
+                <strong style="color:#0F172A;">Dana Point implication:</strong> Corporate meeting planners evaluating
                 South OC coastal venues represent the highest-value group segment. Waldorf Astoria
                 and Ritz-Carlton carry national brand recognition that opens doors to corporate
                 contracting. TBID investment in group sales missions targeting these planners
@@ -1645,7 +1661,7 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
     # Dana Point opportunities
     st.markdown("""
     <div style="margin-top:16px;">
-      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+      <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                   letter-spacing:.08em;margin-bottom:10px;">DANA POINT SEGMENT OPPORTUNITIES</div>
     </div>
     """, unsafe_allow_html=True)
@@ -1671,7 +1687,7 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
     if (df_costar_monthly is not None and not df_costar_monthly.empty) or \
        (web_groups is not None and not web_groups.empty):
         st.markdown("""
-        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+        <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.08em;margin:18px 0 10px;">
         E. COSTAR MONTHLY OCC vs DATAFY GROUP ATTRIBUTION
         </div>
@@ -1688,7 +1704,7 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
     # ── F. Shoulder Season Alignment Matrix ───────────────────────────────────
     if df_types is not None and not df_types.empty and comp is not None and not comp.empty:
         st.markdown("""
-        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+        <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.08em;margin:18px 0 10px;">
         F. SHOULDER SEASON ALIGNMENT MATRIX — Traveler Types × Quarters
         </div>
@@ -1722,11 +1738,11 @@ def _render_ai_analyst(ai_keys: dict, selected_model: str) -> None:
     ]
 
     st.markdown("""
-    <div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:16px 20px;
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:16px 20px;
                 margin-bottom:16px;">
-      <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+      <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                   letter-spacing:.08em;margin-bottom:6px;">AI GROUP TRAVEL ANALYST</div>
-      <div style="color:#CBD5E1;font-size:12px;line-height:1.6;">
+      <div style="color:#334155;font-size:12px;line-height:1.6;">
         Ask the AI analyst a question about group travel strategy, or use one of the
         pre-loaded prompts below. The AI has full access to our group intelligence data,
         U.S. Travel benchmarks, and CoStar market data.
