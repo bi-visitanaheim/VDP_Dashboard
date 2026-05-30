@@ -7988,24 +7988,24 @@ with st.sidebar:
     # ── Thursday Demo Walkthrough ──────────────────────────────────────────────
     with st.expander("🎯 Thursday Demo Flow", expanded=False):
         st.markdown(
-            '<div style="font-size:11px;line-height:1.7;color:#CBD5E1;">'
-            '<strong style="color:#22D3EE;font-size:12px;">Suggested 10-Minute Flow</strong><br><br>'
-            '<strong style="color:#F8FAFC;">1. Overview Tab</strong><br>'
+            '<div style="font-size:11px;line-height:1.7;color:#475569;">'
+            '<strong style="color:#0891B2;font-size:12px;">Suggested 10-Minute Flow</strong><br><br>'
+            '<strong style="color:#0F172A;">1. Overview Tab</strong><br>'
             '→ Point to hero stats (RevPAR, ADR, OCC)<br>'
             '→ Click <strong>🎯 Full Story</strong> — AI tells the narrative<br>'
             '→ Show <strong>12-Month Scorecard</strong> in Performance Metrics<br><br>'
-            '<strong style="color:#F8FAFC;">2. Hotel Trends Tab</strong><br>'
+            '<strong style="color:#0F172A;">2. Hotel Trends Tab</strong><br>'
             '→ Switch to Monthly view → show RevPAR trend<br>'
             '→ Highlight YOY improvement in chart<br><br>'
-            '<strong style="color:#F8FAFC;">3. Our Visitors Tab</strong><br>'
+            '<strong style="color:#0F172A;">3. Our Visitors Tab</strong><br>'
             '→ Show 3.55M annual trips, 61% overnight<br>'
             '→ Point to spending by category<br><br>'
-            '<strong style="color:#F8FAFC;">4. Where They\'re From Tab</strong><br>'
+            '<strong style="color:#0F172A;">4. Where They\'re From Tab</strong><br>'
             '→ LA = 19% of visits (high volume, lower spend)<br>'
             '→ Fly markets (SLC, Dallas) = premium value<br><br>'
-            '<strong style="color:#F8FAFC;">5. Board Report Sub-Tab</strong><br>'
+            '<strong style="color:#0F172A;">5. Board Report Sub-Tab</strong><br>'
             '→ Overview → Board Report → Download HTML<br><br>'
-            '<strong style="color:#22D3EE;font-size:11px;">Key Numbers to Remember</strong><br>'
+            '<strong style="color:#0891B2;font-size:11px;">Key Numbers to Remember</strong><br>'
             '• RevPAR: $325 (+63.5% YOY)<br>'
             '• ADR: $440 (+26.5% YOY)<br>'
             '• Annual Trips: 3.55M<br>'
@@ -11587,11 +11587,11 @@ with tab_fo:
         # Seasonal demand tiers for OC coastal: 1=lowest, 5=highest
         _season_idx = {1: 2, 2: 2, 3: 3, 4: 3, 5: 4, 6: 5, 7: 5, 8: 5, 9: 4, 10: 4, 11: 3, 12: 3}
         _tier_color = {
-            1: ("rgba(99,102,241,0.15)", "#818CF8", "Off-Peak"),
-            2: ("rgba(99,102,241,0.20)", "#818CF8", "Shoulder"),
-            3: ("rgba(251,146,60,0.18)", "#FB923C", "Secondary Peak"),
-            4: ("rgba(16,185,129,0.20)", "#34D399", "High Season"),
-            5: ("rgba(239,68,68,0.20)",  "#F87171", "Peak / Compression"),
+            1: ("rgba(99,102,241,0.10)", "#4F46E5", "Off-Peak"),
+            2: ("rgba(99,102,241,0.12)", "#4F46E5", "Shoulder"),
+            3: ("rgba(251,146,60,0.12)", "#EA580C", "Secondary Peak"),
+            4: ("rgba(16,185,129,0.12)", "#059669", "High Season"),
+            5: ("rgba(239,68,68,0.12)",  "#DC2626", "Peak / Compression"),
         }
 
         # ADR seasonal multipliers (relative to base $440)
@@ -11621,21 +11621,22 @@ with tab_fo:
                         f'{_ev_icon} {_ev["name"]}</div>'
                     )
                 _is_current = (_fm.year == _today_cal.year and _fm.month == _today_cal.month)
-                _border_extra = "border:2px solid #22D3EE;" if _is_current else "border:1px solid rgba(255,255,255,0.08);"
+                _border_extra = "border:2px solid #0891B2;" if _is_current else "border:1px solid #E2E8F0;"
                 st.markdown(
                     f'<div style="padding:14px 14px 10px 14px;border-radius:12px;'
-                    f'background:{_bg};{_border_extra}margin-bottom:8px;">'
+                    f'background:{_bg};{_border_extra}margin-bottom:8px;'
+                    f'box-shadow:0 1px 3px rgba(15,23,42,0.05);">'
                     f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-                    f'<div style="font-size:12px;font-weight:800;color:#F8FAFC;">{_mo_name}</div>'
-                    + (f'<span style="font-size:9px;color:#22D3EE;font-weight:700;">NOW</span>' if _is_current else '')
+                    f'<div style="font-size:12px;font-weight:800;color:#0F172A;">{_mo_name}</div>'
+                    + (f'<span style="font-size:9px;color:#0891B2;font-weight:800;">NOW</span>' if _is_current else '')
                     + f'</div>'
-                    f'<div style="font-size:9px;font-weight:700;color:{_ac};text-transform:uppercase;'
+                    f'<div style="font-size:9px;font-weight:800;color:{_ac};text-transform:uppercase;'
                     f'letter-spacing:.07em;margin-bottom:6px;">{_tier_lbl}</div>'
-                    f'<div style="font-size:18px;font-weight:900;color:#FFFFFF;font-family:\'Outfit\',sans-serif;">'
+                    f'<div style="font-size:18px;font-weight:900;color:#0F172A;font-family:\'Outfit\',sans-serif;">'
                     f'${_proj_adr:,.0f} <span style="font-size:10px;color:#64748B;font-weight:400;">proj. ADR</span></div>'
                     f'<div style="margin-top:6px;">'
-                    f'<div style="font-size:9px;color:#94A3B8;margin-bottom:2px;">Historical compression</div>'
-                    f'<div style="height:4px;background:rgba(255,255,255,0.08);border-radius:3px;">'
+                    f'<div style="font-size:9px;color:#64748B;margin-bottom:2px;">Historical compression</div>'
+                    f'<div style="height:4px;background:rgba(15,23,42,0.08);border-radius:3px;">'
                     f'<div style="width:{_comp_bar_w}%;height:100%;background:{_ac};border-radius:3px;"></div>'
                     f'</div></div>'
                     f'{_evt_html}'
@@ -13485,20 +13486,20 @@ with tab_ei:
                 f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">'
                 f'<span style="font-size:24px;">🎸</span>'
                 f'<div>'
-                f'<div style="font-size:13px;font-weight:800;color:#FED7AA;letter-spacing:.06em;text-transform:uppercase;">Ohana Fest 2026 — Sep 25–28</div>'
-                f'<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:2px;">Dana Point\'s #1 hotel demand driver · {_days_ohana} days away</div>'
+                f'<div style="font-size:13px;font-weight:800;color:#C2410C;letter-spacing:.06em;text-transform:uppercase;">Ohana Fest 2026 — Sep 25–28</div>'
+                f'<div style="font-size:11px;color:#475569;margin-top:2px;">Dana Point\'s #1 hotel demand driver · {_days_ohana} days away</div>'
                 f'</div>'
-                f'<span style="margin-left:auto;background:rgba(249,115,22,0.20);color:#FB923C;'
+                f'<span style="margin-left:auto;background:rgba(249,115,22,0.15);color:#C2410C;'
                 f'font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;'
                 f'padding:4px 12px;border-radius:99px;border:1px solid rgba(249,115,22,0.40);">'
                 f'⏳ {_days_ohana} DAYS</span>'
                 f'</div>'
                 f'<div style="display:flex;flex-wrap:wrap;gap:10px;">'
                 + "".join([
-                    f'<div style="flex:1;min-width:110px;background:rgba(255,255,255,0.04);'
-                    f'border-radius:10px;padding:12px 14px;border:1px solid rgba(255,255,255,0.08);">'
-                    f'<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94A3B8;margin-bottom:5px;">{lbl}</div>'
-                    f'<div style="font-size:20px;font-weight:900;font-family:\'Outfit\',sans-serif;color:#FFFFFF;">{val}</div>'
+                    f'<div style="flex:1;min-width:110px;background:#FFFFFF;'
+                    f'border-radius:10px;padding:12px 14px;border:1px solid #FED7AA;">'
+                    f'<div style="font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9A3412;margin-bottom:5px;">{lbl}</div>'
+                    f'<div style="font-size:20px;font-weight:900;font-family:\'Outfit\',sans-serif;color:#0F172A;">{val}</div>'
                     f'<div style="font-size:10px;color:#64748B;margin-top:3px;">{sub}</div></div>'
                     for lbl, val, sub in [
                         ("Event Expenditure",  "$14.6M",  "direct event spend"),
@@ -13523,12 +13524,12 @@ with tab_ei:
                 f'display:flex;align-items:center;gap:14px;flex-wrap:wrap;">'
                 f'<span style="font-size:22px;">🏖️</span>'
                 f'<div style="flex:1;">'
-                f'<div style="font-size:12px;font-weight:800;color:#C7D2FE;">Memorial Day Weekend — May 23–25, 2026</div>'
-                f'<div style="font-size:11px;color:rgba(255,255,255,0.55);margin-top:3px;">'
+                f'<div style="font-size:12px;font-weight:800;color:#4338CA;">Memorial Day Weekend — May 23–25, 2026</div>'
+                f'<div style="font-size:11px;color:#475569;margin-top:3px;">'
                 f'{_days_memday} days away · Book now for best rates · '
                 f'Expected ADR premium: ~+${_memday_adr_premium:.0f} vs. shoulder season</div>'
                 f'</div>'
-                f'<span style="background:rgba(99,102,241,0.20);color:#A5B4FC;'
+                f'<span style="background:rgba(99,102,241,0.15);color:#4338CA;'
                 f'font-size:10px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;'
                 f'padding:4px 12px;border-radius:99px;border:1px solid rgba(99,102,241,0.40);">'
                 f'🔴 HIGH DEMAND</span>'
@@ -13655,13 +13656,13 @@ with tab_ei:
             f'<div style="display:flex;gap:20px;align-items:center;margin-top:4px;'
             f'padding:8px 12px;background:linear-gradient(90deg, rgba(0,212,200,0.12) 0%, rgba(255,255,255,0.04) 100%);border-radius:8px;'
             f'border:1px solid rgba(0,212,200,0.20);">'
-            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#F8FAFC;">'
+            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#0F172A;font-weight:600;">'
             f'<span style="width:14px;height:14px;border-radius:3px;background:{TEAL};display:inline-block;"></span>'
             f'Major Event ({_total_major})</span>'
-            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#F8FAFC;">'
+            f'<span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#0F172A;font-weight:600;">'
             f'<span style="width:14px;height:14px;border-radius:3px;background:#64748B;display:inline-block;"></span>'
             f'Standard Event ({_total_events - _total_major})</span>'
-            f'<span style="margin-left:auto;font-size:11px;color:#CBD5E1;">'
+            f'<span style="margin-left:auto;font-size:11px;color:#64748B;">'
             f'{_total_events} events · {_evts_sorted["event_date"].min().strftime("%b %Y")} – {_evts_sorted["event_date"].max().strftime("%b %Y")} · Source: Visit Dana Point</span>'
             f'</div>',
             unsafe_allow_html=True,
@@ -15568,35 +15569,35 @@ with tab_cs:
                 _avg_adr_premium = (merged["portfolio_adr"] - merged["mkt_adr"]).mean()
                 st.markdown(f"""
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-      <div style="flex:1;min-width:140px;background:rgba(33,128,141,0.12);border:1px solid rgba(33,128,141,0.3);
-           border-radius:10px;padding:10px 14px;">
-        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">RevPAR Correlation</div>
-        <div style="font-size:1.6rem;font-weight:800;color:#67E8F9;">{_corr_rvp:.2f}</div>
-        <div style="font-size:10px;color:#8B949E;">R — portfolio tracks market</div>
+      <div style="flex:1;min-width:140px;background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid #0891B2;
+           border-radius:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+        <div style="font-size:10px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">RevPAR Correlation</div>
+        <div style="font-size:1.6rem;font-weight:900;font-family:'Outfit',sans-serif;color:#0891B2;">{_corr_rvp:.2f}</div>
+        <div style="font-size:10px;color:#64748B;">R — portfolio tracks market</div>
       </div>
-      <div style="flex:1;min-width:140px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);
-           border-radius:10px;padding:10px 14px;">
-        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">ADR Correlation</div>
-        <div style="font-size:1.6rem;font-weight:800;color:#C4B5FD;">{_corr_adr:.2f}</div>
-        <div style="font-size:10px;color:#8B949E;">R — rate pricing alignment</div>
+      <div style="flex:1;min-width:140px;background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid #7C3AED;
+           border-radius:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+        <div style="font-size:10px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">ADR Correlation</div>
+        <div style="font-size:1.6rem;font-weight:900;font-family:'Outfit',sans-serif;color:#7C3AED;">{_corr_adr:.2f}</div>
+        <div style="font-size:10px;color:#64748B;">R — rate pricing alignment</div>
       </div>
-      <div style="flex:1;min-width:140px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);
-           border-radius:10px;padding:10px 14px;">
-        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Avg RevPAR Premium</div>
-        <div style="font-size:1.6rem;font-weight:800;color:{'#34D399' if _avg_rvp_premium>=0 else '#F87171'};">${_avg_rvp_premium:+.0f}</div>
-        <div style="font-size:10px;color:#8B949E;">portfolio above market avg</div>
+      <div style="flex:1;min-width:140px;background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid {'#059669' if _avg_rvp_premium>=0 else '#DC2626'};
+           border-radius:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+        <div style="font-size:10px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Avg RevPAR Premium</div>
+        <div style="font-size:1.6rem;font-weight:900;font-family:'Outfit',sans-serif;color:{'#059669' if _avg_rvp_premium>=0 else '#DC2626'};">${_avg_rvp_premium:+.0f}</div>
+        <div style="font-size:10px;color:#64748B;">portfolio above market avg</div>
       </div>
-      <div style="flex:1;min-width:140px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);
-           border-radius:10px;padding:10px 14px;">
-        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Avg ADR Premium</div>
-        <div style="font-size:1.6rem;font-weight:800;color:{'#FDE68A' if _avg_adr_premium>=0 else '#F87171'};">${_avg_adr_premium:+.0f}</div>
-        <div style="font-size:10px;color:#8B949E;">portfolio above market ADR</div>
+      <div style="flex:1;min-width:140px;background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid {'#D97706' if _avg_adr_premium>=0 else '#DC2626'};
+           border-radius:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+        <div style="font-size:10px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Avg ADR Premium</div>
+        <div style="font-size:1.6rem;font-weight:900;font-family:'Outfit',sans-serif;color:{'#D97706' if _avg_adr_premium>=0 else '#DC2626'};">${_avg_adr_premium:+.0f}</div>
+        <div style="font-size:10px;color:#64748B;">portfolio above market ADR</div>
       </div>
-      <div style="flex:1;min-width:140px;background:rgba(22,27,34,0.8);border:1px solid rgba(0,0,0,0.08);
-           border-radius:10px;padding:10px 14px;">
-        <div style="font-size:10px;color:#8B949E;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Data Points</div>
-        <div style="font-size:1.6rem;font-weight:800;color:#E6EDF3;">{len(merged)}</div>
-        <div style="font-size:10px;color:#8B949E;">months of aligned data</div>
+      <div style="flex:1;min-width:140px;background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid #64748B;
+           border-radius:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+        <div style="font-size:10px;color:#64748B;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">Data Points</div>
+        <div style="font-size:1.6rem;font-weight:900;font-family:'Outfit',sans-serif;color:#0F172A;">{len(merged)}</div>
+        <div style="font-size:10px;color:#64748B;">months of aligned data</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -16527,41 +16528,41 @@ with tab_cs:
                 _d1, _d2, _d3, _d4 = st.columns([1, 1, 1, 1])
                 with _d1:
                     st.markdown(
-                        f'<div style="background:rgba(0,0,0,0.25);border:1px solid {_dsig_color}40;border-left:3px solid {_dsig_color};'
-                        f'border-radius:10px;padding:14px 16px;">'
-                        f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:{_dsig_color};">Demand Score</div>'
-                        f'<div style="font-size:32px;font-weight:900;color:#EFF6FF;line-height:1.1;">{_dsig_score:.0f}<span style="font-size:16px;color:#5A7A95;">/100</span></div>'
-                        f'<div style="font-size:12px;color:#5A7A95;">{_dsig_tier} {_dsig_dir_sym} {_dsig_dir}</div>'
+                        f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid {_dsig_color};'
+                        f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">'
+                        f'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:{_dsig_color};">Demand Score</div>'
+                        f'<div style="font-size:32px;font-weight:900;font-family:\'Outfit\',sans-serif;color:#0F172A;line-height:1.1;">{_dsig_score:.0f}<span style="font-size:16px;color:#94A3B8;">/100</span></div>'
+                        f'<div style="font-size:12px;color:#64748B;">{_dsig_tier} {_dsig_dir_sym} {_dsig_dir}</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
                 with _d2:
                     _trend_c = float(_dsig_latest.get("trend_component", 50))
                     st.markdown(
-                        f'<div style="background:rgba(0,0,0,0.25);border:1px solid rgba(34,211,238,0.25);border-radius:10px;padding:14px 16px;">'
-                        f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#22D3EE;">Search Demand</div>'
-                        f'<div style="font-size:28px;font-weight:800;color:#EFF6FF;">{_trend_c:.0f}<span style="font-size:13px;color:#5A7A95;">/100</span></div>'
-                        f'<div style="font-size:11px;color:#5A7A95;">Google Trends · 35% weight</div>'
+                        f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid #0891B2;border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">'
+                        f'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#0891B2;">Search Demand</div>'
+                        f'<div style="font-size:28px;font-weight:800;font-family:\'Outfit\',sans-serif;color:#0F172A;">{_trend_c:.0f}<span style="font-size:13px;color:#94A3B8;">/100</span></div>'
+                        f'<div style="font-size:11px;color:#64748B;">Google Trends · 35% weight</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
                 with _d3:
                     _weather_c = float(_dsig_latest.get("weather_component", 50))
                     st.markdown(
-                        f'<div style="background:rgba(0,0,0,0.25);border:1px solid rgba(251,191,36,0.25);border-radius:10px;padding:14px 16px;">'
-                        f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#FBBF24;">Beach Quality</div>'
-                        f'<div style="font-size:28px;font-weight:800;color:#EFF6FF;">{_weather_c:.0f}<span style="font-size:13px;color:#5A7A95;">/100</span></div>'
-                        f'<div style="font-size:11px;color:#5A7A95;">Seasonal coastal · 20% weight</div>'
+                        f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid #D97706;border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">'
+                        f'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#D97706;">Beach Quality</div>'
+                        f'<div style="font-size:28px;font-weight:800;font-family:\'Outfit\',sans-serif;color:#0F172A;">{_weather_c:.0f}<span style="font-size:13px;color:#94A3B8;">/100</span></div>'
+                        f'<div style="font-size:11px;color:#64748B;">Seasonal coastal · 20% weight</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
                 with _d4:
                     _wow_color = "#22C55E" if _dsig_wod > 0 else ("#EF4444" if _dsig_wod < 0 else "#6B7280")
                     st.markdown(
-                        f'<div style="background:rgba(0,0,0,0.25);border:1px solid rgba(139,92,246,0.25);border-radius:10px;padding:14px 16px;">'
-                        f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#8B5CF6;">Week/Week</div>'
-                        f'<div style="font-size:28px;font-weight:800;color:{_wow_color};">{"+" if _dsig_wod > 0 else ""}{_dsig_wod:.1f}</div>'
-                        f'<div style="font-size:11px;color:#5A7A95;">points vs. last week</div>'
+                        f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-top:3px solid #7C3AED;border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">'
+                        f'<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:#7C3AED;">Week/Week</div>'
+                        f'<div style="font-size:28px;font-weight:800;font-family:\'Outfit\',sans-serif;color:{_wow_color};">{"+" if _dsig_wod > 0 else ""}{_dsig_wod:.1f}</div>'
+                        f'<div style="font-size:11px;color:#64748B;">points vs. last week</div>'
                         f'</div>',
                         unsafe_allow_html=True,
                     )
@@ -16779,11 +16780,11 @@ with tab_cs:
                             _cr_interp = str(_cr["interpretation"])
                             _cr_color = "#22C55E" if _cr_r > 0.3 else ("#EF4444" if _cr_r < -0.3 else "#F59E0B")
                             st.markdown(
-                                f'<div style="background:rgba(0,0,0,0.2);border-left:3px solid {_cr_color};'
-                                f'border-radius:6px;padding:10px 12px;margin-bottom:8px;">'
-                                f'<div style="font-size:12px;font-weight:700;color:#EFF6FF;">'
-                                f'{_cr["metric_a"].replace("_"," ").title()} <span style="color:#475569;">→</span> Occ%</div>'
-                                f'<div style="font-size:11px;color:#94A3B8;">{_cr_interp.title()} · r={_cr_r:.3f} · {_cr_lag}wk lead · n={_cr_n}</div>'
+                                f'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-left:3px solid {_cr_color};'
+                                f'border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
+                                f'<div style="font-size:12px;font-weight:700;color:#0F172A;">'
+                                f'{_cr["metric_a"].replace("_"," ").title()} <span style="color:#94A3B8;">→</span> Occ%</div>'
+                                f'<div style="font-size:11px;color:#64748B;">{_cr_interp.title()} · r={_cr_r:.3f} · {_cr_lag}wk lead · n={_cr_n}</div>'
                                 f'<div style="font-size:11px;color:#64748B;margin-top:4px;">'
                                 f'{"If this signals up, occupancy tends to follow in " + str(_cr_lag) + " weeks." if _cr_lag > 0 else "Same-week relationship — monitor simultaneously."}'
                                 f'</div>'
@@ -16854,9 +16855,9 @@ with tab_cs:
                         for _pk_k, _pk_v in _pk_stats:
                             st.markdown(
                                 f'<div style="display:flex;justify-content:space-between;'
-                                f'padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.06);">'
-                                f'<span style="font-size:12px;color:#94A3B8;">{_pk_k}</span>'
-                                f'<span style="font-size:13px;font-weight:700;color:#EFF6FF;">{_pk_v}</span>'
+                                f'padding:5px 0;border-bottom:1px solid #E2E8F0;">'
+                                f'<span style="font-size:12px;color:#64748B;">{_pk_k}</span>'
+                                f'<span style="font-size:13px;font-weight:700;color:#0F172A;">{_pk_v}</span>'
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
@@ -17148,18 +17149,20 @@ with tab_cs:
                     risk_label = "LOW"
 
                 st.markdown(f"""
-                <div style="background:rgba(0,0,0,0.2);border-left:3px solid {risk_color};
-                            border-radius:6px;padding:12px 16px;margin:8px 0;">
-                  <div style="color:{risk_color};font-weight:700;font-size:11px;letter-spacing:.05em;
+                <div style="background:linear-gradient(180deg,{risk_color}0D 0%,#FFFFFF 60%);
+                            border:1px solid #E2E8F0;border-left:4px solid {risk_color};
+                            border-radius:10px;padding:12px 16px;margin:8px 0;
+                            box-shadow:0 1px 3px rgba(15,23,42,0.06);">
+                  <div style="color:{risk_color};font-weight:800;font-size:11px;letter-spacing:.05em;
                               text-transform:uppercase;margin-bottom:4px;">
                     GROUP DISPLACEMENT RISK: {risk_label}
                   </div>
-                  <div style="color:#CBD5E1;font-size:12px;line-height:1.6;">
-                    <strong>{g_compression} compression days/year</strong> (80%+ occupancy).
-                    On peak nights, group blocks at est. <strong>${g_group_adr:.0f} ADR</strong> displace
-                    transient leisure at <strong>${g_market_adr:.0f}+ ADR</strong> — a
-                    <strong>${g_market_adr - g_group_adr:.0f}/room/night</strong> revenue gap.
-                    Optimal strategy: target group business in <strong>Q1/Q4 shoulder</strong> when
+                  <div style="color:#334155;font-size:12px;line-height:1.6;">
+                    <strong style="color:#0F172A;">{g_compression} compression days/year</strong> (80%+ occupancy).
+                    On peak nights, group blocks at est. <strong style="color:#0F172A;">${g_group_adr:.0f} ADR</strong> displace
+                    transient leisure at <strong style="color:#0F172A;">${g_market_adr:.0f}+ ADR</strong> — a
+                    <strong style="color:#0F172A;">${g_market_adr - g_group_adr:.0f}/room/night</strong> revenue gap.
+                    Optimal strategy: target group business in <strong style="color:#0F172A;">Q1/Q4 shoulder</strong> when
                     transient demand is softest.
                   </div>
                 </div>
@@ -17247,23 +17250,23 @@ with tab_cs:
                             <div style="display:flex;gap:12px;margin:8px 0;">
                               <div style="flex:1;background:rgba(37,99,235,0.1);border-radius:6px;
                                           padding:10px 14px;text-align:center;">
-                                <div style="color:#93C5FD;font-size:10px;font-weight:600;
+                                <div style="color:#2563EB;font-size:10px;font-weight:700;
                                             text-transform:uppercase;letter-spacing:.05em;">National Business Travel</div>
-                                <div style="color:#EFF6FF;font-size:20px;font-weight:700;">${_biz_spend:.0f}B</div>
+                                <div style="color:#0F172A;font-size:20px;font-weight:800;">${_biz_spend:.0f}B</div>
                                 <div style="color:#64748B;font-size:10px;">{_biz_recov:.0f}% of 2019</div>
                               </div>
                               <div style="flex:1;background:rgba(37,99,235,0.1);border-radius:6px;
                                           padding:10px 14px;text-align:center;">
-                                <div style="color:#93C5FD;font-size:10px;font-weight:600;
+                                <div style="color:#2563EB;font-size:10px;font-weight:700;
                                             text-transform:uppercase;letter-spacing:.05em;">Biz Traveler Hotel Rev Share</div>
-                                <div style="color:#EFF6FF;font-size:20px;font-weight:700;">{_biz_lodg:.0f}%</div>
+                                <div style="color:#0F172A;font-size:20px;font-weight:800;">{_biz_lodg:.0f}%</div>
                                 <div style="color:#64748B;font-size:10px;">of hotel revenue (20% of volume)</div>
                               </div>
                               <div style="flex:1;background:rgba(37,99,235,0.1);border-radius:6px;
                                           padding:10px 14px;text-align:center;">
-                                <div style="color:#93C5FD;font-size:10px;font-weight:600;
+                                <div style="color:#2563EB;font-size:10px;font-weight:700;
                                             text-transform:uppercase;letter-spacing:.05em;">Total Group Travel</div>
-                                <div style="color:#EFF6FF;font-size:20px;font-weight:700;">$319B</div>
+                                <div style="color:#0F172A;font-size:20px;font-weight:800;">$319B</div>
                                 <div style="color:#64748B;font-size:10px;">3M+ U.S. jobs supported</div>
                               </div>
                             </div>
