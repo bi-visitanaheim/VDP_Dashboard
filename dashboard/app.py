@@ -3139,7 +3139,12 @@ st.markdown("""
       '[data-testid="stStatusWidget"]','[data-testid="manage-app-button"]',
       '[class*="_profileImage_"]','[class*="_link_gzau"]',
       '[class*="_container_gzau"]','[class*="appCreator" i]','[class*="deployButton" i]',
-      '[class*="viewerBadge" i]','[class*="profileContainer" i]'
+      '[class*="viewerBadge" i]','[class*="profileContainer" i]',
+      /* Running man / Streamlit loading animation */
+      '[data-testid="stAppRunningMan"]','[class*="runningMan" i]',
+      '[class*="RunningMan" i]','[class*="appRunning" i]',
+      '[class*="loaderWrapper" i]','[class*="AppSkeleton" i]',
+      '[class*="appSkeleton" i]','[class*="stLoading" i]'
     ];
     sel.forEach(function(s){
       try { document.querySelectorAll(s).forEach(function(el){ el.style.setProperty('display','none','important'); }); } catch(e){}
