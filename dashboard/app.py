@@ -16975,28 +16975,30 @@ with tab_cs:
         _ac1, _ac2, _ac3 = st.columns(3)
         with _ac1:
             st.markdown(
-                f'<div style="background:#0C1E14;border:1px solid rgba(16,185,129,0.22);border-left:3px solid #10B981;'
+                f'<div style="background:#FFFFFF;border:1px solid #D1FAE5;border-top:3px solid #10B981;'
                 f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
                 f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#059669;margin-bottom:4px;">Populated Sources</div>'
-                f'<div style="font-size:28px;font-weight:800;color:#EFF6FF;">{len(_populated)}</div>'
-                f'<div style="font-size:12px;color:#5A7A95;">of {len(_df_registry)} tracked DataFrames</div>'
+                f'<div style="font-size:28px;font-weight:800;color:#0F172A;">{len(_populated)}</div>'
+                f'<div style="font-size:12px;color:#64748B;">of {len(_df_registry)} tracked DataFrames</div>'
                 f'</div>', unsafe_allow_html=True)
         with _ac2:
             _ac2_color = "#DC2626" if _empty else "#059669"
+            _ac2_bg = "#FEF2F2" if _empty else "#F0FDF4"
+            _ac2_bdr = "#FECACA" if _empty else "#D1FAE5"
             st.markdown(
-                f'<div style="background:#1E0E0E;border:1px solid rgba(239,68,68,0.22);border-left:3px solid {_ac2_color};'
+                f'<div style="background:#FFFFFF;border:1px solid {_ac2_bdr};border-top:3px solid {_ac2_color};'
                 f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
                 f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:{_ac2_color};margin-bottom:4px;">Empty Sources</div>'
-                f'<div style="font-size:28px;font-weight:800;color:#EFF6FF;">{len(_empty)}</div>'
-                f'<div style="font-size:12px;color:#5A7A95;">{"Run pipeline to fix" if _empty else "All sources healthy"}</div>'
+                f'<div style="font-size:28px;font-weight:800;color:#0F172A;">{len(_empty)}</div>'
+                f'<div style="font-size:12px;color:#64748B;">{"Run pipeline to fix" if _empty else "All sources healthy"}</div>'
                 f'</div>', unsafe_allow_html=True)
         with _ac3:
             st.markdown(
-                f'<div style="background:#0C1525;border:1px solid rgba(0,212,200,0.22);border-left:3px solid #0891B2;'
+                f'<div style="background:#FFFFFF;border:1px solid #BAE6FD;border-top:3px solid #0891B2;'
                 f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
                 f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">Insights Status</div>'
-                f'<div style="font-size:18px;font-weight:800;color:#EFF6FF;">{_insights_status}</div>'
-                f'<div style="font-size:12px;color:#5A7A95;">{_insights_detail}</div>'
+                f'<div style="font-size:18px;font-weight:800;color:#0F172A;">{_insights_status}</div>'
+                f'<div style="font-size:12px;color:#64748B;">{_insights_detail}</div>'
                 f'</div>', unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:16px;'></div>", unsafe_allow_html=True)
@@ -17005,11 +17007,11 @@ with tab_cs:
         _ac4, _ac5 = st.columns([1, 2])
         with _ac4:
             st.markdown(
-                f'<div style="background:#0C1525;border:1px solid rgba(0,212,200,0.18);border-left:3px solid #0891B2;'
+                f'<div style="background:#FFFFFF;border:1px solid #BAE6FD;border-top:3px solid #0891B2;'
                 f'border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,0.06);">'
                 f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#0567C8;margin-bottom:4px;">STR Data Recency</div>'
-                f'<div style="font-size:18px;font-weight:800;color:#EFF6FF;">{_str_status}</div>'
-                f'<div style="font-size:12px;color:#5A7A95;">{_str_detail}</div>'
+                f'<div style="font-size:18px;font-weight:800;color:#0F172A;">{_str_status}</div>'
+                f'<div style="font-size:12px;color:#64748B;">{_str_detail}</div>'
                 f'</div>', unsafe_allow_html=True)
         with _ac5:
             with st.expander("📋 Full DataFrame Status Checklist", expanded=False):
