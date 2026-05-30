@@ -367,10 +367,17 @@ def format_stat_band(
     if stats:
         chips = []
         for s in stats:
-            label = s.get("label", "")
-            value = s.get("value", "")
-            delta = s.get("delta", "")
-            good = s.get("good", True)
+            # Accept either a dict or a (label, value[, delta[, good]]) tuple/list
+            if isinstance(s, (tuple, list)):
+                label = s[0] if len(s) > 0 else ""
+                value = s[1] if len(s) > 1 else ""
+                delta = s[2] if len(s) > 2 else ""
+                good = s[3] if len(s) > 3 else True
+            else:
+                label = s.get("label", "")
+                value = s.get("value", "")
+                delta = s.get("delta", "")
+                good = s.get("good", True)
             d_clr = "#15803D" if good else "#DC2626"
             arrow = ""
             if delta:
@@ -420,3 +427,143 @@ def format_stat_band(
     {stats_html}
     </div>"""
 
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# OCFEC-style benchmark band — value-vs-benchmark bars grouped by category
+# ──────────────────────────────────────────────────────────────────────────────
+def format_benchmark_band(category: str, icon: str, color: str, rows, *,
+                          benchmark_label: str = "BENCHMARK") -> str:
+    """
+    OCFEC-style horizontal benchmark bars for one category band.
+
+    Args:
+        category: band label shown vertically on the left (e.g. "Activity Volume")
+        icon:     emoji/glyph for the band
+        color:    accent hex for the band + bars
+        rows:     list of (label, ratio, display) where ratio is value/benchmark
+                  (1.0 = at benchmark) and display is the printed value string.
+        benchmark_label: right-edge label for the 1.0 reference line.
+
+    Returns:
+        HTML string. Render with st.markdown(..., unsafe_allow_html=True).
+    """
+    if not rows:
+        return ""
+    _max_ratio = max((abs(r[1]) for r in rows), default=1.0) or 1.0
+    _scale = 92.0 / max(_max_ratio, 1.0)
+    bar_rows = ""
+    for label, ratio, display in rows:
+        pct = max(2.0, min(100.0, abs(ratio) * _scale))
+        bar_rows += (
+            f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">'
+            f'<div style="flex:0 0 190px;text-align:right;font-size:12.5px;'
+            f'font-weight:600;color:#475569;">{label}:</div>'
+            f'<div style="flex:1;position:relative;height:22px;">'
+            f'<div style="position:absolute;left:0;top:0;height:100%;width:{pct}%;'
+            f'background:{color};border-radius:2px;display:flex;align-items:center;'
+            f'justify-content:flex-end;padding-right:8px;">'
+            f'<span style="font-size:11.5px;font-weight:800;color:#FFFFFF;'
+            f'-webkit-text-fill-color:#FFFFFF;">{display}</span></div>'
+            f'<div style="position:absolute;left:94%;top:-3px;height:28px;'
+            f'width:2px;background:#0F172A;"></div>'
+            f'</div></div>'
+        )
+    return (
+        f'<div style="display:flex;border:2px solid {color};border-radius:10px;'
+        f'overflow:hidden;margin:10px 0;background:#FFFFFF;">'
+        f'<div style="flex:0 0 54px;background:{color}14;display:flex;'
+        f'flex-direction:column;align-items:center;justify-content:center;gap:8px;'
+        f'padding:12px 4px;">'
+        f'<div style="font-size:22px;">{icon}</div>'
+        f'<div style="writing-mode:vertical-rl;transform:rotate(180deg);'
+        f'font-size:12px;font-weight:800;letter-spacing:.04em;color:{color};'
+        f'text-transform:uppercase;">{category}</div></div>'
+        f'<div style="flex:1;padding:12px 16px 12px 8px;">{bar_rows}'
+        f'<div style="text-align:right;font-size:11px;font-weight:800;'
+        f'letter-spacing:.06em;color:#0F172A;margin-top:4px;">{benchmark_label}</div>'
+        f'</div></div>'
+    )
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Auto chart analysis — derive an infographic stat-band from a labeled series
+# ──────────────────────────────────────────────────────────────────────────────
+def _fmt_val(v, unit: str = "") -> str:
+    """Compact value formatter honoring a unit hint ($, %, or count)."""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return str(v)
+    if unit == "%":
+        return f"{v:.1f}%"
+    if unit == "$":
+        if abs(v) >= 1e6:
+            return f"${v/1e6:.1f}M"
+        if abs(v) >= 1e3:
+            return f"${v/1e3:.0f}K"
+        return f"${v:,.0f}"
+    if abs(v) >= 1e6:
+        return f"{v/1e6:.2f}M"
+    if abs(v) >= 1e3:
+        return f"{v:,.0f}"
+    return f"{v:,.0f}" if v == int(v) else f"{v:,.1f}"
+
+
+def auto_distribution_analysis(labels, values, *, title: str, noun: str = "share",
+                               unit: str = "%", eyebrow: str = "What this shows",
+                               accent: str = "teal", icon: str = "📊",
+                               extra_points=None) -> str:
+    """
+    Build an infographic analysis band automatically from a labeled distribution
+    (feeder markets, spend categories, channels, etc.). Computes the leader, the
+    top-3 concentration, and the tail, then renders via format_stat_band.
+
+    Returns an HTML string (empty if no usable data).
+    """
+    pairs = []
+    for l, v in zip(labels, values):
+        try:
+            if v is None or (isinstance(v, float) and v != v):  # NaN
+                continue
+            pairs.append((str(l), float(v)))
+        except (TypeError, ValueError):
+            continue
+    if not pairs:
+        return ""
+    pairs.sort(key=lambda x: x[1], reverse=True)
+    total = sum(v for _, v in pairs) or 1.0
+    top_l, top_v = pairs[0]
+    top3 = pairs[:3]
+    top3_sum = sum(v for _, v in top3)
+    top3_names = ", ".join(l for l, _ in top3)
+    top_share = top_v / total * 100
+    top3_share = top3_sum / total * 100
+    n = len(pairs)
+
+    points = [
+        f"<strong>{top_l}</strong> leads at {_fmt_val(top_v, unit)} "
+        f"({top_share:.0f}% of total) {noun}.",
+        f"The top 3 ({top3_names}) account for <strong>{top3_share:.0f}%</strong> "
+        f"of all {n} tracked entries — "
+        + ("a concentrated mix." if top3_share >= 60 else "a relatively even spread."),
+    ]
+    if n > 3:
+        tail_l, tail_v = pairs[-1]
+        points.append(
+            f"The long tail bottoms out at <strong>{tail_l}</strong> "
+            f"({_fmt_val(tail_v, unit)}), a growth or pruning candidate."
+        )
+    if extra_points:
+        points.extend(extra_points)
+
+    stats = [
+        ("Leader", _fmt_val(top_v, unit)),
+        ("Top-3 share", f"{top3_share:.0f}%"),
+        ("Entries", f"{n}"),
+    ]
+    return format_stat_band(
+        icon, title, points,
+        eyebrow=eyebrow, accent=accent, stats=stats,
+        status=(f"{top_l} #1", accent),
+    )

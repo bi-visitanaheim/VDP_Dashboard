@@ -45,6 +45,7 @@ from components import (
 from utils import (
     format_hero_kpi_card, format_exec_kpi_banner, safe_sql_query,
     combine_social_followers, safe_execute_with_logging, format_metric_delta,
+    format_stat_band, format_benchmark_band, auto_distribution_analysis,
 )
 from components_coastal import render_coastal_intelligence
 from components_group import render_group_tab
@@ -12116,6 +12117,18 @@ with tab_ev:
                     ))
                     fig.update_layout(xaxis_ticksuffix="%", showlegend=False)
                     st.plotly_chart(style_fig(fig, height=360), width="stretch", config=PLOTLY_CONFIG)
+                    try:
+                        _hs = df_dfy_dma[df_dfy_dma["avg_spend_usd"].notna()].nlargest(1, "avg_spend_usd") if "avg_spend_usd" in df_dfy_dma.columns else _dma.iloc[:0]
+                        _extra = ([f"Highest spend-per-visitor is <strong>{_hs.iloc[0]['dma']}</strong> at "
+                                   f"${float(_hs.iloc[0]['avg_spend_usd']):,.0f}/trip — drive markets bring volume, fly markets bring revenue."]
+                                  if not _hs.empty else None)
+                        st.markdown(auto_distribution_analysis(
+                            _dma["dma"], _dma["visitor_days_share_pct"],
+                            title="Reading the feeder-market mix", noun="of visitor days",
+                            unit="%", accent="blue", icon="🗺️", extra_points=_extra,
+                        ), unsafe_allow_html=True)
+                    except Exception as _e:
+                        _logger.debug(f"dma analysis band failed: {_e}")
                 else:
                     st.info("DMA data not available. Run the pipeline.")
 
@@ -12151,6 +12164,14 @@ with tab_ev:
                                           font_color="#21808D", showarrow=False)],
                     )
                     st.plotly_chart(style_fig(fig, height=400), width="stretch", config=PLOTLY_CONFIG)
+                    try:
+                        st.markdown(auto_distribution_analysis(
+                            _sp["category"], _sp["spend_share_pct"],
+                            title="Where visitor dollars go", noun="of destination spend",
+                            unit="%", accent="teal", icon="💸",
+                        ), unsafe_allow_html=True)
+                    except Exception as _e:
+                        _logger.debug(f"spend analysis band failed: {_e}")
                 else:
                     st.info("Spending data not available. Run the pipeline.")
 
