@@ -9100,16 +9100,16 @@ if _requested_tab:
     except:
         pass
 
-tab_ov, tab_tr, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_gt, tab_dl = st.tabs([
+tab_ov, tab_tr, tab_gt, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
     "🏠 Today's Overview",
     "🏨 Hotel Trends",
+    "🏨 Group Lodging",
     "🔮 What's Next",
     "👥 Our Visitors",
     "🗺️ Where They're From",
     "🎉 Event Impact",
     "🏗️ New Competition",
     "📈 Market Intel",
-    "👥 Group & Travel",
     "🗄️ Data & Downloads",
 ])
 

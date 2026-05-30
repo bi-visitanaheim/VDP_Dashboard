@@ -202,6 +202,9 @@ def _load_group_insights() -> pd.DataFrame:
                OR category LIKE '%traveler%'
                OR category = 'group_event_synergy'
                OR category = 'traveler_mix_revenue_gap'
+               OR category = 'supply_pipeline_group_risk'
+               OR category = 'competitive_set_group_gap'
+               OR category = 'channel_group_attribution'
             ORDER BY priority ASC
             LIMIT 12
             """,
@@ -249,7 +252,8 @@ def _load_costar_chain() -> pd.DataFrame:
         conn = sqlite3.connect(_DB_PATH, timeout=10)
         df = pd.read_sql_query(
             """
-            SELECT chain_scale, supply_rooms, occupancy_pct, adr_usd, revpar_usd
+            SELECT chain_scale, supply_rooms, occupancy_pct, adr_usd, revpar_usd,
+                   room_revenue_usd, market_share_revpar_pct
             FROM costar_chain_scale_breakdown
             ORDER BY revpar_usd DESC
             """,
@@ -257,7 +261,103 @@ def _load_costar_chain() -> pd.DataFrame:
         )
         conn.close()
         return df
-    except Exception:
+    except Exception as exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("_load_costar_chain failed: %s", exc)
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_competitive_set() -> pd.DataFrame:
+    """Load costar_competitive_set: ADR, Occ, MPI, ARI, RGI per property."""
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='costar_competitive_set'")
+        if not cur.fetchone():
+            conn.close()
+            return pd.DataFrame()
+        df = pd.read_sql_query(
+            """
+            SELECT property_name, chain_scale, rooms, occupancy_pct, adr_usd,
+                   revpar_usd, mpi, ari, rgi, submarket
+            FROM costar_competitive_set
+            ORDER BY adr_usd DESC
+            """,
+            conn,
+        )
+        conn.close()
+        return df
+    except Exception as exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("_load_competitive_set failed: %s", exc)
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_supply_pipeline() -> pd.DataFrame:
+    """Load costar_supply_pipeline: upcoming hotel openings."""
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='costar_supply_pipeline'")
+        if not cur.fetchone():
+            conn.close()
+            return pd.DataFrame()
+        df = pd.read_sql_query(
+            """
+            SELECT property_name, city, rooms, chain_scale, status,
+                   projected_open_date, brand, notes
+            FROM costar_supply_pipeline
+            ORDER BY projected_open_date ASC
+            """,
+            conn,
+        )
+        conn.close()
+        return df
+    except Exception as exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("_load_supply_pipeline failed: %s", exc)
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_attribution_groups() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load website + media group attribution data."""
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        web_df = pd.DataFrame()
+        med_df = pd.DataFrame()
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='datafy_attribution_website_groups'")
+        if cur.fetchone():
+            web_df = pd.read_sql_query("SELECT * FROM datafy_attribution_website_groups ORDER BY report_period_start", conn)
+        cur2 = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='datafy_attribution_media_groups'")
+        if cur2.fetchone():
+            med_df = pd.read_sql_query("SELECT * FROM datafy_attribution_media_groups ORDER BY report_period_start", conn)
+        conn.close()
+        return web_df, med_df
+    except Exception as exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("_load_attribution_groups failed: %s", exc)
+        return pd.DataFrame(), pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_costar_monthly() -> pd.DataFrame:
+    """Load costar_monthly_performance for occupancy trend overlay."""
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='costar_monthly_performance'")
+        if not cur.fetchone():
+            conn.close()
+            return pd.DataFrame()
+        df = pd.read_sql_query(
+            """
+            SELECT as_of_date, occupancy_pct, adr_usd, revpar_usd
+            FROM costar_monthly_performance
+            WHERE as_of_date >= date('now','-24 months')
+            ORDER BY as_of_date
+            """,
+            conn,
+        )
+        conn.close()
+        return df
+    except Exception as exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("_load_costar_monthly failed: %s", exc)
         return pd.DataFrame()
 
 
@@ -469,11 +569,352 @@ def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
+    """ADR vs Occupancy scatter per property — coloured by chain scale."""
+    if df.empty:
+        return _dark_fig()
+
+    scale_color = {
+        "Luxury":       "#F5B940",
+        "Upper Upscale": "#0891B2",
+        "Upscale":      "#10B981",
+        "Upper Midscale": "#A78BFA",
+        "Midscale":     "#FB923C",
+        "Economy":      "#6EE7B7",
+    }
+    colors = [scale_color.get(str(s), "#64748B") for s in df["chain_scale"]]
+
+    fig = _dark_fig(height=360)
+    for scale in df["chain_scale"].unique():
+        sub = df[df["chain_scale"] == scale]
+        fig.add_trace(go.Scatter(
+            x=sub["occupancy_pct"].tolist(),
+            y=sub["adr_usd"].tolist(),
+            mode="markers+text",
+            marker=dict(color=scale_color.get(str(scale), "#64748B"), size=14,
+                        line=dict(width=1, color="rgba(255,255,255,0.3)")),
+            text=sub["property_name"].str[:18].tolist(),
+            textposition="top center",
+            textfont=dict(size=9, color="#CBD5E1"),
+            name=str(scale),
+            hovertemplate=(
+                "<b>%{text}</b><br>Occ: %{x:.1f}%<br>ADR: $%{y:.0f}"
+                "<br>RevPAR: $%{customdata:.0f}<extra></extra>"
+            ),
+            customdata=sub["revpar_usd"].tolist(),
+        ))
+    fig.update_layout(
+        title=dict(
+            text="Competitive Set — ADR vs Occupancy (bubble = RevPAR)",
+            font=dict(size=12.5, color="#EFF6FF"),
+        ),
+        xaxis_title="Occupancy %",
+        yaxis_title="ADR ($)",
+        yaxis_tickprefix="$",
+        showlegend=True,
+    )
+    return fig
+
+
+def _chart_tbid_chain_waterfall(df_chain: pd.DataFrame, g: dict) -> go.Figure:
+    """TBID contribution waterfall by chain scale."""
+    if df_chain.empty:
+        return _dark_fig()
+
+    _GROUP_SCALES = ["Luxury", "Upper Upscale", "Upscale"]
+    subset = df_chain[df_chain["chain_scale"].isin(_GROUP_SCALES)].copy()
+    if subset.empty:
+        subset = df_chain.copy()
+
+    group_share = (GROUP_SHARE_LOW + GROUP_SHARE_HIGH) / 2
+    subset = subset.copy()
+    subset["group_rev"] = (
+        subset["supply_rooms"].fillna(0) *
+        subset["adr_usd"].fillna(0) *
+        subset["occupancy_pct"].fillna(0) / 100 *
+        group_share * 365
+    )
+    subset["tbid_contribution"] = subset["group_rev"] * TBID_RATE
+
+    colors = ["#F5B940", "#0891B2", "#10B981", "#A78BFA", "#FB923C"]
+
+    fig = _dark_fig(height=300)
+    fig.add_trace(go.Bar(
+        x=subset["chain_scale"].tolist(),
+        y=(subset["tbid_contribution"] / 1e6).tolist(),
+        marker_color=colors[:len(subset)],
+        text=[f"${v/1e6:.2f}M" for v in subset["tbid_contribution"]],
+        textposition="outside",
+        textfont=dict(size=12.5, color="#EFF6FF"),
+        hovertemplate="<b>%{x}</b><br>Est. Group TBID: $%{y:.2f}M<extra></extra>",
+    ))
+    tbid_target = 4.1  # $4.1M midpoint target
+    fig.add_hline(
+        y=tbid_target, line_dash="dash", line_color="#F5B940", line_width=1.5,
+        annotation_text=f"${tbid_target:.1f}M TBID midpoint target",
+        annotation_font_size=9.5, annotation_font_color="#F5B940",
+        annotation_position="right",
+    )
+    fig.update_layout(
+        title=dict(text="TBID Waterfall by Chain Scale — rooms × ADR × 28% group share × 1.25%",
+                   font=dict(size=12, color="#EFF6FF")),
+        yaxis_title="Est. TBID $M/yr",
+        yaxis_tickprefix="$",
+        yaxis_ticksuffix="M",
+        showlegend=False,
+    )
+    return fig
+
+
+def _chart_supply_pipeline(df: pd.DataFrame) -> go.Figure:
+    """Horizontal bar timeline of supply pipeline by chain scale."""
+    if df.empty:
+        return _dark_fig()
+
+    scale_color = {
+        "Luxury":       "#F5B940",
+        "Upper Upscale": "#0891B2",
+        "Upscale":      "#10B981",
+        "Upper Midscale": "#A78BFA",
+        "Midscale":     "#FB923C",
+        "Economy":      "#6EE7B7",
+    }
+    colors = [scale_color.get(str(s), "#64748B") for s in df["chain_scale"]]
+    labels = [f"{r['property_name']} ({r.get('projected_open_date','?')})"
+              for _, r in df.iterrows()]
+
+    fig = _dark_fig(height=max(260, len(df) * 55))
+    fig.add_trace(go.Bar(
+        y=labels,
+        x=df["rooms"].tolist(),
+        orientation="h",
+        marker_color=colors,
+        text=[f"{int(v):,} rooms" for v in df["rooms"]],
+        textposition="inside",
+        textfont=dict(size=11, color="#EFF6FF"),
+        hovertemplate="<b>%{y}</b><br>Rooms: %{x:,}<br>Scale: %{customdata}<extra></extra>",
+        customdata=df["chain_scale"].tolist(),
+    ))
+    fig.update_layout(
+        title=dict(text="Supply Pipeline — Upcoming Dana Point Hotel Openings",
+                   font=dict(size=12.5, color="#EFF6FF")),
+        xaxis_title="New Rooms",
+        showlegend=False,
+        margin=dict(l=250, r=20, t=48, b=14),
+    )
+    return fig
+
+
+def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go.Figure:
+    """Bar chart: website vs media attributed group trips and impact."""
+    if web_df.empty and med_df.empty:
+        return _dark_fig()
+
+    TBID_TARGET_MID = 4_100_000  # $4.1M
+
+    channels, trips_vals, impact_vals = [], [], []
+    if not web_df.empty:
+        channels.append("Website Attribution")
+        trips_vals.append(float(web_df["trips"].sum()))
+        impact_vals.append(float(web_df["est_impact_usd"].sum()))
+    if not med_df.empty:
+        channels.append("Media Attribution")
+        trips_vals.append(float(med_df["trips"].sum()))
+        impact_vals.append(float(med_df["est_impact_usd"].sum()))
+
+    fig = _dark_fig(height=320)
+    fig.add_trace(go.Bar(
+        name="Attributed Trips",
+        x=channels,
+        y=trips_vals,
+        marker_color="#0891B2",
+        yaxis="y",
+        text=[f"{int(v):,}" for v in trips_vals],
+        textposition="outside",
+        textfont=dict(size=12, color="#EFF6FF"),
+        hovertemplate="<b>%{x}</b><br>Trips: %{y:,}<extra></extra>",
+    ))
+    fig.add_trace(go.Bar(
+        name="Est. Impact ($K)",
+        x=channels,
+        y=[v / 1000 for v in impact_vals],
+        marker_color="#10B981",
+        yaxis="y2",
+        text=[f"${v/1000:.0f}K" for v in impact_vals],
+        textposition="outside",
+        textfont=dict(size=12, color="#EFF6FF"),
+        hovertemplate="<b>%{x}</b><br>Impact: $%{y:.0f}K<extra></extra>",
+    ))
+    fig.add_hline(
+        y=TBID_TARGET_MID / 1000, line_dash="dash",
+        line_color="#F5B940", line_width=1.5,
+        annotation_text="$4.1M TBID midpoint target",
+        annotation_font_size=9.5, annotation_font_color="#F5B940",
+        annotation_position="right",
+        yref="y2",
+    )
+    fig.update_layout(
+        title=dict(text="Group Attribution — Website vs Media Channels",
+                   font=dict(size=12.5, color="#EFF6FF")),
+        barmode="group",
+        yaxis=dict(title="Attributed Trips", color=_LABEL_CLR),
+        yaxis2=dict(title="Est. Impact ($K)", overlaying="y", side="right",
+                    color=_LABEL_CLR, tickprefix="$", ticksuffix="K"),
+        showlegend=True,
+    )
+    return fig
+
+
+def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> go.Figure:
+    """Dual-axis line: CoStar monthly occ vs Datafy group attribution quarterly."""
+    fig = _dark_fig(height=340)
+
+    if not df_costar.empty and "as_of_date" in df_costar.columns:
+        fig.add_trace(go.Scatter(
+            x=df_costar["as_of_date"].tolist(),
+            y=df_costar["occupancy_pct"].tolist(),
+            name="CoStar Mkt Occ %",
+            mode="lines+markers",
+            line=dict(color="#0891B2", width=2.5),
+            marker=dict(size=6),
+            yaxis="y",
+            hovertemplate="<b>%{x}</b><br>CoStar Occ: %{y:.1f}%<extra></extra>",
+        ))
+
+    if not web_df.empty and "est_impact_usd" in web_df.columns:
+        q_totals = web_df.groupby("report_period_start")["est_impact_usd"].sum().reset_index()
+        fig.add_trace(go.Scatter(
+            x=q_totals["report_period_start"].tolist(),
+            y=(q_totals["est_impact_usd"] / 1000).tolist(),
+            name="Group Impact ($K)",
+            mode="lines+markers",
+            line=dict(color="#10B981", width=2.5, dash="dot"),
+            marker=dict(size=8, symbol="diamond"),
+            yaxis="y2",
+            hovertemplate="<b>%{x}</b><br>Impact: $%{y:.0f}K<extra></extra>",
+        ))
+
+    fig.update_layout(
+        title=dict(text="CoStar Monthly Occ vs Datafy Group Attribution",
+                   font=dict(size=12.5, color="#EFF6FF")),
+        yaxis=dict(title="Occupancy %", color=_LABEL_CLR),
+        yaxis2=dict(title="Group Impact ($K)", overlaying="y", side="right",
+                    color=_LABEL_CLR, tickprefix="$", ticksuffix="K"),
+        showlegend=True,
+    )
+    return fig
+
+
+def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> None:
+    """Heatmap table: traveler types × quarters — Safe/Caution/Risk by occ threshold."""
+    if df_types.empty or comp.empty:
+        st.info("Traveler type or compression data not loaded.")
+        return
+
+    quarters = ["Q1", "Q2", "Q3", "Q4"]
+    # Map compression days to occ risk level per quarter
+    q_risk: dict[str, str] = {}
+    for _, row in comp.iterrows():
+        q = str(row.get("quarter", "")).split("-")[-1] if "-" in str(row.get("quarter", "")) else str(row.get("quarter", ""))
+        days_high = int(row.get("days_above_80_occ") or 0)
+        if days_high >= 20:
+            q_risk[q] = "Risk"
+        elif days_high >= 8:
+            q_risk[q] = "Caution"
+        else:
+            q_risk[q] = "Safe"
+    for q in quarters:
+        q_risk.setdefault(q, "Safe")
+
+    # Select traveler types to show
+    _SHOW_TYPES = ["business", "smerf", "family", "leisure", "solo", "bleisure"]
+    subset = df_types[df_types["traveler_type"].isin(_SHOW_TYPES)].copy()
+    if subset.empty:
+        subset = df_types.head(5)
+
+    # Build seasonal affinity: which quarters does each type prefer?
+    _SEASONAL_MAP = {
+        "peak":       {"Q3": "Caution", "Q2": "Caution", "Q1": "Safe", "Q4": "Safe"},
+        "year_round": {"Q1": "Safe",    "Q2": "Safe",    "Q3": "Safe", "Q4": "Safe"},
+        "shoulder":   {"Q1": "Safe",    "Q4": "Safe",    "Q2": "Caution", "Q3": "Risk"},
+        "winter":     {"Q1": "Safe",    "Q4": "Caution", "Q2": "Risk",  "Q3": "Risk"},
+    }
+    _CELL_COLOR = {"Safe": "#14532D", "Caution": "#78350F", "Risk": "#7F1D1D"}
+    _TEXT_COLOR = {"Safe": "#4ADE80", "Caution": "#FCD34D", "Risk": "#FCA5A5"}
+
+    rows_html = ""
+    for _, trow in subset.iterrows():
+        ttype = str(trow.get("traveler_type", "")).title()
+        seasonal = str(trow.get("seasonal_pattern", "year_round")).lower()
+        affinity = _SEASONAL_MAP.get(seasonal, _SEASONAL_MAP["year_round"])
+        cells = ""
+        for q in quarters:
+            type_pref = affinity.get(q, "Safe")
+            mkt_risk  = q_risk.get(q, "Safe")
+            # Effective risk: max(market risk, type mismatch)
+            _RANK = {"Safe": 0, "Caution": 1, "Risk": 2}
+            effective = "Safe" if _RANK[mkt_risk] == 0 and _RANK[type_pref] == 0 else \
+                        "Risk" if _RANK[mkt_risk] == 2 or _RANK[type_pref] == 2 else "Caution"
+            bg = _CELL_COLOR[effective]
+            fg = _TEXT_COLOR[effective]
+            cells += (
+                f'<td style="background:{bg};color:{fg};font-weight:700;font-size:11px;'
+                f'text-align:center;padding:8px 4px;border:1px solid rgba(255,255,255,0.06);">'
+                f'{effective}</td>'
+            )
+        rows_html += (
+            f'<tr><td style="color:#EFF6FF;font-size:11.5px;padding:8px 12px;'
+            f'border:1px solid rgba(255,255,255,0.06);font-weight:600;">{ttype}</td>'
+            f'{cells}</tr>'
+        )
+
+    header_cells_parts = []
+    for q in quarters:
+        q_r = q_risk.get(q, "Safe")
+        q_c = _TEXT_COLOR[q_r]
+        header_cells_parts.append(
+            f'<th style="color:#93C5FD;font-size:10.5px;text-align:center;padding:8px;'
+            f'border:1px solid rgba(255,255,255,0.06);">{q}<br>'
+            f'<span style="color:{q_c};font-size:9px;">({q_r})</span></th>'
+        )
+    header_cells = "".join(header_cells_parts)
+
+    st.markdown(f"""
+    <div style="margin-top:14px;margin-bottom:6px;color:#93C5FD;font-size:10px;
+                font-weight:700;text-transform:uppercase;letter-spacing:.08em;">
+      SHOULDER SEASON ALIGNMENT MATRIX — Traveler Types × Quarters
+    </div>
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;background:rgba(0,0,0,0.2);
+                  border-radius:8px;overflow:hidden;">
+      <thead>
+        <tr>
+          <th style="color:#93C5FD;font-size:10.5px;text-align:left;padding:8px 12px;
+                     border:1px solid rgba(255,255,255,0.06);">Traveler Type</th>
+          {header_cells}
+        </tr>
+      </thead>
+      <tbody>
+        {rows_html}
+      </tbody>
+    </table>
+    </div>
+    <div style="margin-top:8px;font-size:10px;color:#64748B;">
+      🟢 Safe = low displacement risk + type alignment · 🟡 Caution = monitor demand ·
+      🔴 Risk = high occ displacement or seasonal mismatch. Market occ threshold: 80%+.
+    </div>
+    """, unsafe_allow_html=True)
+
+
 # ── Sub-tab renderers ─────────────────────────────────────────────────────────
 
 def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
                            df_chain: pd.DataFrame, insights: pd.DataFrame,
-                           social: dict) -> None:
+                           social: dict,
+                           df_comp: Optional[pd.DataFrame] = None,
+                           df_pipeline: Optional[pd.DataFrame] = None,
+                           web_groups: Optional[pd.DataFrame] = None,
+                           med_groups: Optional[pd.DataFrame] = None) -> None:
     # ── Executive Brief ───────────────────────────────────────────────────────
     tbid_low   = g.get("estimated_group_tbid_rev_low",  3_603_940)
     tbid_high  = g.get("estimated_group_tbid_rev_high", 4_613_043)
@@ -602,6 +1043,145 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
                 st.markdown(_metric_box(lbl, val, note, color), unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:18px;'></div>", unsafe_allow_html=True)
+
+    # ── A. Competitive Set Positioning ───────────────────────────────────────
+    if df_comp is not None and not df_comp.empty:
+        st.markdown("""
+        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.06em;margin-bottom:10px;">
+        A. COMPETITIVE SET POSITIONING — How Dana Point Properties Index Against the Set
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_scatter, col_index = st.columns([2, 1])
+        with col_scatter:
+            st.plotly_chart(_chart_competitive_scatter(df_comp), use_container_width=True,
+                            key="gt_comp_scatter")
+        with col_index:
+            # Show MPI / ARI / RGI summary cards
+            avg_mpi = df_comp["mpi"].mean() if "mpi" in df_comp.columns else None
+            avg_ari = df_comp["ari"].mean() if "ari" in df_comp.columns else None
+            avg_rgi = df_comp["rgi"].mean() if "rgi" in df_comp.columns else None
+            for lbl, val, note, color in [
+                ("Avg MPI", f"{avg_mpi:.1f}" if avg_mpi else "–",
+                 "Market Penetration Index (100 = fair share)", "#0891B2"),
+                ("Avg ARI", f"{avg_ari:.1f}" if avg_ari else "–",
+                 "ADR Index (100 = fair share)", "#10B981"),
+                ("Avg RGI", f"{avg_rgi:.1f}" if avg_rgi else "–",
+                 "RevPAR Growth Index (100 = fair share)", "#F5B940"),
+            ]:
+                st.markdown(_metric_box(lbl, val, note, color), unsafe_allow_html=True)
+                st.markdown("<div style='margin-bottom:10px;'></div>", unsafe_allow_html=True)
+
+    # ── B. TBID Waterfall by Chain Scale ─────────────────────────────────────
+    st.markdown("""
+    <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                letter-spacing:.06em;margin:14px 0 10px;">
+    B. TBID WATERFALL BY CHAIN SCALE — rooms × ADR × 28% group share × 1.25% TBID rate
+    </div>
+    """, unsafe_allow_html=True)
+    if not df_chain.empty:
+        col_wf, col_meta = st.columns([3, 1])
+        with col_wf:
+            st.plotly_chart(_chart_tbid_chain_waterfall(df_chain, g),
+                            use_container_width=True, key="gt_tbid_waterfall")
+        with col_meta:
+            tbid_target = 4_100_000
+            tbid_actual = g.get("estimated_group_tbid_rev_low", 3_603_940)
+            gap = tbid_target - tbid_actual
+            st.markdown(_metric_box(
+                "Gap to $4.1M Target",
+                f"${gap/1000:.0f}K",
+                "midpoint TBID group target",
+                "#EF4444" if gap > 0 else "#22C55E",
+            ), unsafe_allow_html=True)
+    else:
+        st.info("Chain scale breakdown data not loaded. Run the pipeline.")
+
+    # ── C. Supply Pipeline Timeline ───────────────────────────────────────────
+    if df_pipeline is not None and not df_pipeline.empty:
+        st.markdown("""
+        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.06em;margin:14px 0 10px;">
+        C. SUPPLY PIPELINE TIMELINE — Upcoming Hotel Openings
+        </div>
+        """, unsafe_allow_html=True)
+        st.plotly_chart(_chart_supply_pipeline(df_pipeline), use_container_width=True,
+                        key="gt_supply_pipeline")
+        # Detail table
+        show_cols = ["property_name", "rooms", "chain_scale", "status",
+                     "projected_open_date", "brand"]
+        show_cols = [c for c in show_cols if c in df_pipeline.columns]
+        if show_cols:
+            st.dataframe(df_pipeline[show_cols].rename(columns={
+                "property_name": "Property",
+                "rooms": "Rooms",
+                "chain_scale": "Scale",
+                "status": "Status",
+                "projected_open_date": "Est. Open",
+                "brand": "Brand",
+            }), use_container_width=True, hide_index=True)
+
+    # ── D. Attribution Channel Contribution ───────────────────────────────────
+    if (web_groups is not None and not web_groups.empty) or \
+       (med_groups is not None and not med_groups.empty):
+        st.markdown("""
+        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.06em;margin:14px 0 10px;">
+        D. ATTRIBUTION CHANNEL CONTRIBUTION — Website vs Media Group Trips & Impact
+        </div>
+        """, unsafe_allow_html=True)
+        col_attr, col_gap = st.columns([3, 1])
+        with col_attr:
+            st.plotly_chart(
+                _chart_attribution_channel(
+                    web_groups if web_groups is not None else pd.DataFrame(),
+                    med_groups if med_groups is not None else pd.DataFrame(),
+                ),
+                use_container_width=True,
+                key="gt_attr_channel",
+            )
+        with col_gap:
+            total_impact = 0.0
+            if web_groups is not None and not web_groups.empty:
+                total_impact += float(web_groups["est_impact_usd"].sum())
+            if med_groups is not None and not med_groups.empty:
+                total_impact += float(med_groups["est_impact_usd"].sum())
+            tbid_from_impact = total_impact * TBID_RATE
+            tbid_gap = 4_100_000 - tbid_from_impact
+            st.markdown(_metric_box(
+                "Attribution Impact",
+                f"${total_impact/1e6:.2f}M",
+                "website + media combined",
+                "#10B981",
+            ), unsafe_allow_html=True)
+            st.markdown("<div style='margin:8px 0;'></div>", unsafe_allow_html=True)
+            st.markdown(_metric_box(
+                "TBID from Attribution",
+                f"${tbid_from_impact/1000:.0f}K",
+                f"gap to $4.1M: ${tbid_gap/1000:.0f}K",
+                "#F5B940" if tbid_gap > 0 else "#22C55E",
+            ), unsafe_allow_html=True)
+
+    # ── STR Group Segment Coming Soon ─────────────────────────────────────────
+    st.markdown("""
+    <div style="background:rgba(8,145,178,0.04);border:1px dashed rgba(8,145,178,0.30);
+                border-radius:8px;padding:14px 18px;margin:14px 0;">
+      <div style="color:#38BDF8;font-weight:700;font-size:11.5px;margin-bottom:6px;">
+        🔜 STR GROUP-SEGMENT DATA — COMING SOON
+      </div>
+      <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
+        When STR provides group-segment demand exports, this section will add live
+        <strong>group demand rooms</strong>, <strong>group ADR actuals</strong>,
+        <strong>SMERF vs. corporate split</strong>, and <strong>group vs. transient trend</strong>
+        replacing benchmark estimates above.<br>
+        To enable: save STR group export → <code>data/str/str_group_daily.xlsx</code>
+        → <code>python scripts/run_pipeline.py</code>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
 
     # ── Actionable insights (by audience) ────────────────────────────────────
     if not insights.empty:
@@ -747,7 +1327,11 @@ def _render_traveler_types(df_types: pd.DataFrame) -> None:
 
 
 def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
-                              g: dict) -> None:
+                              g: dict,
+                              df_costar_monthly: Optional[pd.DataFrame] = None,
+                              web_groups: Optional[pd.DataFrame] = None,
+                              df_types: Optional[pd.DataFrame] = None,
+                              comp: Optional[pd.DataFrame] = None) -> None:
     # National summary callout
     total_group = 319
     meetings_b  = 126
@@ -862,6 +1446,34 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
     for icon, title, accent, body, action in opportunities:
         st.markdown(_action_card(icon, title, body, action, accent), unsafe_allow_html=True)
 
+    # ── E. CoStar Monthly Occ overlay ─────────────────────────────────────────
+    if (df_costar_monthly is not None and not df_costar_monthly.empty) or \
+       (web_groups is not None and not web_groups.empty):
+        st.markdown("""
+        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.08em;margin:18px 0 10px;">
+        E. COSTAR MONTHLY OCC vs DATAFY GROUP ATTRIBUTION
+        </div>
+        """, unsafe_allow_html=True)
+        st.plotly_chart(
+            _chart_costar_occ_overlay(
+                df_costar_monthly if df_costar_monthly is not None else pd.DataFrame(),
+                web_groups if web_groups is not None else pd.DataFrame(),
+            ),
+            use_container_width=True,
+            key="gt_costar_occ_overlay",
+        )
+
+    # ── F. Shoulder Season Alignment Matrix ───────────────────────────────────
+    if df_types is not None and not df_types.empty and comp is not None and not comp.empty:
+        st.markdown("""
+        <div style="color:#93C5FD;font-size:10px;font-weight:700;text-transform:uppercase;
+                    letter-spacing:.08em;margin:18px 0 10px;">
+        F. SHOULDER SEASON ALIGNMENT MATRIX — Traveler Types × Quarters
+        </div>
+        """, unsafe_allow_html=True)
+        _render_shoulder_alignment(df_types, comp)
+
 
 def _render_ai_analyst(ai_keys: dict, selected_model: str) -> None:
     """AI Analyst sub-tab with group travel pre-loaded prompts."""
@@ -938,14 +1550,30 @@ def render_group_tab(ai_keys: dict | None = None, selected_model: str = "claude"
     """Render the full Group & Traveler Intelligence tab."""
 
     # Load all data
-    g           = _load_group_intel()
-    df_monthly  = _load_monthly_occ()
-    df_segs     = _load_ust_segments()
-    df_biz      = _load_ust_biz()
-    df_types    = _load_traveler_types()
-    insights    = _load_group_insights()
-    social      = _load_social_summary()
-    df_chain    = _load_costar_chain()
+    g                 = _load_group_intel()
+    df_monthly        = _load_monthly_occ()
+    df_segs           = _load_ust_segments()
+    df_biz            = _load_ust_biz()
+    df_types          = _load_traveler_types()
+    insights          = _load_group_insights()
+    social            = _load_social_summary()
+    df_chain          = _load_costar_chain()
+    df_comp           = _load_competitive_set()
+    df_pipeline       = _load_supply_pipeline()
+    web_groups, med_groups = _load_attribution_groups()
+    df_costar_monthly = _load_costar_monthly()
+
+    # Load compression for shoulder matrix
+    try:
+        _comp_conn = sqlite3.connect(_DB_PATH, timeout=10)
+        df_compression = pd.read_sql_query(
+            "SELECT quarter, days_above_80_occ, days_above_90_occ FROM kpi_compression_quarterly ORDER BY quarter",
+            _comp_conn,
+        )
+        _comp_conn.close()
+    except Exception as _exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("compression load failed: %s", _exc)
+        df_compression = pd.DataFrame()
 
     # Hero banner
     tbid_low  = g.get("estimated_group_tbid_rev_low",  3_603_940)
@@ -983,13 +1611,25 @@ def render_group_tab(ai_keys: dict | None = None, selected_model: str = "claude"
     ])
 
     with sub_strategy:
-        _render_group_strategy(g, df_monthly, df_chain, insights, social)
+        _render_group_strategy(
+            g, df_monthly, df_chain, insights, social,
+            df_comp=df_comp,
+            df_pipeline=df_pipeline,
+            web_groups=web_groups,
+            med_groups=med_groups,
+        )
 
     with sub_types:
         _render_traveler_types(df_types)
 
     with sub_national:
-        _render_national_context(df_segs, df_biz, g)
+        _render_national_context(
+            df_segs, df_biz, g,
+            df_costar_monthly=df_costar_monthly,
+            web_groups=web_groups,
+            df_types=df_types,
+            comp=df_compression,
+        )
 
     with sub_ai:
         _render_ai_analyst(ai_keys or {}, selected_model)

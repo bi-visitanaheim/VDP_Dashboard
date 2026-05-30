@@ -2227,6 +2227,381 @@ def gen_cross_traveler_mix_revenue_gap(
     )
 
 
+def _load_competitive_set_data(conn: sqlite3.Connection) -> pd.DataFrame:
+    """Load costar_competitive_set for group insights."""
+    try:
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='costar_competitive_set'")
+        if not cur.fetchone():
+            return pd.DataFrame()
+        return pd.read_sql_query(
+            "SELECT property_name, chain_scale, occupancy_pct, adr_usd, revpar_usd, mpi, ari, rgi "
+            "FROM costar_competitive_set ORDER BY revpar_usd DESC",
+            conn,
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+def _load_supply_pipeline_data(conn: sqlite3.Connection) -> pd.DataFrame:
+    """Load costar_supply_pipeline for supply risk insights."""
+    try:
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='costar_supply_pipeline'")
+        if not cur.fetchone():
+            return pd.DataFrame()
+        return pd.read_sql_query(
+            "SELECT property_name, rooms, chain_scale, status, projected_open_date FROM costar_supply_pipeline",
+            conn,
+        )
+    except Exception:
+        return pd.DataFrame()
+
+
+def _load_attribution_groups_data(conn: sqlite3.Connection) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Load web + media group attribution tables."""
+    try:
+        web = pd.DataFrame()
+        med = pd.DataFrame()
+        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='datafy_attribution_website_groups'")
+        if cur.fetchone():
+            web = pd.read_sql_query("SELECT * FROM datafy_attribution_website_groups", conn)
+        cur2 = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='datafy_attribution_media_groups'")
+        if cur2.fetchone():
+            med = pd.read_sql_query("SELECT * FROM datafy_attribution_media_groups", conn)
+        return web, med
+    except Exception:
+        return pd.DataFrame(), pd.DataFrame()
+
+
+def gen_cross_group_costar_correlation(
+    group: dict[str, Any],
+    kpi: pd.DataFrame,
+    comp_set: pd.DataFrame,
+) -> dict:
+    """
+    CROSS insight: Group ADR benchmark × CoStar competitive set ARI/RGI.
+    Compares estimated group ADR discount to competitive set ADR index.
+    Reveals rate gap vs luxury peers that group planners exploit.
+    """
+    if not group or comp_set.empty:
+        return {}
+
+    group_adr   = float(group.get("estimated_group_adr", 236.57) or 236.57)
+    market_adr  = float(group.get("market_blended_adr", 288.50) or 288.50)
+    adr_gap     = market_adr - group_adr
+    discount_pct = adr_gap / market_adr * 100
+
+    avg_ari = float(comp_set["ari"].mean()) if "ari" in comp_set.columns and not comp_set["ari"].isna().all() else None
+    avg_rgi = float(comp_set["rgi"].mean()) if "rgi" in comp_set.columns and not comp_set["rgi"].isna().all() else None
+    luxury_adr = float(comp_set[comp_set["chain_scale"] == "Luxury"]["adr_usd"].mean()) \
+        if "Luxury" in comp_set.get("chain_scale", pd.Series()).values else None
+
+    ari_str = f"ARI {avg_ari:.1f}" if avg_ari else "ARI data pending"
+    rgi_str = f"RGI {avg_rgi:.1f}" if avg_rgi else "RGI data pending"
+    lux_str = f"Luxury peer ADR ${luxury_adr:.0f}" if luxury_adr else ""
+
+    headline = (
+        f"HIDDEN SIGNAL — COMP SET RATE GAP: Group ADR ${group_adr:.0f} is "
+        f"${adr_gap:.0f} ({discount_pct:.0f}%) below market blended ${market_adr:.0f}; "
+        f"competitive set {ari_str}, {rgi_str}"
+    )
+    body = (
+        f"CROSS-SIGNAL: CoStar competitive set index × group ADR benchmark reveals a "
+        f"${adr_gap:.0f}/room/night rate gap ({discount_pct:.0f}% discount) between "
+        f"estimated group ADR (${group_adr:.0f}) and market blended ADR (${market_adr:.0f}). "
+        f"Competitive set {ari_str} and {rgi_str}. "
+        + (f"Luxury properties average ${luxury_adr:.0f} ADR — group blocks at ${group_adr:.0f} "
+           f"represent a significant premium over SMERF alternatives, validating Dana Point "
+           f"as a high-value group destination vs. inland meeting hotels. " if luxury_adr else "")
+        + f"Closing the group ADR gap by $15–$25 would add ${(15 * 5120 * 0.28 * 0.0125):.0f}–"
+          f"${(25 * 5120 * 0.28 * 0.0125):.0f} in incremental TBID annually."
+        + _5wh(
+            who="VDP DMO and hotel revenue managers",
+            what=f"${adr_gap:.0f}/room discount in group ADR vs blended market rate",
+            when="Negotiate for next group contract cycle (12–18 month horizon)",
+            where="Upper Upscale and Upscale properties in Dana Point competitive set",
+            why="Closing group ADR gap adds TBID without increasing demand volume",
+            how="Set group rate floors with hotel partners; target higher-spend SMERF and corporate groups",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=2, horizon_days=365,
+        data_sources="group_intelligence,costar_competitive_set",
+        metric_basis={
+            "group_adr": round(group_adr, 2),
+            "market_blended_adr": round(market_adr, 2),
+            "adr_gap": round(adr_gap, 2),
+            "discount_pct": round(discount_pct, 1),
+            "avg_ari": round(avg_ari, 1) if avg_ari else None,
+            "avg_rgi": round(avg_rgi, 1) if avg_rgi else None,
+        },
+    )
+
+
+def gen_cross_supply_pipeline_group_risk(
+    group: dict[str, Any],
+    pipeline: pd.DataFrame,
+    comp: pd.DataFrame,
+) -> dict:
+    """
+    CROSS insight: Supply pipeline new rooms × group demand share benchmark.
+    Reveals how much new group-capable supply is coming and the TBID uplift opportunity.
+    """
+    if pipeline.empty:
+        return {}
+
+    total_new_rooms = int(pipeline["rooms"].sum()) if "rooms" in pipeline.columns else 0
+    group_new_rooms = int(total_new_rooms * ((0.25 + 0.32) / 2))
+    tbid_rate = 0.0125
+    market_adr = float(group.get("market_blended_adr", 288.50) or 288.50)
+    group_adr  = float(group.get("estimated_group_adr", 236.57) or 236.57)
+    new_group_tbid_annual = group_new_rooms * group_adr * 0.70 * 365 * tbid_rate  # 70% occ assumed
+
+    compression_days = int(group.get("compression_days_annual", 138) or 138)
+    risk_level = "HIGH" if compression_days >= 80 else "MODERATE" if compression_days >= 30 else "LOW"
+
+    # Earliest opening
+    soonest = None
+    if "projected_open_date" in pipeline.columns:
+        dates = pipeline["projected_open_date"].dropna()
+        soonest = str(dates.iloc[0]) if not dates.empty else None
+
+    headline = (
+        f"HIDDEN SIGNAL — SUPPLY PIPELINE: {total_new_rooms:,} new rooms entering market "
+        f"(est. open {soonest or 'TBD'}); group-capable share adds ~${new_group_tbid_annual/1000:.0f}K TBID/yr"
+    )
+    body = (
+        f"CROSS-SIGNAL: CoStar supply pipeline × group demand benchmarks reveal "
+        f"{total_new_rooms:,} new rooms entering the Dana Point market "
+        + (f"starting {soonest} " if soonest else "")
+        + f"across {len(pipeline)} properties. Applying the 25–32% industry group demand share "
+        f"benchmark, approximately {group_new_rooms:,} of these rooms will serve group business, "
+        f"generating an estimated ${new_group_tbid_annual/1000:.0f}K in additional annual TBID "
+        f"at current group ADR (${group_adr:.0f}). Current displacement risk is {risk_level} "
+        f"({compression_days} compression days/yr). New supply in shoulder properties "
+        f"could reduce peak displacement risk while expanding TBID base."
+        + _5wh(
+            who="TBID board and city planning",
+            what=f"{total_new_rooms:,} new rooms entering market; {group_new_rooms:,} estimated group-capable",
+            when=f"Beginning {soonest or 'TBD'} — TBID projections should be updated",
+            where="Dana Point / South Orange County competitive set",
+            why=f"New supply expands TBID base by ~${new_group_tbid_annual/1000:.0f}K/yr at current group ADR",
+            how="Update TBID revenue projections; negotiate group rate programs with new properties pre-opening",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=2, horizon_days=365,
+        data_sources="costar_supply_pipeline,group_intelligence,kpi_compression_quarterly",
+        metric_basis={
+            "total_new_rooms": total_new_rooms,
+            "group_new_rooms": group_new_rooms,
+            "est_new_group_tbid": round(new_group_tbid_annual),
+            "compression_days": compression_days,
+            "displacement_risk": risk_level,
+            "soonest_open": soonest,
+        },
+    )
+
+
+def gen_cross_competitive_set_group_gap(
+    group: dict[str, Any],
+    comp_set: pd.DataFrame,
+    kpi: pd.DataFrame,
+) -> dict:
+    """
+    CROSS insight: Competitive set RevPAR index (RGI) × group demand share gap.
+    Properties with RGI < 100 may be under-indexing due to group mix imbalance.
+    """
+    if comp_set.empty or not group:
+        return {}
+
+    under_index = comp_set[comp_set["rgi"] < 100] if "rgi" in comp_set.columns else pd.DataFrame()
+    over_index  = comp_set[comp_set["rgi"] >= 100] if "rgi" in comp_set.columns else pd.DataFrame()
+    n_under = len(under_index)
+    n_total = len(comp_set)
+    avg_rgi = float(comp_set["rgi"].mean()) if "rgi" in comp_set.columns and not comp_set["rgi"].isna().all() else 100.0
+
+    group_share_mid = (0.25 + 0.32) / 2
+    tbid_low  = float(group.get("estimated_group_tbid_rev_low",  3_603_940) or 3_603_940)
+    tbid_high = float(group.get("estimated_group_tbid_rev_high", 4_613_043) or 4_613_043)
+
+    if avg_rgi >= 110:
+        signal = "outperforming"
+        signal_color = "positive"
+    elif avg_rgi >= 90:
+        signal = "at-par"
+        signal_color = "neutral"
+    else:
+        signal = "under-indexing"
+        signal_color = "caution"
+
+    headline = (
+        f"HIDDEN GAP — COMPETITIVE SET GROUP INDEX: "
+        f"Avg RGI {avg_rgi:.1f} ({signal}); {n_under}/{n_total} properties under-index on RevPAR "
+        f"— group mix correction worth ${(tbid_high-tbid_low)/1e6:.1f}M TBID upside"
+    )
+    body = (
+        f"CROSS-SIGNAL: CoStar competitive set RevPAR index (RGI) × group demand benchmarks "
+        f"show the South OC market averaging RGI {avg_rgi:.1f} — market is {signal} on RevPAR. "
+        f"{n_under} of {n_total} properties index below fair share (RGI < 100), suggesting "
+        f"rate compression from over-reliance on transient leisure or suboptimal group mix. "
+        f"Industry benchmark group demand share of 25–32% implies ${tbid_low/1e6:.1f}M–"
+        f"${tbid_high/1e6:.1f}M TBID opportunity. Properties with RGI < 100 are prime candidates "
+        f"for targeted group sales support to rebalance their mix."
+        + _5wh(
+            who="VDP DMO, hotel revenue managers, TBID board",
+            what=f"RGI {avg_rgi:.1f} average; {n_under} under-indexing properties need group mix support",
+            when="Immediate — group sales outreach should target Q1/Q4 shoulder bookings now",
+            where="Under-indexing properties in Dana Point competitive set",
+            why=f"Closing group RGI gap to 100 adds up to ${(tbid_high-tbid_low)/1e6:.1f}M incremental TBID",
+            how="Identify under-indexing properties; co-create group rate programs; DMO sales team support",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=3, horizon_days=180,
+        data_sources="costar_competitive_set,group_intelligence",
+        metric_basis={
+            "avg_rgi": round(avg_rgi, 1),
+            "n_under_index": n_under,
+            "n_total": n_total,
+            "signal": signal,
+            "tbid_opportunity_low": round(tbid_low),
+            "tbid_opportunity_high": round(tbid_high),
+        },
+    )
+
+
+def gen_cross_channel_group_attribution(
+    web_groups: pd.DataFrame,
+    med_groups: pd.DataFrame,
+    group: dict[str, Any],
+) -> dict:
+    """
+    CROSS insight: Website attribution + media attribution for group trips × TBID target gap.
+    Reveals which channel is producing the most attributable group impact.
+    """
+    if web_groups.empty and med_groups.empty:
+        return {}
+
+    TBID_TARGET = 4_100_000  # $4.1M midpoint
+
+    web_trips  = float(web_groups["trips"].sum())  if not web_groups.empty and "trips"          in web_groups.columns  else 0.0
+    web_impact = float(web_groups["est_impact_usd"].sum()) if not web_groups.empty and "est_impact_usd" in web_groups.columns else 0.0
+    med_trips  = float(med_groups["trips"].sum())  if not med_groups.empty and "trips"          in med_groups.columns  else 0.0
+    med_impact = float(med_groups["est_impact_usd"].sum()) if not med_groups.empty and "est_impact_usd" in med_groups.columns else 0.0
+
+    total_impact = web_impact + med_impact
+    tbid_from_attr = total_impact * 0.0125
+    gap_to_target  = TBID_TARGET - tbid_from_attr
+
+    top_channel = "media" if med_impact > web_impact else "website"
+    top_impact  = max(med_impact, web_impact)
+    top_trips   = med_trips if top_channel == "media" else web_trips
+    web_per_trip = web_impact / web_trips if web_trips > 0 else 0
+    med_per_trip = med_impact / med_trips if med_trips > 0 else 0
+
+    headline = (
+        f"HIDDEN OPPORTUNITY — GROUP CHANNEL ATTRIBUTION: "
+        f"{top_channel.title()} channel leads with {int(top_trips):,} group trips / ${top_impact/1e3:.0f}K impact; "
+        f"combined TBID attribution ${tbid_from_attr/1e3:.0f}K vs ${TBID_TARGET/1e6:.1f}M target"
+    )
+    body = (
+        f"CROSS-SIGNAL: Datafy website attribution ({int(web_trips):,} trips, ${web_impact/1e3:.0f}K impact, "
+        f"${web_per_trip:.0f}/trip) vs media attribution ({int(med_trips):,} trips, ${med_impact/1e3:.0f}K impact, "
+        f"${med_per_trip:.0f}/trip). Combined attributable impact: ${total_impact/1e3:.0f}K → "
+        f"${tbid_from_attr/1e3:.0f}K in TBID-equivalent. Gap to $4.1M group TBID target: "
+        f"${gap_to_target/1e3:.0f}K. "
+        + (f"Media attribution shows {'higher' if med_per_trip > web_per_trip else 'lower'} "
+           f"impact per trip (${med_per_trip:.0f} vs ${web_per_trip:.0f} website) — "
+           f"{'suggesting media spend is reaching higher-value group travelers.' if med_per_trip > web_per_trip else 'website organic discovery is efficient.'} ")
+        + f"To close the gap to $4.1M, {top_channel} channel investment should be prioritized."
+        + _5wh(
+            who="VDP marketing team and TBID board",
+            what=f"${total_impact/1e3:.0f}K combined group attribution; ${gap_to_target/1e3:.0f}K gap to target",
+            when="Next campaign cycle — reallocate budget toward highest-impact channel",
+            where=f"{top_channel.title()} channel (highest ${top_impact/1e3:.0f}K impact)",
+            why=f"Closing ${gap_to_target/1e3:.0f}K group attribution gap required to hit $4.1M TBID target",
+            how=f"Increase {top_channel} group-specific content and targeting; A/B test group landing pages",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=2, horizon_days=90,
+        data_sources="datafy_attribution_website_groups,datafy_attribution_media_groups,group_intelligence",
+        metric_basis={
+            "web_trips": round(web_trips),
+            "web_impact_usd": round(web_impact, 2),
+            "med_trips": round(med_trips),
+            "med_impact_usd": round(med_impact, 2),
+            "total_impact_usd": round(total_impact, 2),
+            "tbid_from_attribution": round(tbid_from_attr, 2),
+            "gap_to_target": round(gap_to_target, 2),
+            "top_channel": top_channel,
+        },
+    )
+
+
+def gen_dmo_group_channel_roi(
+    web_groups: pd.DataFrame,
+    med_groups: pd.DataFrame,
+    group: dict[str, Any],
+    media_kpis: dict[str, Any],
+) -> dict:
+    """
+    DMO insight: Group channel ROI — which attribution channel generates more TBID per dollar spent.
+    Compares website organic vs media paid attribution for group travel segments.
+    """
+    if web_groups.empty and med_groups.empty:
+        return {}
+
+    web_trips  = float(web_groups["trips"].sum())  if not web_groups.empty else 0.0
+    web_impact = float(web_groups["est_impact_usd"].sum()) if not web_groups.empty else 0.0
+    med_trips  = float(med_groups["trips"].sum())  if not med_groups.empty else 0.0
+    med_impact = float(med_groups["est_impact_usd"].sum()) if not med_groups.empty else 0.0
+
+    # Media spend from media KPIs if available
+    media_spend = float(media_kpis.get("media_spend_usd", 0) or 0)
+    med_roi_str = (
+        f"Media ROAS: ${med_impact/media_spend:.1f} impact/$1 spend" if media_spend > 0 else
+        "Media spend data pending"
+    )
+
+    web_per_trip = web_impact / web_trips if web_trips > 0 else 0
+    med_per_trip = med_impact / med_trips if med_trips > 0 else 0
+    tbid_low   = float(group.get("estimated_group_tbid_rev_low",  3_603_940) or 3_603_940)
+    tbid_high  = float(group.get("estimated_group_tbid_rev_high", 4_613_043) or 4_613_043)
+
+    headline = (
+        f"GROUP CHANNEL ROI: Website ${web_per_trip:.0f}/trip vs Media ${med_per_trip:.0f}/trip; "
+        f"combined group attribution supports ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M TBID target"
+    )
+    body = (
+        f"DMO group channel ROI analysis: website attribution delivers {int(web_trips):,} group trips "
+        f"at ${web_per_trip:.0f} impact/trip; media attribution delivers {int(med_trips):,} trips "
+        f"at ${med_per_trip:.0f} impact/trip. {med_roi_str}. "
+        f"Recommended group TBID target range: ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M annually. "
+        f"{'Media attribution is more efficient per trip — prioritize group-targeted media spend.' if med_per_trip > web_per_trip else 'Website organic attribution is cost-efficient — invest in group landing pages and SEO.'}"
+        + _5wh(
+            who="VDP DMO marketing team and TBID board",
+            what=f"Group channel ROI: website {int(web_trips):,} trips vs media {int(med_trips):,} trips",
+            when="Review quarterly with each Datafy attribution report update",
+            where="Website (organic) and media (paid) channels",
+            why=f"Optimizing channel mix toward highest-ROI source maximizes TBID from group segment",
+            how="Shift budget toward highest $/trip channel; track group attribution quarterly vs $4.1M target",
+        )
+    )
+    return dict(
+        headline=headline, body=body, priority=3, horizon_days=90,
+        data_sources="datafy_attribution_website_groups,datafy_attribution_media_groups,group_intelligence",
+        metric_basis={
+            "web_trips": round(web_trips),
+            "web_impact_per_trip": round(web_per_trip, 2),
+            "med_trips": round(med_trips),
+            "med_impact_per_trip": round(med_per_trip, 2),
+            "tbid_target_low": round(tbid_low),
+            "tbid_target_high": round(tbid_high),
+        },
+    )
+
+
 def load_fred_signals(conn: sqlite3.Connection) -> dict[str, Any]:
     """Load key FRED macro signals for insight generation."""
     result: dict[str, Any] = {}
@@ -2871,6 +3246,9 @@ def main() -> None:
         parks_data   = load_state_parks_recent(conn)
         group_data   = load_group_intelligence(conn)
         us_travel    = load_us_travel_benchmarks(conn)
+        comp_set_df  = _load_competitive_set_data(conn)
+        pipeline_df  = _load_supply_pipeline_data(conn)
+        web_grp_df, med_grp_df = _load_attribution_groups_data(conn)
 
         print(f"  KPI rows: {len(kpi_recent)} (90d) | {len(kpi_all)} (all)")
         print(f"  Compression quarters: {len(comp)}")
@@ -2939,6 +3317,12 @@ def main() -> None:
             ("cross","traveler_type_mix"):          lambda: gen_cross_traveler_type_mix(us_travel, overview, kpi_recent),
             ("cross","group_event_synergy"):        lambda: gen_cross_group_event_synergy(group_data, us_travel, comp),
             ("cross","traveler_mix_revenue_gap"):   lambda: gen_cross_traveler_mix_revenue_gap(us_travel, overview, kpi_recent),
+            # New group intelligence cross-dataset insights (2026-05-30)
+            ("cross","group_costar_correlation"):   lambda: gen_cross_group_costar_correlation(group_data, kpi_recent, comp_set_df),
+            ("cross","supply_pipeline_group_risk"): lambda: gen_cross_supply_pipeline_group_risk(group_data, pipeline_df, comp),
+            ("cross","competitive_set_group_gap"):  lambda: gen_cross_competitive_set_group_gap(group_data, comp_set_df, kpi_recent),
+            ("cross","channel_group_attribution"):  lambda: gen_cross_channel_group_attribution(web_grp_df, med_grp_df, group_data),
+            ("dmo",  "group_channel_roi"):          lambda: gen_dmo_group_channel_roi(web_grp_df, med_grp_df, group_data, media_kpis),
         }
 
         inserted = 0
