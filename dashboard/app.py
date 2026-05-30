@@ -4098,6 +4098,28 @@ _st_components.html("""
 (function(){
   var doc = window.parent.document;
   if(!doc) return;
+  // (0) Pre-inject custom favicon before React sets its own — eliminates pop-in flash
+  (function(){
+    var FAVICON = '/app/static/favicon.png';
+    // Remove any existing icon links Streamlit may have injected
+    doc.querySelectorAll('link[rel~="icon"],link[rel~="shortcut"]').forEach(function(l){ l.remove(); });
+    var lnk = doc.createElement('link');
+    lnk.rel = 'icon'; lnk.type = 'image/png'; lnk.href = FAVICON;
+    doc.head.appendChild(lnk);
+    // Watch for Streamlit re-injecting its own favicon and override immediately
+    if(window.MutationObserver){
+      new MutationObserver(function(muts){
+        muts.forEach(function(m){
+          m.addedNodes.forEach(function(n){
+            if(n.nodeName === 'LINK' && /icon|shortcut/i.test(n.rel||'') &&
+               !/favicon\.png/i.test(n.href||'')){
+              n.href = FAVICON;
+            }
+          });
+        });
+      }).observe(doc.head,{childList:true});
+    }
+  })();
   // (a) Inject a <style> into parent <head> — loads after emotion CSS, wins cascade
   if(!doc.getElementById('dp-spacing-fix')){
     var s = doc.createElement('style');
@@ -4107,6 +4129,8 @@ _st_components.html("""
         'position:absolute!important;top:-9999px!important;overflow:hidden!important}' +
       'header{display:none!important;height:0!important}' +
       '[data-testid="stToolbar"]{display:none!important;height:0!important}' +
+      '[data-testid="stStatusWidget"]{display:none!important;opacity:0!important;' +
+        'pointer-events:none!important;visibility:hidden!important}' +
       '[data-testid="stMain"]{padding-top:0!important;margin-top:0!important}' +
       '[data-testid="stMainBlockContainer"]{padding-top:0!important;margin-top:0!important}' +
       'section[data-testid="stMain"]>div{padding-top:0!important;margin-top:0!important}' +
@@ -4146,10 +4170,15 @@ _st_components.html("""
     //     between releases, so match by stable testid + case-insensitive class
     //     fragment + any anchor that links to a streamlit domain.
     var _bsel = [
-      '[data-testid="stStatusWidget"]', '[data-testid="manage-app-button"]',
+      '[data-testid="stStatusWidget"]',
+      '[data-testid="stStatusWidget"] *',
+      '[data-testid="manage-app-button"]',
       '[data-testid="stAppDeployButton"]', '[data-testid="stDeployButton"]',
       '[class*="viewerBadge" i]', '[class*="profileContainer" i]',
-      '[class*="appCreator" i]', '[class*="deployButton" i]'
+      '[class*="appCreator" i]', '[class*="deployButton" i]',
+      '[class*="StatusWidget" i]', '[class*="runningIcon" i]',
+      '[class*="stSpinner" i]', 'button[aria-label*="Running" i]',
+      'button[aria-label*="Stop" i]'
     ];
     _bsel.forEach(function(s){
       try { doc.querySelectorAll(s).forEach(function(el){
