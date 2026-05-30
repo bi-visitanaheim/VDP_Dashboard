@@ -267,3 +267,156 @@ def format_insight_card(icon: str, title: str, main_value: str, subtitle: str = 
     <div style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 900; letter-spacing: -0.03em; color: {accent_color}; margin: 8px 0;">{main_value}</div>
     {body_html}
     </div>"""
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# INFOGRAPHIC STAT BAND  — OCFEC-inspired, but sleeker
+# A color-coded band that pulls the MAIN IDEAS out of a plain paragraph into
+# scannable "key points" + optional stat chips, with a gradient icon tile and an
+# optional status pill. Use in place of dense explanatory text boxes.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Named accent palette — each entry: (solid, tint_bg, deep_text)
+STAT_BAND_PALETTE = {
+    "teal":   ("#0891B2", "#ECFEFF", "#075E6B"),
+    "blue":   ("#2563EB", "#EFF6FF", "#1E40AF"),
+    "amber":  ("#D97706", "#FFFBEB", "#92400E"),
+    "purple": ("#7C3AED", "#F5F3FF", "#5B21B6"),
+    "green":  ("#059669", "#ECFDF5", "#065F46"),
+    "red":    ("#DC2626", "#FEF2F2", "#991B1B"),
+    "slate":  ("#475569", "#F8FAFC", "#1E293B"),
+}
+
+
+def _stat_band_colors(accent: str) -> tuple:
+    """Resolve an accent name or hex into (solid, tint_bg, deep_text)."""
+    if accent in STAT_BAND_PALETTE:
+        return STAT_BAND_PALETTE[accent]
+    # Custom hex — derive a very light tint and a dark text shade
+    hex_clr = accent.lstrip("#")
+    if len(hex_clr) == 6:
+        r, g, b = (int(hex_clr[i:i + 2], 16) for i in (0, 2, 4))
+        tint = f"rgba({r},{g},{b},0.07)"
+        deep = f"rgb({int(r * 0.55)},{int(g * 0.55)},{int(b * 0.55)})"
+        return (accent, tint, deep)
+    return ("#0891B2", "#ECFEFF", "#075E6B")
+
+
+def format_stat_band(
+    icon: str,
+    title: str,
+    points,
+    *,
+    eyebrow: str = "",
+    accent: str = "teal",
+    stats=None,
+    status=None,
+) -> str:
+    """
+    Sleek infographic stat band — OCFEC-style category band, modernized.
+
+    Args:
+        icon:    emoji/glyph shown in a gradient tile on the left
+        title:   bold band title
+        points:  list of "main idea" strings (scannable key points). Inline HTML
+                 like <strong> is honored. Pass [] to omit.
+        eyebrow: small uppercase category label above the title (optional)
+        accent:  palette name (teal|blue|amber|purple|green|red|slate) or #hex
+        stats:   optional list of dicts -> stat chips. Each:
+                   {"label": str, "value": str, "delta": str?, "good": bool?}
+        status:  optional (text, palette_or_hex) -> status pill, top-right
+
+    Returns:
+        HTML string. Render with st.markdown(..., unsafe_allow_html=True).
+    """
+    solid, tint, deep = _stat_band_colors(accent)
+
+    eyebrow_html = (
+        f'<div style="font-size:10.5px;font-weight:800;letter-spacing:.12em;'
+        f'text-transform:uppercase;color:{solid};margin-bottom:3px;">{eyebrow}</div>'
+        if eyebrow else ""
+    )
+
+    status_html = ""
+    if status:
+        s_txt, s_clr = status
+        s_solid, _, _ = _stat_band_colors(s_clr)
+        status_html = (
+            f'<span style="background:{s_solid};color:#FFFFFF;font-size:10px;'
+            f'font-weight:800;letter-spacing:.08em;text-transform:uppercase;'
+            f'padding:4px 11px;border-radius:20px;white-space:nowrap;">{s_txt}</span>'
+        )
+
+    # Key points — each with an accent marker; main ideas, not a wall of text
+    points_html = ""
+    if points:
+        items = "".join(
+            f'<li style="position:relative;padding-left:20px;margin:0 0 7px 0;'
+            f'font-size:13px;line-height:1.6;color:#334155;-webkit-text-fill-color:#334155;">'
+            f'<span style="position:absolute;left:0;top:7px;width:7px;height:7px;'
+            f'border-radius:2px;background:{solid};transform:rotate(45deg);"></span>'
+            f'{p}</li>'
+            for p in points
+        )
+        points_html = (
+            f'<ul style="list-style:none;padding:0;margin:12px 0 0 0;">{items}</ul>'
+        )
+
+    # Stat chips — the hard numbers, OCFEC-style values, as mini cards
+    stats_html = ""
+    if stats:
+        chips = []
+        for s in stats:
+            label = s.get("label", "")
+            value = s.get("value", "")
+            delta = s.get("delta", "")
+            good = s.get("good", True)
+            d_clr = "#15803D" if good else "#DC2626"
+            arrow = ""
+            if delta:
+                arrow = (
+                    f'<div style="font-size:11px;font-weight:700;color:{d_clr};'
+                    f'margin-top:2px;">{delta}</div>'
+                )
+            chips.append(
+                f'<div style="flex:1;min-width:118px;background:#FFFFFF;'
+                f'border:1px solid #E2E8F0;border-top:3px solid {solid};'
+                f'border-radius:9px;padding:11px 13px;">'
+                f'<div style="font-size:10px;font-weight:700;text-transform:uppercase;'
+                f'letter-spacing:.07em;color:#64748B;margin-bottom:3px;">{label}</div>'
+                f'<div style="font-family:\'Outfit\',sans-serif;font-size:22px;'
+                f'font-weight:900;letter-spacing:-0.02em;color:#0F172A;'
+                f'-webkit-text-fill-color:#0F172A;line-height:1.05;">{value}</div>'
+                f'{arrow}</div>'
+            )
+        stats_html = (
+            f'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">'
+            f'{"".join(chips)}</div>'
+        )
+
+    return f"""<div style="
+    background:linear-gradient(180deg,{tint} 0%,#FFFFFF 62%);
+    border:1px solid #E2E8F0; border-left:5px solid {solid};
+    border-radius:13px; padding:16px 20px 18px 18px; margin:16px 0;
+    box-shadow:0 1px 3px rgba(15,23,42,0.06),0 6px 18px rgba(15,23,42,0.05);">
+    <div style="display:flex;align-items:flex-start;gap:14px;">
+      <div style="flex-shrink:0;width:46px;height:46px;border-radius:12px;
+        background:linear-gradient(135deg,{solid} 0%,{deep} 100%);
+        display:flex;align-items:center;justify-content:center;font-size:23px;
+        box-shadow:0 4px 12px {solid}40;">{icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            {eyebrow_html}
+            <div style="font-family:'Outfit',sans-serif;font-size:16px;font-weight:800;
+              color:#0F172A;-webkit-text-fill-color:#0F172A;letter-spacing:-0.01em;
+              line-height:1.25;">{title}</div>
+          </div>
+          {status_html}
+        </div>
+      </div>
+    </div>
+    {points_html}
+    {stats_html}
+    </div>"""
+

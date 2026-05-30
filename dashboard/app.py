@@ -26,6 +26,7 @@ import urllib.parse as _urlparse
 from pathlib import Path
 from dotenv import load_dotenv
 import re as _re
+import json as _json
 
 # Suppress third-party deprecation noise — never show in customer-facing UI
 warnings.filterwarnings("ignore", category=FutureWarning, module="google")
@@ -7145,6 +7146,262 @@ def chart_primer(text: str) -> str:
     return f'<div class="chart-primer"><strong>What to look for:</strong> {text}</div>'
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# SMART INSIGHT CARD — turns a dense insights_daily row into a scannable
+# infographic: status badge + clean title + lead idea + labeled metric chips
+# (parsed from metric_basis JSON) + highlighted Action CTA.
+# GloCon Solutions LLC — Dana Point PULSE
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Headline prefix -> (badge label, accent color)
+_INSIGHT_PREFIX = {
+    "HIDDEN SIGNAL":        ("Hidden Signal",  "#0891B2"),
+    "HIDDEN OPPORTUNITY":   ("Opportunity",    "#10B981"),
+    "HIDDEN GAP":           ("Revenue Gap",    "#F59E0B"),
+    "HIDDEN RISK":          ("Risk Flag",      "#EF4444"),
+    "CROSS-SIGNAL":         ("Cross-Signal",   "#A78BFA"),
+    "FORWARD DEMAND INDEX": ("Demand Index",   "#38BDF8"),
+    "SIGNAL":               ("Signal",         "#0891B2"),
+    "OPPORTUNITY":          ("Opportunity",    "#10B981"),
+    "RISK":                 ("Risk",           "#EF4444"),
+    "GAP":                  ("Gap",            "#F59E0B"),
+    "ALERT":                ("Alert",          "#EF4444"),
+}
+
+# category -> emoji icon
+_INSIGHT_ICON = {
+    "feeder_value_gap": "🗺️", "daytrip_conversion": "🏨", "weekday_los_gap": "📅",
+    "campaign_seasonality": "📣", "oos_adr_premium": "✈️", "compression_daytrip": "🔥",
+    "group_event_synergy": "🤝", "traveler_mix_revenue_gap": "🧳",
+    "demand_trend": "📈", "tbid_projection": "💳", "feeder_market": "🗺️",
+    "compression_outlook": "🔥", "event_roi": "🎟️", "tot_revenue": "🏛️",
+    "infrastructure": "🚧", "visitor_profile": "👥", "economic_impact": "💰",
+    "best_value": "🏷️", "rate_outlook": "📊", "upcoming_events": "📅",
+    "booking_timing": "⏰", "peak_alert": "⚠️", "economic_benefit": "💵",
+    "quiet_windows": "🌙", "annual_impact": "📆",
+}
+
+# Acronyms kept uppercase when humanizing metric_basis keys
+_KEY_ACRONYMS = {"la", "adr", "los", "oos", "tbid", "tot", "roi", "yoy", "revpar",
+                 "dma", "rev", "us", "ca", "slc", "nyc", "occ", "pp", "ytd"}
+# Noise suffixes dropped from chip labels
+_KEY_DROP = {"pct", "usd", "est", "30d", "value", "num"}
+
+
+def _humanize_metric_key(key: str) -> str:
+    """la_visitor_share_pct -> 'LA Visitor Share'; avg_los_days -> 'Avg LOS'."""
+    parts = [p for p in str(key).split("_") if p and p not in _KEY_DROP]
+    out = []
+    for p in parts:
+        if p in _KEY_ACRONYMS:
+            out.append(p.upper())
+        elif p == "avg":
+            out.append("Avg")
+        else:
+            out.append(p.capitalize())
+    label = " ".join(out).strip()
+    return label or str(key).replace("_", " ").title()
+
+
+def _format_metric_value(key: str, val) -> str:
+    """Format a metric_basis value using key-name hints ($ / % / × / count).
+
+    Precedence matters: money hints (revenue/spend/adr) beat a stray 'pct' in a
+    key like 'revenue_at_3pct_conversion'; '_pct' suffix beats the 'trip' count
+    rule for 'day_trip_pct'; 'trips' counts beat the 'day' duration rule for
+    'annual_day_trips'.
+    """
+    k = str(key).lower()
+    if isinstance(val, str):
+        return val
+    if val is None:
+        return "—"
+    try:
+        v = float(val)
+    except (TypeError, ValueError):
+        return str(val)
+    # 1) ratios / multipliers
+    if "efficiency" in k or "multiplier" in k or k.endswith("_x"):
+        return f"{v:.2f}×"
+    # 2) percentage-point gaps
+    if k.endswith("_pp") or k.endswith("gap_pp") or "_pp_" in k:
+        return f"{v:+.1f}pp"
+    # 3) index / score (0-100)
+    if k.endswith("_index") or k.endswith("_score") or "/100" in k:
+        return f"{v:.0f}/100"
+    # 4) MONEY — strong hints win over a mid-key 'pct'
+    if "billion" in k:
+        return f"${v:.0f}B"
+    _MONEY = ("revenue", "spend", "adr", "usd", "worth", "impact", "income",
+              "tbid", "tot", "price", "_rev", "rev_")
+    if any(t in k for t in _MONEY) or k.endswith("_est") or "_est_" in k:
+        if abs(v) >= 1e6:
+            return f"${v/1e6:.2f}M"
+        if abs(v) >= 1e3:
+            return f"${v/1e3:.0f}K"
+        return f"${v:,.0f}"
+    # 5) percentages — '_pct' suffix / share / rate beat the count rule
+    if k.endswith("_pct") or "share" in k or "_occ" in k or k.endswith("_rate") \
+       or "pct" in k:
+        return f"{v:.1f}%"
+    # 6) counts — trips / rooms / jobs / visitors / attendees / events
+    if any(t in k for t in ("trip", "room", "job", "visitor", "attendee",
+                            "event", "count", "device")):
+        return f"{int(round(v)):,}"
+    # 7) durations (LOS / nights / days as a duration)
+    if "los" in k or k.endswith("_days") or k.endswith("_nights") or k.endswith("_day"):
+        return f"{v:.1f}" + (" days" if v != 1 else " day")
+    # 8) fallback
+    if v >= 1000 or v == int(v):
+        return f"{int(round(v)):,}"
+    return f"{v:.1f}"
+
+
+def _parse_insight_headline(headline: str):
+    """Return (badge_label, accent, clean_title). Strips the PREFIX: marker."""
+    hl = (headline or "").strip()
+    up = hl.upper()
+    for prefix, (label, color) in _INSIGHT_PREFIX.items():
+        if up.startswith(prefix):
+            rest = hl[len(prefix):].lstrip(" :—-").strip()
+            # Capitalize first char without lower-casing the rest (keeps acronyms)
+            if rest:
+                rest = rest[0].upper() + rest[1:]
+            return label, color, (rest or hl)
+    return "", "", hl
+
+
+def _insight_lead_and_action(body: str):
+    """Split body into (lead_idea, action_cta). Lead = first 1-2 sentences."""
+    b = (body or "").strip()
+    action = ""
+    # Pull an explicit "Action:" clause if present
+    m = _re.search(r"(?:^|[.\s])Action[:\-]\s*(.+)$", b, flags=_re.I | _re.S)
+    if m:
+        action = m.group(1).strip()
+        b = b[:m.start()].strip().rstrip(".") + "."
+    # Lead = up to 2 sentences (cap ~240 chars at a sentence boundary)
+    sentences = _re.split(r"(?<=[.!?])\s+", b)
+    lead = ""
+    for s in sentences:
+        if not s.strip():
+            continue
+        if len(lead) + len(s) > 240 and lead:
+            break
+        lead = (lead + " " + s).strip()
+        if lead.count(".") >= 2 and len(lead) > 90:
+            break
+    if action and len(action) > 220:
+        action = action[:217].rstrip() + "…"
+    return lead, action
+
+
+def _select_metric_chips(metric_basis, max_n: int = 4):
+    """Parse metric_basis JSON -> [{'label','value'}] for stat chips."""
+    if not metric_basis:
+        return []
+    data = metric_basis
+    if isinstance(metric_basis, str):
+        try:
+            data = _json.loads(metric_basis)
+        except (ValueError, TypeError):
+            return []
+    if not isinstance(data, dict):
+        return []
+    chips = []
+    for k, v in data.items():
+        if v is None or (isinstance(v, str) and not v.strip()):
+            continue
+        chips.append({"label": _humanize_metric_key(k), "value": _format_metric_value(k, v)})
+        if len(chips) >= max_n:
+            break
+    return chips
+
+
+def render_smart_insight_card(sig: dict, accent_fallback: str = "#0891B2") -> str:
+    """Render one insights_daily row as a sleek, scannable infographic card.
+
+    Pulls: status badge (headline prefix) · clean title · lead idea ·
+    labeled metric chips (from metric_basis JSON) · highlighted Action CTA.
+    """
+    cat   = str(sig.get("category", "") or "")
+    icon  = _INSIGHT_ICON.get(cat, "💡")
+    badge, accent, title = _parse_insight_headline(sig.get("headline", ""))
+    if not accent:
+        accent = accent_fallback
+    lead, action = _insight_lead_and_action(sig.get("body", ""))
+    chips = _select_metric_chips(sig.get("metric_basis"))
+    horizon = sig.get("horizon_days")
+
+    # Light tint of accent for the header band
+    _hx = accent.lstrip("#")
+    try:
+        _r, _g, _b = (int(_hx[i:i+2], 16) for i in (0, 2, 4))
+        tint = f"rgba({_r},{_g},{_b},0.06)"
+        deep = f"rgb({int(_r*0.55)},{int(_g*0.55)},{int(_b*0.55)})"
+    except Exception:
+        tint, deep = "rgba(8,145,178,0.06)", "#075E6B"
+
+    badge_html = (
+        f'<span style="background:{accent};color:#FFFFFF;font-size:9.5px;font-weight:800;'
+        f'letter-spacing:.09em;text-transform:uppercase;padding:3px 10px;border-radius:20px;'
+        f'white-space:nowrap;">{badge}</span>' if badge else ""
+    )
+    horizon_html = (
+        f'<span style="font-size:10px;color:#94A3B8;font-weight:600;white-space:nowrap;">'
+        f'⏱ {int(horizon)}-day horizon</span>'
+        if horizon not in (None, "", 0) and str(horizon).replace(".", "").isdigit() else ""
+    )
+
+    chips_html = ""
+    if chips:
+        cells = "".join(
+            f'<div style="flex:1;min-width:104px;background:#FFFFFF;border:1px solid #E8EDF3;'
+            f'border-top:3px solid {accent};border-radius:9px;padding:9px 12px;">'
+            f'<div style="font-size:9.5px;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:.06em;color:#64748B;margin-bottom:2px;line-height:1.2;">{c["label"]}</div>'
+            f'<div style="font-family:\'Outfit\',sans-serif;font-size:19px;font-weight:900;'
+            f'letter-spacing:-0.02em;color:#0F172A;-webkit-text-fill-color:#0F172A;'
+            f'line-height:1.05;">{c["value"]}</div></div>'
+            for c in chips
+        )
+        chips_html = f'<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:13px;">{cells}</div>'
+
+    lead_html = (
+        f'<p style="font-size:13px;color:#334155;-webkit-text-fill-color:#334155;'
+        f'line-height:1.6;margin:11px 0 0 0;">{lead}</p>' if lead else ""
+    )
+    action_html = (
+        f'<div style="display:flex;align-items:flex-start;gap:8px;margin-top:13px;'
+        f'background:{tint};border-radius:8px;padding:9px 12px;">'
+        f'<span style="color:{accent};font-weight:800;font-size:11px;white-space:nowrap;'
+        f'text-transform:uppercase;letter-spacing:.05em;padding-top:1px;">⚡ Action</span>'
+        f'<span style="font-size:12.5px;color:#0F172A;-webkit-text-fill-color:#0F172A;'
+        f'font-weight:600;line-height:1.5;">{action}</span></div>' if action else ""
+    )
+
+    return (
+        f'<div style="background:linear-gradient(180deg,{tint} 0%,#FFFFFF 55%);'
+        f'border:1px solid #E2E8F0;border-left:5px solid {accent};border-radius:13px;'
+        f'padding:15px 19px 17px 17px;margin-bottom:14px;'
+        f'box-shadow:0 1px 3px rgba(15,23,42,0.06),0 6px 18px rgba(15,23,42,0.05);">'
+        f'<div style="display:flex;align-items:flex-start;gap:13px;">'
+        f'<div style="flex-shrink:0;width:42px;height:42px;border-radius:11px;'
+        f'background:linear-gradient(135deg,{accent} 0%,{deep} 100%);display:flex;'
+        f'align-items:center;justify-content:center;font-size:21px;'
+        f'box-shadow:0 4px 11px {accent}40;">{icon}</div>'
+        f'<div style="flex:1;min-width:0;">'
+        f'<div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;flex-wrap:wrap;">'
+        f'{badge_html}{horizon_html}</div>'
+        f'<div style="font-family:\'Outfit\',sans-serif;font-size:15px;font-weight:800;'
+        f'color:#0F172A;-webkit-text-fill-color:#0F172A;letter-spacing:-0.01em;'
+        f'line-height:1.3;">{title}</div>'
+        f'</div></div>'
+        f'{lead_html}{chips_html}{action_html}'
+        f'</div>'
+    )
+
+
 def _safe_section(fn, section_name: str = "section"):
     """GloCon Solutions LLC — failsafe wrapper for any dashboard section.
     Catches exceptions and renders a user-friendly error card instead of crashing.
@@ -9541,17 +9798,8 @@ with tab_ov:
             for _sig in _cross_rows:
                 _cat  = _sig.get("category", "")
                 _col  = _sig_colors.get(_cat, "#0891B2")
-                _hl   = _sig.get("headline", "")
-                _body = _sig.get("body", "")
-                _sig_cards += (
-                    f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-left:4px solid {_col};'
-                    f'border-radius:10px;padding:14px 18px;margin-bottom:10px;'
-                    f'box-shadow:0 1px 3px rgba(15,23,42,0.08);">'
-                    f'<div style="font-size:12px;font-weight:800;color:{_col};text-transform:uppercase;'
-                    f'letter-spacing:.08em;margin-bottom:4px;">{_hl}</div>'
-                    f'<div style="font-size:13px;color:#334155;line-height:1.55;">{_body}</div>'
-                    f'</div>'
-                )
+                # Scannable infographic card: badge + title + lead + metric chips + action
+                _sig_cards += render_smart_insight_card(_sig, accent_fallback=_col)
             st.markdown(
                 f'<div style="background:linear-gradient(135deg,rgba(239,68,68,0.04) 0%,rgba(167,139,250,0.06) 100%);'
                 f'border:1px solid rgba(239,68,68,0.18);border-radius:14px;padding:20px 22px;margin-bottom:32px;">'
