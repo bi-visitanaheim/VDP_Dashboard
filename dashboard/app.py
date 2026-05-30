@@ -6312,7 +6312,7 @@ def kpi_card(label, value, delta, positive=True, neutral=False,
 
     # ── Flip card wrapper ─────────────────────────────────────────────────────
     return (
-        f'<div class="dp-flip-card">'
+        f'<div class="dp-flip-card" onclick="this.classList.toggle(\'is-flipped\')">'
         f'<div class="dp-flip-inner">'
         # Front face
         f'<div class="dp-flip-front kpi-card"{title_attr}>'
@@ -6357,7 +6357,7 @@ def insight_card(title, body, kind="info", icon: str = "", date_label: str = "")
     )
     return (
         # ── Flip card wrapper ──────────────────────────────────────────────
-        f'<div class="dp-flip-card">'
+        f'<div class="dp-flip-card" onclick="this.classList.toggle(\'is-flipped\')">'
         f'<div class="dp-flip-inner">'
         # Front face — badge + title + flip hint
         f'<div class="dp-flip-front insight-card insight-{kind}" '
@@ -9850,25 +9850,34 @@ with tab_ov:
             _oos_pct = float(_ek.get("out_of_state_vd_pct", 0) or 0)
 
         if _trips_fmt != "—":
+            _ek2 = df_dfy_ov.iloc[0] if not df_dfy_ov.empty else {}
+            _on_pct  = float(_ek2.get("overnight_trips_pct", 0) or 0) if _ek2 else 0
+            _los     = float(_ek2.get("avg_length_of_stay_days", 0) or 0) if _ek2 else 0
+            _dt_pct  = float(_ek2.get("day_trips_pct", 0) or 0) if _ek2 else 0
+            _tiles = [
+                ("#0369A1", "#DBEAFE", "👥", _trips_fmt, "Annual Visitor Trips", "Total visits to Dana Point"),
+                ("#0891B2", "#E0F2FE", "🏨", f"{_on_pct:.0f}%", "Stay Overnight", "Hotel · vacation rental · STVR"),
+                ("#0F172A", "#F1F5F9", "✈️", f"{_oos_pct:.0f}%", "Out-of-State Visitors", "Higher spend · longer stays"),
+                ("#059669", "#DCFCE7", "🌙", f"{_los:.1f}d", "Avg Length of Stay", "Nights per overnight trip"),
+                ("#D97706", "#FEF3C7", "🌅", f"{_dt_pct:.0f}%", "Same-Day Visits", "Conversion opportunity"),
+            ]
+            _tile_html = ""
+            for _bg, _light, _ico, _val, _lbl, _sub in _tiles:
+                _tile_html += (
+                    f'<div style="background:#FFFFFF;border:1px solid {_light};border-top:4px solid {_bg};'
+                    f'border-radius:12px;padding:18px 16px;text-align:center;flex:1;min-width:130px;">'
+                    f'<div style="font-size:26px;margin-bottom:6px;">{_ico}</div>'
+                    f'<div style="font-size:24px;font-weight:900;color:{_bg};font-family:Outfit,sans-serif;line-height:1;">{_val}</div>'
+                    f'<div style="font-size:12px;font-weight:700;color:#0F172A;margin-top:4px;">{_lbl}</div>'
+                    f'<div style="font-size:10px;color:#64748B;margin-top:2px;">{_sub}</div>'
+                    f'</div>'
+                )
             st.markdown(
-                f"""<div style="
-                background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
-                border: 1px solid #E2E8F0;
-                border-left: 4px solid #0284C7;
-                border-radius: 12px;
-                padding: 24px 28px;
-                margin-bottom: 40px;
-                box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
-                ">
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                <span style="font-size: 22px;">👥</span>
-                <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #0F172A; margin: 0;">Visitor Economy Context</h3>
-                </div>
-                <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0;">
-                <strong style="color: #0284C7;">{_trips_fmt}</strong> annual visitor trips with <strong style="color: #0284C7;">{_oos_pct:.0f}%</strong> out-of-state visitors driving higher spending per trip.
-                Explore feeder markets and visitor demographics in the <strong>Our Visitors</strong> tab.
-                </p>
-                </div>""",
+                f'<div style="margin-bottom:32px;">'
+                f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;'
+                f'color:#64748B;margin-bottom:12px;">📊 Visitor Economy Snapshot · Datafy Annual 2025</div>'
+                f'<div style="display:flex;gap:12px;flex-wrap:wrap;">{_tile_html}</div>'
+                f'</div>',
                 unsafe_allow_html=True,
             )
     except Exception as e:
@@ -11489,7 +11498,7 @@ with tab_fo:
                         )
                         st.markdown(
                             # Flip card wrapper
-                            f'<div class="dp-flip-card">'
+                            f'<div class="dp-flip-card" onclick="this.classList.toggle(\'is-flipped\')">'
                             f'<div class="dp-flip-inner">'
                             # Front — headline + source tags
                             f'<div class="dp-flip-front insight-card {style_cls}" '
@@ -11968,6 +11977,37 @@ with tab_ev:
                         f'</div>',
                         unsafe_allow_html=True,
                     )
+
+            # ── OCFEC-style Economic Impact Infographic Grid ─────────────────────
+            _cat_spend = float(df_dfy_spend.iloc[0].get("accommodation_pct", 0) or 0) if not df_dfy_spend.empty else 0
+            _total_spend_est = int(total_trips * 650 / 1e6) if total_trips > 0 else 0
+            _hotel_rev_est   = int(total_trips * overnight_pct / 100 * avg_los * 288) if total_trips > 0 else 0
+            _oos_trip_ct     = int(total_trips * oos_pct / 100)
+            _impact_tiles = [
+                ("#0369A1", "👥", f"{total_trips/1e6:.2f}M", "ANNUAL VISITORS", "Total trips to Dana Point"),
+                ("#0891B2", "🏨", f"{int(total_trips * overnight_pct / 100):,}", "OVERNIGHT STAYS", f"{overnight_pct:.0f}% of all visits"),
+                ("#059669", "💵", f"${_hotel_rev_est:,}M" if _hotel_rev_est >= 1 else "N/A", "EST. HOTEL REVENUE", "Overnight trips × ADR × LOS"),
+                ("#7C3AED", "✈️", f"{_oos_trip_ct:,}", "OUT-OF-STATE VISITS", f"{oos_pct:.0f}% · premium spend segment"),
+                ("#D97706", "🌙", f"{avg_los:.1f}", "NIGHTS PER STAY", "Avg length of overnight visit"),
+                ("#DC2626", "🔄", f"{repeat_pct:.0f}%", "REPEAT VISITORS", "Brand loyalty indicator"),
+            ]
+            _impact_html = ""
+            for _ic, _ico, _val, _lbl, _sub in _impact_tiles:
+                _impact_html += (
+                    f'<div style="background:{_ic};border-radius:12px;padding:20px 16px;text-align:center;flex:1;min-width:140px;">'
+                    f'<div style="font-size:28px;margin-bottom:8px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">{_ico}</div>'
+                    f'<div style="font-size:26px;font-weight:900;color:#FFFFFF;font-family:Outfit,sans-serif;line-height:1;">{_val}</div>'
+                    f'<div style="font-size:9.5px;font-weight:800;color:rgba(255,255,255,0.9);letter-spacing:.10em;text-transform:uppercase;margin-top:6px;">{_lbl}</div>'
+                    f'<div style="font-size:10px;color:rgba(255,255,255,0.7);margin-top:3px;">{_sub}</div>'
+                    f'</div>'
+                )
+            st.markdown(
+                f'<div style="margin:16px 0 24px;">'
+                f'<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748B;margin-bottom:12px;">📊 Visitor Economy Impact · Dana Point Annual 2025</div>'
+                f'<div style="display:flex;gap:10px;flex-wrap:wrap;">{_impact_html}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
             st.markdown("---")
 
