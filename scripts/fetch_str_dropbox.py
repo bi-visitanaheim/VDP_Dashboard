@@ -28,19 +28,19 @@ PROJECT_ROOT = BASE_DIR.parent
 WEEKLY_DIR = PROJECT_ROOT / "data" / "str" / "weekly"
 MONTHLY_DIR = PROJECT_ROOT / "data" / "str" / "monthly"
 
-# Dropbox shared folder links provided by STR
-WEEKLY_FOLDER_URL = (
-    "https://www.dropbox.com/scl/fo/ua6phm862g2dhlivuhhzh/ANKnc0sSWvtvF2TTcT4_j1w/2026"
-    "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&st=d6ic125m&dl=0"
+# Dropbox shared folder links provided by STR.
+# Both subfolders share the same root rlkey — use the root URL + path parameter
+# so the Dropbox API can correctly resolve each subfolder.
+DROPBOX_ROOT_URL = (
+    "https://www.dropbox.com/scl/fo/ua6phm862g2dhlivuhhzh"
+    "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&dl=0"
 )
-MONTHLY_FOLDER_URL = (
-    "https://www.dropbox.com/scl/fo/ua6phm862g2dhlivuhhzh/APCDmFO0BYYCJhG7y8cPLWk/2026/2026%20Monthly"
-    "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&st=upol86um&dl=0"
-)
+WEEKLY_SUBFOLDER_PATH  = "/2026"
+MONTHLY_SUBFOLDER_PATH = "/2026/2026 Monthly"
 
-DROPBOX_LIST_URL = "https://api.dropboxapi.com/2/files/list_folder"
+DROPBOX_LIST_URL          = "https://api.dropboxapi.com/2/files/list_folder"
 DROPBOX_LIST_CONTINUE_URL = "https://api.dropboxapi.com/2/files/list_folder/continue"
-DROPBOX_DOWNLOAD_URL = "https://content.dropboxapi.com/2/sharing/get_shared_link_file"
+DROPBOX_DOWNLOAD_URL      = "https://content.dropboxapi.com/2/sharing/get_shared_link_file"
 
 
 def get_token() -> str:
@@ -57,15 +57,15 @@ def get_token() -> str:
     return token
 
 
-def list_folder_files(token: str, shared_url: str) -> list[dict]:
-    """List all .xlsx files in a Dropbox shared folder link."""
+def list_folder_files(token: str, root_url: str, subfolder_path: str) -> list[dict]:
+    """List all .xlsx files in a Dropbox shared folder using root URL + subfolder path."""
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
     body = {
-        "shared_link": {"url": shared_url},
-        "path": "",
+        "shared_link": {"url": root_url},
+        "path": subfolder_path,
         "recursive": False,
     }
 
@@ -89,7 +89,7 @@ def list_folder_files(token: str, shared_url: str) -> list[dict]:
             )
 
         if resp.status_code != 200:
-            print(f"ERROR listing folder: {resp.status_code} {resp.text}")
+            print(f"ERROR listing folder: {resp.status_code} {resp.text[:300]}")
             return []
 
         data = resp.json()
@@ -107,11 +107,46 @@ def list_folder_files(token: str, shared_url: str) -> list[dict]:
     return all_entries
 
 
-def download_file(token: str, shared_url: str, file_name: str, dest_path: Path) -> bool:
-    """Download a single file from a Dropbox shared folder link."""
+def download_file(token: str, file_path: str, dest_path: Path) -> bool:
+    """Download a single file using its Dropbox path via files/download endpoint."""
     headers = {
         "Authorization": f"Bearer {token}",
-        "Dropbox-API-Arg": json.dumps({"url": shared_url, "path": f"/{file_name}"}),
+        "Dropbox-API-Arg": json.dumps({"path": file_path}),
+    }
+
+    for attempt in range(4):
+        try:
+            resp = requests.post(
+                "https://content.dropboxapi.com/2/files/download",
+                headers=headers,
+                timeout=120,
+                stream=True,
+            )
+            if resp.status_code == 200:
+                with open(dest_path, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                return True
+
+            # Fallback: try sharing/get_shared_link_file with root URL + path
+            print(f"  files/download failed ({resp.status_code}), trying shared link download...")
+            break
+
+        except requests.RequestException as e:
+            print(f"  WARN: attempt {attempt+1} network error: {e}")
+            if attempt < 3:
+                time.sleep(2 ** attempt)
+
+    return False
+
+
+def download_file_via_shared_link(
+    token: str, root_url: str, file_path: str, dest_path: Path
+) -> bool:
+    """Download using sharing/get_shared_link_file (requires sharing.read scope)."""
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Dropbox-API-Arg": json.dumps({"url": root_url, "path": file_path}),
     }
 
     for attempt in range(4):
@@ -128,7 +163,7 @@ def download_file(token: str, shared_url: str, file_name: str, dest_path: Path) 
                         f.write(chunk)
                 return True
 
-            print(f"  WARN: attempt {attempt+1} got HTTP {resp.status_code}: {resp.text[:200]}")
+            print(f"  WARN: attempt {attempt+1} HTTP {resp.status_code}: {resp.text[:200]}")
             if attempt < 3:
                 time.sleep(2 ** attempt)
 
@@ -140,25 +175,29 @@ def download_file(token: str, shared_url: str, file_name: str, dest_path: Path) 
     return False
 
 
-def sync_folder(token: str, shared_url: str, local_dir: Path, label: str) -> list[Path]:
-    """List and download all .xlsx files from a shared folder to a local directory."""
+def sync_folder(
+    token: str, subfolder_path: str, local_dir: Path, label: str
+) -> list[Path]:
+    """List and download all .xlsx files from a shared subfolder to a local directory."""
     local_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"\n[{label}] Listing files from Dropbox...")
-    entries = list_folder_files(token, shared_url)
+    print(f"\n[{label}] Listing files (path: {subfolder_path}) ...")
+    entries = list_folder_files(token, DROPBOX_ROOT_URL, subfolder_path)
 
     if not entries:
-        print(f"  No .xlsx files found (or folder is empty / token lacks access).")
+        print(f"  No .xlsx files found.")
         return []
 
     print(f"  Found {len(entries)} .xlsx file(s):")
     for e in entries:
-        print(f"    {e['name']}  ({e.get('size', 0):,} bytes)")
+        print(f"    {e['name']}  ({e.get('size', 0):,} bytes)  path: {e.get('path_lower','?')}")
 
     downloaded = []
     for entry in entries:
         name = entry["name"]
         dest = local_dir / name
+        file_path = entry.get("path_lower", f"{subfolder_path}/{name}").lower()
+
         if dest.exists():
             remote_modified = entry.get("server_modified", "")
             local_modified = datetime.fromtimestamp(dest.stat().st_mtime).strftime(
@@ -170,7 +209,11 @@ def sync_folder(token: str, shared_url: str, local_dir: Path, label: str) -> lis
                 continue
 
         print(f"  Downloading: {name} ...", end=" ", flush=True)
-        ok = download_file(token, shared_url, name, dest)
+        # Try files/download first (needs only files.content.read); fall back to shared link
+        ok = download_file(token, file_path, dest)
+        if not ok:
+            ok = download_file_via_shared_link(token, DROPBOX_ROOT_URL, file_path, dest)
+
         if ok:
             print("OK")
             downloaded.append(dest)
@@ -184,8 +227,8 @@ def main():
     token = get_token()
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] fetch_str_dropbox starting")
 
-    weekly_files = sync_folder(token, WEEKLY_FOLDER_URL, WEEKLY_DIR, "WEEKLY/DAILY")
-    monthly_files = sync_folder(token, MONTHLY_FOLDER_URL, MONTHLY_DIR, "MONTHLY")
+    weekly_files = sync_folder(token, WEEKLY_SUBFOLDER_PATH, WEEKLY_DIR, "WEEKLY/DAILY")
+    monthly_files = sync_folder(token, MONTHLY_SUBFOLDER_PATH, MONTHLY_DIR, "MONTHLY")
 
     print(f"\nSummary:")
     print(f"  Weekly files:  {len(weekly_files)} in {WEEKLY_DIR}")
