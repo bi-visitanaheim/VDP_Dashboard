@@ -7,9 +7,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
-# STR raw exports live in data/str/  (legacy path: downloads/str_daily.xlsx)
 STR_DIR = os.path.join(PROJECT_ROOT, "data", "str")
+# Primary file (legacy / manual drop)
 DAILY_FILE = os.path.join(STR_DIR, "str_daily.xlsx")
+# Dropbox-synced weekly exports land here (multiple files, any # of sheets)
+WEEKLY_DIR = os.path.join(STR_DIR, "weekly")
 
 
 def get_connection():
@@ -89,14 +91,76 @@ def normalize_str_daily(df):
     ]
 
 
+def _collect_daily_dataframes() -> list[pd.DataFrame]:
+    """Collect raw dataframes from all STR daily/weekly sources.
+
+    Sources (in priority order):
+      1. data/str/weekly/*.xlsx  — Dropbox-synced weekly exports (all sheets)
+      2. data/str/str_daily.xlsx — legacy single-file fallback
+    """
+    frames = []
+
+    # Source 1: Dropbox weekly directory (multiple files, all sheets)
+    if os.path.isdir(WEEKLY_DIR):
+        xlsx_files = sorted(
+            f for f in os.listdir(WEEKLY_DIR) if f.lower().endswith(".xlsx")
+        )
+        for fname in xlsx_files:
+            fpath = os.path.join(WEEKLY_DIR, fname)
+            try:
+                xl = pd.ExcelFile(fpath, engine="openpyxl")
+                for sheet in xl.sheet_names:
+                    try:
+                        df = xl.parse(sheet)
+                        if "Period" in df.columns:
+                            frames.append((fpath, sheet, df))
+                        else:
+                            print(f"  SKIP sheet '{sheet}' in {fname} — no 'Period' column")
+                    except Exception as e:
+                        print(f"  WARN: could not parse sheet '{sheet}' in {fname}: {e}")
+            except Exception as e:
+                print(f"  WARN: could not open {fname}: {e}")
+
+    # Source 2: Legacy single file
+    if os.path.exists(DAILY_FILE):
+        try:
+            xl = pd.ExcelFile(DAILY_FILE, engine="openpyxl")
+            for sheet in xl.sheet_names:
+                try:
+                    df = xl.parse(sheet)
+                    if "Period" in df.columns:
+                        frames.append((DAILY_FILE, sheet, df))
+                except Exception as e:
+                    print(f"  WARN: could not parse sheet '{sheet}' in str_daily.xlsx: {e}")
+        except Exception as e:
+            print(f"  WARN: could not open str_daily.xlsx: {e}")
+
+    return frames
+
+
 def load_str_daily(conn):
-    if not os.path.exists(DAILY_FILE):
-        print(f"Daily file not found, skipping: {DAILY_FILE}")
+    sources = _collect_daily_dataframes()
+    if not sources:
+        print(f"No STR daily data found in {WEEKLY_DIR}/ or {DAILY_FILE} — skipping")
         return 0
 
-    print(f"Loading STR daily file: {DAILY_FILE}")
-    df = pd.read_excel(DAILY_FILE, engine="openpyxl")
-    norm_df = normalize_str_daily(df)
+    print(f"Loading STR daily data: {len(sources)} sheet(s) across {len(set(s[0] for s in sources))} file(s)")
+
+    all_norm = []
+    for fpath, sheet, df in sources:
+        fname = os.path.basename(fpath)
+        try:
+            norm_df = normalize_str_daily(df)
+            all_norm.append(norm_df)
+            print(f"  {fname} [{sheet}] → {len(norm_df)} rows")
+        except Exception as e:
+            print(f"  WARN: normalize failed for {fname} [{sheet}]: {e}")
+
+    if not all_norm:
+        print("  No normalizable data found — skipping")
+        return 0
+
+    norm_df = pd.concat(all_norm, ignore_index=True).drop_duplicates()
 
     cursor = conn.cursor()
 
@@ -151,16 +215,17 @@ def load_str_daily(conn):
     rows_inserted = len(rows_to_insert)
     conn.commit()
 
+    file_label = f"weekly_dir({len(sources)} files)" if sources else os.path.basename(DAILY_FILE)
     cursor.execute(
         """
         INSERT INTO load_log (source, grain, file_name, rows_inserted)
         VALUES (?, ?, ?, ?)
         """,
-        ("STR", "daily", os.path.basename(DAILY_FILE), rows_inserted),
+        ("STR", "daily", file_label, rows_inserted),
     )
     conn.commit()
 
-    print(f"Inserted {rows_inserted} new daily rows from {os.path.basename(DAILY_FILE)}")
+    print(f"Inserted {rows_inserted} new daily rows ({file_label})")
     return rows_inserted
 
 

@@ -6,9 +6,11 @@ import pandas as pd
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
-# STR raw exports live in data/str/  (legacy path: downloads/str_monthly.xlsx)
 STR_DIR = os.path.join(PROJECT_ROOT, "data", "str")
+# Primary file (legacy / manual drop)
 MONTHLY_FILE = os.path.join(STR_DIR, "str_monthly.xlsx")
+# Dropbox-synced monthly exports land here (multiple files, any # of sheets)
+MONTHLY_DIR = os.path.join(STR_DIR, "monthly")
 
 
 def get_connection() -> sqlite3.Connection:
@@ -104,14 +106,75 @@ def safe_float(v):
         return None
 
 
+def _collect_monthly_sources() -> list[tuple[str, str, pd.DataFrame]]:
+    """Return list of (file_path, sheet_name, dataframe) for all monthly sources.
+
+    Sources:
+      1. data/str/monthly/*.xlsx  — Dropbox-synced monthly exports (all sheets)
+      2. data/str/str_monthly.xlsx — legacy single-file fallback
+    """
+    sources = []
+
+    if os.path.isdir(MONTHLY_DIR):
+        xlsx_files = sorted(
+            f for f in os.listdir(MONTHLY_DIR) if f.lower().endswith(".xlsx")
+        )
+        for fname in xlsx_files:
+            fpath = os.path.join(MONTHLY_DIR, fname)
+            try:
+                xl = pd.ExcelFile(fpath, engine="openpyxl")
+                for sheet in xl.sheet_names:
+                    try:
+                        df = xl.parse(sheet)
+                        if "Period" in df.columns:
+                            sources.append((fpath, sheet, df))
+                        else:
+                            print(f"  SKIP sheet '{sheet}' in {fname} — no 'Period' column")
+                    except Exception as e:
+                        print(f"  WARN: could not parse sheet '{sheet}' in {fname}: {e}")
+            except Exception as e:
+                print(f"  WARN: could not open {fname}: {e}")
+
+    if os.path.exists(MONTHLY_FILE):
+        try:
+            xl = pd.ExcelFile(MONTHLY_FILE, engine="openpyxl")
+            for sheet in xl.sheet_names:
+                try:
+                    df = xl.parse(sheet)
+                    if "Period" in df.columns:
+                        sources.append((MONTHLY_FILE, sheet, df))
+                except Exception as e:
+                    print(f"  WARN: could not parse sheet '{sheet}' in str_monthly.xlsx: {e}")
+        except Exception as e:
+            print(f"  WARN: could not open str_monthly.xlsx: {e}")
+
+    return sources
+
+
 def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
-    if not os.path.exists(path):
-        print(f"File not found, skipping: {path}")
+    """Load all monthly STR data. `path` is ignored — kept for pipeline signature compat."""
+    sources = _collect_monthly_sources()
+    if not sources:
+        print(f"No STR monthly data found in {MONTHLY_DIR}/ or {MONTHLY_FILE} — skipping")
         return 0
 
-    print(f"Loading STR monthly file: {path}")
-    df = pd.read_excel(path, engine="openpyxl")
-    norm_df = normalize_str_monthly(df)
+    print(f"Loading STR monthly data: {len(sources)} sheet(s) across {len(set(s[0] for s in sources))} file(s)")
+
+    all_norm = []
+    for fpath, sheet, df in sources:
+        fname = os.path.basename(fpath)
+        try:
+            norm_df = normalize_str_monthly(df)
+            all_norm.append(norm_df)
+            print(f"  {fname} [{sheet}] → {len(norm_df)} rows")
+        except Exception as e:
+            print(f"  WARN: normalize failed for {fname} [{sheet}]: {e}")
+
+    if not all_norm:
+        print("  No normalizable data found — skipping")
+        return 0
+
+    norm_df = pd.concat(all_norm, ignore_index=True).drop_duplicates()
 
     cur = conn.cursor()
 
@@ -138,7 +201,6 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
 
         val = safe_float(row["metric_value"])
         # Preserve NULL for missing values; do not floor negative values to 0
-        # (negative revenue/demand indicates data quality issue — log, don't mask)
         if val is not None and val < 0:
             print(
                 f"  WARNING: Negative {row['metric_name']} value ({val}) "
@@ -172,13 +234,14 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
     rows_inserted = len(rows_to_insert)
     conn.commit()
 
+    file_label = f"monthly_dir({len(sources)} files)" if sources else os.path.basename(MONTHLY_FILE)
     cur.execute(
         "INSERT INTO load_log (source, grain, file_name, rows_inserted) VALUES (?, ?, ?, ?)",
-        ("STR", "monthly", os.path.basename(path), rows_inserted),
+        ("STR", "monthly", file_label, rows_inserted),
     )
     conn.commit()
 
-    print(f"Inserted {rows_inserted} new monthly rows from {os.path.basename(path)}")
+    print(f"Inserted {rows_inserted} new monthly rows ({file_label})")
     return rows_inserted
 
 

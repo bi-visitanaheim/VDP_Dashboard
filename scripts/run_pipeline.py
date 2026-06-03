@@ -83,6 +83,9 @@ LOG_JSON_PATH = os.path.join(PROJECT_ROOT, "logs", "pipeline.jsonl")
 # fail_fast=True  → pipeline aborts if step fails (core STR/KPI/Insights steps)
 # fail_fast=False → pipeline warns and continues (optional enrichment steps)
 STEPS = [
+    # Step 0: Dropbox sync — downloads latest STR weekly+monthly exports BEFORE loaders run.
+    # Skip-safe: if DROPBOX_ACCESS_TOKEN is not set, this step logs a warning and continues.
+    ("fetch_str_dropbox", os.path.join(BASE_DIR, "fetch_str_dropbox.py"),       False),
     ("load_str_daily",    os.path.join(BASE_DIR, "load_str_daily_sqlite.py"),   True),
     ("load_str_monthly",  os.path.join(BASE_DIR, "load_str_monthly_sqlite.py"), True),
     ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),            True),
