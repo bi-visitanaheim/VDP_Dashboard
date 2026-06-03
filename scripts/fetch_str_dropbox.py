@@ -215,8 +215,8 @@ def sync_folder(
 
         print(f"  Downloading: {name} ...", end=" ", flush=True)
         # Download via shared link: the folder_url points directly to the subfolder,
-        # so just pass the filename as the path within that shared folder
-        ok = download_file_via_shared_link(token, folder_url, name, dest)
+        # so pass the filename with leading / as the path within that shared folder
+        ok = download_file_via_shared_link(token, folder_url, f"/{name}", dest)
 
         if ok:
             print("OK")
