@@ -109,14 +109,15 @@ def safe_float(v):
 def _sorted_xlsx_files(directory: str) -> list[str]:
     if not os.path.isdir(directory):
         return []
-    return sorted(f for f in os.listdir(directory) if f.lower().endswith(".xlsx"))
+    return sorted(f for f in os.listdir(directory) if f.lower().endswith((".xlsx", ".xls")))
 
 
 def _read_all_sheets(fpath: str) -> list[tuple[str, str, pd.DataFrame]]:
     results = []
     fname = os.path.basename(fpath)
+    engine = "xlrd" if fname.lower().endswith(".xls") else "openpyxl"
     try:
-        xl = pd.ExcelFile(fpath, engine="openpyxl")
+        xl = pd.ExcelFile(fpath, engine=engine)
         for sheet in xl.sheet_names:
             try:
                 df = xl.parse(sheet)

@@ -100,11 +100,11 @@ def list_folder_files(token: str, folder_url: str) -> list[dict]:
 
         data = resp.json()
         entries = data.get("entries", [])
-        xlsx_entries = [
+        excel_entries = [
             e for e in entries
-            if e.get(".tag") == "file" and e["name"].lower().endswith(".xlsx")
+            if e.get(".tag") == "file" and e["name"].lower().endswith((".xlsx", ".xls"))
         ]
-        all_entries.extend(xlsx_entries)
+        all_entries.extend(excel_entries)
 
         if not data.get("has_more", False):
             break

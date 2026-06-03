@@ -92,7 +92,7 @@ def normalize_str_daily(df):
 
 
 def _sorted_xlsx_files(directory: str) -> list[str]:
-    """Return .xlsx files in a directory sorted oldest-first by filename.
+    """Return .xlsx/.xls files in a directory sorted oldest-first by filename.
 
     STR files are named with dates (e.g. VisitDanaPoint_20260426.xlsx) so
     alphabetical sort == chronological order. Oldest loads first so newer
@@ -100,15 +100,16 @@ def _sorted_xlsx_files(directory: str) -> list[str]:
     """
     if not os.path.isdir(directory):
         return []
-    return sorted(f for f in os.listdir(directory) if f.lower().endswith(".xlsx"))
+    return sorted(f for f in os.listdir(directory) if f.lower().endswith((".xlsx", ".xls")))
 
 
 def _read_all_sheets(fpath: str) -> list[tuple[str, str, pd.DataFrame]]:
     """Return (fpath, sheet_name, df) for every sheet that has a 'Period' column."""
     results = []
     fname = os.path.basename(fpath)
+    engine = "xlrd" if fname.lower().endswith(".xls") else "openpyxl"
     try:
-        xl = pd.ExcelFile(fpath, engine="openpyxl")
+        xl = pd.ExcelFile(fpath, engine=engine)
         for sheet in xl.sheet_names:
             try:
                 df = xl.parse(sheet)
