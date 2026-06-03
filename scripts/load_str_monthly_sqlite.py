@@ -106,48 +106,41 @@ def safe_float(v):
         return None
 
 
-def _collect_monthly_sources() -> list[tuple[str, str, pd.DataFrame]]:
-    """Return list of (file_path, sheet_name, dataframe) for all monthly sources.
+def _sorted_xlsx_files(directory: str) -> list[str]:
+    if not os.path.isdir(directory):
+        return []
+    return sorted(f for f in os.listdir(directory) if f.lower().endswith(".xlsx"))
 
-    Sources:
-      1. data/str/monthly/*.xlsx  — Dropbox-synced monthly exports (all sheets)
-      2. data/str/str_monthly.xlsx — legacy single-file fallback
+
+def _read_all_sheets(fpath: str) -> list[tuple[str, str, pd.DataFrame]]:
+    results = []
+    fname = os.path.basename(fpath)
+    try:
+        xl = pd.ExcelFile(fpath, engine="openpyxl")
+        for sheet in xl.sheet_names:
+            try:
+                df = xl.parse(sheet)
+                if "Period" in df.columns:
+                    results.append((fpath, sheet, df))
+                else:
+                    print(f"  SKIP sheet '{sheet}' in {fname} — no 'Period' column")
+            except Exception as e:
+                print(f"  WARN: could not parse sheet '{sheet}' in {fname}: {e}")
+    except Exception as e:
+        print(f"  WARN: could not open {fname}: {e}")
+    return results
+
+
+def _collect_monthly_sources() -> list[tuple[str, str, pd.DataFrame]]:
+    """Return (fpath, sheet, df) for all monthly sources, oldest file first.
+
+    Oldest-first so newer monthly exports WIN on UPSERT for the same month.
     """
     sources = []
-
-    if os.path.isdir(MONTHLY_DIR):
-        xlsx_files = sorted(
-            f for f in os.listdir(MONTHLY_DIR) if f.lower().endswith(".xlsx")
-        )
-        for fname in xlsx_files:
-            fpath = os.path.join(MONTHLY_DIR, fname)
-            try:
-                xl = pd.ExcelFile(fpath, engine="openpyxl")
-                for sheet in xl.sheet_names:
-                    try:
-                        df = xl.parse(sheet)
-                        if "Period" in df.columns:
-                            sources.append((fpath, sheet, df))
-                        else:
-                            print(f"  SKIP sheet '{sheet}' in {fname} — no 'Period' column")
-                    except Exception as e:
-                        print(f"  WARN: could not parse sheet '{sheet}' in {fname}: {e}")
-            except Exception as e:
-                print(f"  WARN: could not open {fname}: {e}")
-
+    for fname in _sorted_xlsx_files(MONTHLY_DIR):
+        sources.extend(_read_all_sheets(os.path.join(MONTHLY_DIR, fname)))
     if os.path.exists(MONTHLY_FILE):
-        try:
-            xl = pd.ExcelFile(MONTHLY_FILE, engine="openpyxl")
-            for sheet in xl.sheet_names:
-                try:
-                    df = xl.parse(sheet)
-                    if "Period" in df.columns:
-                        sources.append((MONTHLY_FILE, sheet, df))
-                except Exception as e:
-                    print(f"  WARN: could not parse sheet '{sheet}' in str_monthly.xlsx: {e}")
-        except Exception as e:
-            print(f"  WARN: could not open str_monthly.xlsx: {e}")
-
+        sources.extend(_read_all_sheets(MONTHLY_FILE))
     return sources
 
 
@@ -158,7 +151,8 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
         print(f"No STR monthly data found in {MONTHLY_DIR}/ or {MONTHLY_FILE} — skipping")
         return 0
 
-    print(f"Loading STR monthly data: {len(sources)} sheet(s) across {len(set(s[0] for s in sources))} file(s)")
+    file_names = sorted({os.path.basename(s[0]) for s in sources})
+    print(f"Loading STR monthly: {len(sources)} sheet(s) from {len(file_names)} file(s) (oldest→newest)")
 
     all_norm = []
     for fpath, sheet, df in sources:
@@ -166,7 +160,8 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
         try:
             norm_df = normalize_str_monthly(df)
             all_norm.append(norm_df)
-            print(f"  {fname} [{sheet}] → {len(norm_df)} rows")
+            date_range = f"{norm_df['as_of_date'].min()} → {norm_df['as_of_date'].max()}"
+            print(f"  {fname} [{sheet}] → {len(norm_df)} rows  ({date_range})")
         except Exception as e:
             print(f"  WARN: normalize failed for {fname} [{sheet}]: {e}")
 
@@ -174,75 +169,50 @@ def load_str_monthly(path: str, conn: sqlite3.Connection) -> int:
         print("  No normalizable data found — skipping")
         return 0
 
-    norm_df = pd.concat(all_norm, ignore_index=True).drop_duplicates()
+    # Concat oldest→newest; later rows win on UPSERT for the same month
+    norm_df = pd.concat(all_norm, ignore_index=True)
 
-    cur = conn.cursor()
-
-    # Bulk dedup: load all monthly keys in one query instead of N queries
-    existing = set(
-        cur.execute(
-            "SELECT source, grain, property_name, market, as_of_date, metric_name "
-            "FROM fact_str_metrics WHERE grain = 'monthly'"
-        ).fetchall()
-    )
-
-    rows_to_insert = []
+    rows_to_upsert = []
     for _, row in norm_df.iterrows():
-        key = (
-            row["source"],
-            row["grain"],
-            row["property_name"],
-            row["market"],
-            row["as_of_date"],
-            row["metric_name"],
-        )
-        if key in existing:
-            continue
-
         val = safe_float(row["metric_value"])
-        # Preserve NULL for missing values; do not floor negative values to 0
         if val is not None and val < 0:
             print(
-                f"  WARNING: Negative {row['metric_name']} value ({val}) "
-                f"on {row['as_of_date']} — storing as NULL"
+                f"  WARNING: Negative {row['metric_name']} ({val}) on {row['as_of_date']} — storing NULL"
             )
             val = None
-
-        rows_to_insert.append((
-            row["source"],
-            row["grain"],
-            row["property_name"],
-            row["market"],
-            row["submarket"],
-            row["as_of_date"],
-            row["metric_name"],
-            val,
-            row["unit"],
+        rows_to_upsert.append((
+            row["source"], row["grain"], row["property_name"], row["market"],
+            row["submarket"], row["as_of_date"], row["metric_name"], val, row["unit"],
         ))
 
-    if rows_to_insert:
+    cur = conn.cursor()
+    if rows_to_upsert:
         cur.executemany(
             """
-            INSERT INTO fact_str_metrics (
+            INSERT OR REPLACE INTO fact_str_metrics (
                 source, grain, property_name, market, submarket,
                 as_of_date, metric_name, metric_value, unit
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            rows_to_insert,
+            rows_to_upsert,
         )
 
-    rows_inserted = len(rows_to_insert)
+    rows_upserted = len(rows_to_upsert)
     conn.commit()
 
-    file_label = f"monthly_dir({len(sources)} files)" if sources else os.path.basename(MONTHLY_FILE)
+    total = cur.execute(
+        "SELECT COUNT(*) FROM fact_str_metrics WHERE grain='monthly'"
+    ).fetchone()[0]
+
+    file_label = f"monthly_dir({len(file_names)} files)"
     cur.execute(
-        "INSERT INTO load_log (source, grain, file_name, rows_inserted) VALUES (?, ?, ?, ?)",
-        ("STR", "monthly", file_label, rows_inserted),
+        "INSERT INTO load_log (source, grain, file_name, rows_inserted) VALUES (?,?,?,?)",
+        ("STR", "monthly", file_label, rows_upserted),
     )
     conn.commit()
 
-    print(f"Inserted {rows_inserted} new monthly rows ({file_label})")
-    return rows_inserted
+    print(f"  Upserted {rows_upserted:,} rows — total monthly rows in DB: {total:,}")
+    return rows_upserted
 
 
 def main() -> None:

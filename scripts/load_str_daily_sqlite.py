@@ -91,60 +91,71 @@ def normalize_str_daily(df):
     ]
 
 
-def _collect_daily_dataframes() -> list[pd.DataFrame]:
-    """Collect raw dataframes from all STR daily/weekly sources.
+def _sorted_xlsx_files(directory: str) -> list[str]:
+    """Return .xlsx files in a directory sorted oldest-first by filename.
 
-    Sources (in priority order):
-      1. data/str/weekly/*.xlsx  — Dropbox-synced weekly exports (all sheets)
-      2. data/str/str_daily.xlsx — legacy single-file fallback
+    STR files are named with dates (e.g. VisitDanaPoint_20260426.xlsx) so
+    alphabetical sort == chronological order. Oldest loads first so newer
+    exports overwrite corrections for the same date.
     """
-    frames = []
+    if not os.path.isdir(directory):
+        return []
+    return sorted(f for f in os.listdir(directory) if f.lower().endswith(".xlsx"))
 
-    # Source 1: Dropbox weekly directory (multiple files, all sheets)
-    if os.path.isdir(WEEKLY_DIR):
-        xlsx_files = sorted(
-            f for f in os.listdir(WEEKLY_DIR) if f.lower().endswith(".xlsx")
-        )
-        for fname in xlsx_files:
-            fpath = os.path.join(WEEKLY_DIR, fname)
+
+def _read_all_sheets(fpath: str) -> list[tuple[str, str, pd.DataFrame]]:
+    """Return (fpath, sheet_name, df) for every sheet that has a 'Period' column."""
+    results = []
+    fname = os.path.basename(fpath)
+    try:
+        xl = pd.ExcelFile(fpath, engine="openpyxl")
+        for sheet in xl.sheet_names:
             try:
-                xl = pd.ExcelFile(fpath, engine="openpyxl")
-                for sheet in xl.sheet_names:
-                    try:
-                        df = xl.parse(sheet)
-                        if "Period" in df.columns:
-                            frames.append((fpath, sheet, df))
-                        else:
-                            print(f"  SKIP sheet '{sheet}' in {fname} — no 'Period' column")
-                    except Exception as e:
-                        print(f"  WARN: could not parse sheet '{sheet}' in {fname}: {e}")
+                df = xl.parse(sheet)
+                if "Period" in df.columns:
+                    results.append((fpath, sheet, df))
+                else:
+                    print(f"  SKIP sheet '{sheet}' in {fname} — no 'Period' column")
             except Exception as e:
-                print(f"  WARN: could not open {fname}: {e}")
+                print(f"  WARN: could not parse sheet '{sheet}' in {fname}: {e}")
+    except Exception as e:
+        print(f"  WARN: could not open {fname}: {e}")
+    return results
 
-    # Source 2: Legacy single file
+
+def _collect_daily_sources() -> list[tuple[str, str, pd.DataFrame]]:
+    """Return all (fpath, sheet, df) for daily/weekly STR data, oldest file first.
+
+    Load order:
+      1. data/str/weekly/*.xlsx  — Dropbox exports, sorted oldest→newest by filename
+      2. data/str/str_daily.xlsx — legacy single-file (appended last)
+
+    Oldest-first ensures newer exports WIN on UPSERT when the same date appears
+    in multiple files (STR sometimes revises prior-week values).
+    """
+    sources = []
+    for fname in _sorted_xlsx_files(WEEKLY_DIR):
+        sources.extend(_read_all_sheets(os.path.join(WEEKLY_DIR, fname)))
     if os.path.exists(DAILY_FILE):
-        try:
-            xl = pd.ExcelFile(DAILY_FILE, engine="openpyxl")
-            for sheet in xl.sheet_names:
-                try:
-                    df = xl.parse(sheet)
-                    if "Period" in df.columns:
-                        frames.append((DAILY_FILE, sheet, df))
-                except Exception as e:
-                    print(f"  WARN: could not parse sheet '{sheet}' in str_daily.xlsx: {e}")
-        except Exception as e:
-            print(f"  WARN: could not open str_daily.xlsx: {e}")
+        sources.extend(_read_all_sheets(DAILY_FILE))
+    return sources
 
-    return frames
+
+def _to_float(val) -> float | None:
+    try:
+        return float(val) if pd.notna(val) else None
+    except (TypeError, ValueError):
+        return None
 
 
 def load_str_daily(conn):
-    sources = _collect_daily_dataframes()
+    sources = _collect_daily_sources()
     if not sources:
         print(f"No STR daily data found in {WEEKLY_DIR}/ or {DAILY_FILE} — skipping")
         return 0
 
-    print(f"Loading STR daily data: {len(sources)} sheet(s) across {len(set(s[0] for s in sources))} file(s)")
+    file_names = sorted({os.path.basename(s[0]) for s in sources})
+    print(f"Loading STR daily: {len(sources)} sheet(s) from {len(file_names)} file(s) (oldest→newest)")
 
     all_norm = []
     for fpath, sheet, df in sources:
@@ -152,7 +163,8 @@ def load_str_daily(conn):
         try:
             norm_df = normalize_str_daily(df)
             all_norm.append(norm_df)
-            print(f"  {fname} [{sheet}] → {len(norm_df)} rows")
+            date_range = f"{norm_df['as_of_date'].min()} → {norm_df['as_of_date'].max()}"
+            print(f"  {fname} [{sheet}] → {len(norm_df)} rows  ({date_range})")
         except Exception as e:
             print(f"  WARN: normalize failed for {fname} [{sheet}]: {e}")
 
@@ -160,73 +172,47 @@ def load_str_daily(conn):
         print("  No normalizable data found — skipping")
         return 0
 
-    norm_df = pd.concat(all_norm, ignore_index=True).drop_duplicates()
+    # Concat oldest→newest; later rows win on duplicate key (desired UPSERT behavior)
+    norm_df = pd.concat(all_norm, ignore_index=True)
 
-    cursor = conn.cursor()
-
-    # Bulk dedup: load existing composite keys in one query instead of N queries
-    existing = set(
-        cursor.execute(
-            "SELECT source, grain, property_name, market, as_of_date, metric_name "
-            "FROM fact_str_metrics WHERE grain = 'daily'"
-        ).fetchall()
-    )
-
-    rows_to_insert = []
+    rows_to_upsert = []
     for _, row in norm_df.iterrows():
-        key = (
-            row["source"],
-            row["grain"],
-            row["property_name"],
-            row["market"],
-            row["as_of_date"],
-            row["metric_name"],
-        )
-        if key in existing:
-            continue
-        val = row["metric_value"]
-        try:
-            val = float(val) if pd.notna(val) else None
-        except (TypeError, ValueError):
-            val = None
-        rows_to_insert.append((
-            row["source"],
-            row["grain"],
-            row["property_name"],
-            row["market"],
-            row["submarket"],
-            row["as_of_date"],
-            row["metric_name"],
-            val,
-            row["unit"],
+        val = _to_float(row["metric_value"])
+        rows_to_upsert.append((
+            row["source"], row["grain"], row["property_name"], row["market"],
+            row["submarket"], row["as_of_date"], row["metric_name"], val, row["unit"],
         ))
 
-    if rows_to_insert:
+    cursor = conn.cursor()
+    if rows_to_upsert:
+        # INSERT OR REPLACE: newer file data overwrites old values for same date.
+        # Historical rows not present in new files are untouched (no DELETE).
         cursor.executemany(
             """
-            INSERT INTO fact_str_metrics
+            INSERT OR REPLACE INTO fact_str_metrics
             (source, grain, property_name, market, submarket,
              as_of_date, metric_name, metric_value, unit)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            rows_to_insert,
+            rows_to_upsert,
         )
 
-    rows_inserted = len(rows_to_insert)
+    rows_upserted = len(rows_to_upsert)
     conn.commit()
 
-    file_label = f"weekly_dir({len(sources)} files)" if sources else os.path.basename(DAILY_FILE)
+    total = cursor.execute(
+        "SELECT COUNT(*) FROM fact_str_metrics WHERE grain='daily'"
+    ).fetchone()[0]
+
+    file_label = f"weekly_dir({len(file_names)} files)"
     cursor.execute(
-        """
-        INSERT INTO load_log (source, grain, file_name, rows_inserted)
-        VALUES (?, ?, ?, ?)
-        """,
-        ("STR", "daily", file_label, rows_inserted),
+        "INSERT INTO load_log (source, grain, file_name, rows_inserted) VALUES (?,?,?,?)",
+        ("STR", "daily", file_label, rows_upserted),
     )
     conn.commit()
 
-    print(f"Inserted {rows_inserted} new daily rows ({file_label})")
-    return rows_inserted
+    print(f"  Upserted {rows_upserted:,} rows — total daily rows in DB: {total:,}")
+    return rows_upserted
 
 
 def main():
