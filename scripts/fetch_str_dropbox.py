@@ -29,14 +29,20 @@ WEEKLY_DIR = PROJECT_ROOT / "data" / "str" / "weekly"
 MONTHLY_DIR = PROJECT_ROOT / "data" / "str" / "monthly"
 
 # Dropbox shared folder links provided by STR.
-# Both subfolders share the same root rlkey — use the root URL + path parameter
-# so the Dropbox API can correctly resolve each subfolder.
+# Each URL points directly to its subfolder — use with path="" for listing.
+WEEKLY_FOLDER_URL = (
+    "https://www.dropbox.com/scl/fo/ua6phm862g2dhlivuhhzh/ANKnc0sSWvtvF2TTcT4_j1w/2026"
+    "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&dl=0"
+)
+MONTHLY_FOLDER_URL = (
+    "https://www.dropbox.com/scl/fo/ua6phm862g2dhlivuhhzh/APCDmFO0BYYCJhG7y8cPLWk/2026/2026%20Monthly"
+    "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&dl=0"
+)
+# Root URL used as the shared_link reference for file downloads
 DROPBOX_ROOT_URL = (
     "https://www.dropbox.com/scl/fo/ua6phm862g2dhlivuhhzh"
     "?rlkey=mmhmwkgp0qcyoop3szrz8xtdx&dl=0"
 )
-WEEKLY_SUBFOLDER_PATH  = "/2026"
-MONTHLY_SUBFOLDER_PATH = "/2026/2026 Monthly"
 
 DROPBOX_LIST_URL          = "https://api.dropboxapi.com/2/files/list_folder"
 DROPBOX_LIST_CONTINUE_URL = "https://api.dropboxapi.com/2/files/list_folder/continue"
@@ -57,15 +63,15 @@ def get_token() -> str:
     return token
 
 
-def list_folder_files(token: str, root_url: str, subfolder_path: str) -> list[dict]:
-    """List all .xlsx files in a Dropbox shared folder using root URL + subfolder path."""
+def list_folder_files(token: str, folder_url: str) -> list[dict]:
+    """List all .xlsx files in a Dropbox shared folder link."""
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
     body = {
-        "shared_link": {"url": root_url},
-        "path": subfolder_path,
+        "shared_link": {"url": folder_url},
+        "path": "",
         "recursive": False,
     }
 
@@ -176,13 +182,13 @@ def download_file_via_shared_link(
 
 
 def sync_folder(
-    token: str, subfolder_path: str, local_dir: Path, label: str
+    token: str, folder_url: str, local_dir: Path, label: str
 ) -> list[Path]:
-    """List and download all .xlsx files from a shared subfolder to a local directory."""
+    """List and download all .xlsx files from a Dropbox shared folder."""
     local_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"\n[{label}] Listing files (path: {subfolder_path}) ...")
-    entries = list_folder_files(token, DROPBOX_ROOT_URL, subfolder_path)
+    print(f"\n[{label}] Listing files from Dropbox...")
+    entries = list_folder_files(token, folder_url)
 
     if not entries:
         print(f"  No .xlsx files found.")
@@ -227,8 +233,8 @@ def main():
     token = get_token()
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] fetch_str_dropbox starting")
 
-    weekly_files = sync_folder(token, WEEKLY_SUBFOLDER_PATH, WEEKLY_DIR, "WEEKLY/DAILY")
-    monthly_files = sync_folder(token, MONTHLY_SUBFOLDER_PATH, MONTHLY_DIR, "MONTHLY")
+    weekly_files = sync_folder(token, WEEKLY_FOLDER_URL, WEEKLY_DIR, "WEEKLY/DAILY")
+    monthly_files = sync_folder(token, MONTHLY_FOLDER_URL, MONTHLY_DIR, "MONTHLY")
 
     print(f"\nSummary:")
     print(f"  Weekly files:  {len(weekly_files)} in {WEEKLY_DIR}")

@@ -141,7 +141,7 @@ def _collect_daily_sources() -> list[tuple[str, str, pd.DataFrame]]:
     return sources
 
 
-def _to_float(val) -> float | None:
+def _to_float(val):
     try:
         return float(val) if pd.notna(val) else None
     except (TypeError, ValueError):
