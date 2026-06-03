@@ -144,6 +144,27 @@ def _load_group_intel() -> dict:
 
 
 @st.cache_data(ttl=CACHE_TTL_GROUP)
+def _load_str_group_metrics() -> pd.DataFrame:
+    """Load fact_str_group_metrics: (as_of_date, property, segment, metric_name, metric_value)."""
+    try:
+        conn = sqlite3.connect(_DB_PATH, timeout=10)
+        df = pd.read_sql_query(
+            """
+            SELECT as_of_date, property, segment, metric_name, metric_value, unit
+            FROM fact_str_group_metrics
+            WHERE as_of_date >= date('now','-180 days')
+            ORDER BY as_of_date DESC, property, segment, metric_name
+            """,
+            conn,
+        )
+        conn.close()
+        return df if not df.empty else pd.DataFrame()
+    except Exception as exc:
+        import logging; logging.getLogger("vdp_dashboard").debug("_load_str_group_metrics failed: %s", exc)
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=CACHE_TTL_GROUP)
 def _load_monthly_occ() -> pd.DataFrame:
     try:
         conn = sqlite3.connect(_DB_PATH, timeout=10)
@@ -1122,6 +1143,255 @@ def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> No
     """, unsafe_allow_html=True)
 
 
+# ── STR Group Segment Visualizations ──────────────────────────────────────────
+
+def _chart_group_vs_transient_trends(df_group: pd.DataFrame) -> go.Figure:
+    """Line chart: Group vs Transient Occ/ADR/RevPAR trends over time."""
+    if df_group.empty:
+        fig = _dark_fig()
+        fig.add_annotation(text="No group segment data available", showarrow=False)
+        return fig
+
+    # Pivot to wide: as_of_date × segment × metric
+    df_pivot = df_group.pivot_table(
+        index="as_of_date",
+        columns=["segment", "metric_name"],
+        values="metric_value",
+        aggfunc="first"
+    )
+    df_pivot = df_pivot.reset_index()
+    df_pivot["as_of_date"] = pd.to_datetime(df_pivot["as_of_date"])
+    df_pivot = df_pivot.sort_values("as_of_date")
+
+    fig = _dark_fig(height=380)
+
+    # Extract series for Group and Transient
+    metrics_to_plot = ["Occupancy (%)", "ADR", "RevPAR"]
+    for metric in metrics_to_plot:
+        group_col = ("Grp.", metric)
+        trans_col = ("Trans.", metric)
+
+        if group_col in df_pivot.columns:
+            fig.add_trace(go.Scatter(
+                x=df_pivot["as_of_date"], y=df_pivot[group_col],
+                mode="lines", name=f"Group {metric}",
+                line=dict(color="#10B981", width=2.5),
+                hovertemplate="<b>%{x|%b %d}</b><br>Group " + metric + ": %{y:.2f}<extra></extra>"
+            ))
+        if trans_col in df_pivot.columns:
+            fig.add_trace(go.Scatter(
+                x=df_pivot["as_of_date"], y=df_pivot[trans_col],
+                mode="lines", name=f"Transient {metric}",
+                line=dict(color="#F5B940", width=2.5, dash="dash"),
+                hovertemplate="<b>%{x|%b %d}</b><br>Transient " + metric + ": %{y:.2f}<extra></extra>"
+            ))
+
+    fig.update_xaxes(title_text="Date")
+    fig.update_yaxes(title_text="Value")
+    fig.update_layout(title_text="Group vs Transient Segment Trends", title_font_size=13, title_font_color=_TITLE_CLR)
+    return fig
+
+
+def _chart_segment_mix_donut(df_group: pd.DataFrame) -> go.Figure:
+    """Donut chart: Group demand share vs Transient vs Contract."""
+    if df_group.empty:
+        fig = go.Figure()
+        fig.add_annotation(text="No group segment data available", showarrow=False)
+        return fig
+
+    # Latest date only, sum demand (occupancy proxy) by segment
+    latest = df_group["as_of_date"].max()
+    latest_df = df_group[df_group["as_of_date"] == latest]
+
+    # Group by segment, sum occupancy
+    seg_sum = latest_df[latest_df["metric_name"] == "Occupancy (%)"].groupby("segment")["metric_value"].sum()
+
+    if seg_sum.empty:
+        fig = go.Figure()
+        fig.add_annotation(text="No occupancy data for latest date", showarrow=False)
+        return fig
+
+    fig = _dark_fig(height=380)
+    fig.add_trace(go.Pie(
+        labels=seg_sum.index,
+        values=seg_sum.values,
+        hole=0.4,
+        marker=dict(colors=[_COLORWAY[i % len(_COLORWAY)] for i in range(len(seg_sum))]),
+        hovertemplate="<b>%{label}</b><br>Occupancy: %{value:.1f}%<br>Share: %{percentRoot}<extra></extra>",
+    ))
+    fig.update_layout(title_text="Segment Mix (Latest Date)", title_font_size=13, title_font_color=_TITLE_CLR)
+    return fig
+
+
+def _chart_group_adr_premium(df_group: pd.DataFrame) -> go.Figure:
+    """Line chart: Group ADR premium/discount vs Transient over time."""
+    if df_group.empty:
+        fig = _dark_fig()
+        fig.add_annotation(text="No group segment data available", showarrow=False)
+        return fig
+
+    # Pivot to wide by segment and metric
+    df_pivot = df_group.pivot_table(
+        index="as_of_date",
+        columns=["segment", "metric_name"],
+        values="metric_value",
+        aggfunc="first"
+    )
+    df_pivot = df_pivot.reset_index()
+    df_pivot["as_of_date"] = pd.to_datetime(df_pivot["as_of_date"])
+    df_pivot = df_pivot.sort_values("as_of_date")
+
+    # Calculate ADR premium as % difference
+    if ("Grp.", "ADR") in df_pivot.columns and ("Trans.", "ADR") in df_pivot.columns:
+        df_pivot["ADR_Premium_%"] = (
+            (df_pivot[("Grp.", "ADR")] - df_pivot[("Trans.", "ADR")]) / df_pivot[("Trans.", "ADR")] * 100
+        )
+    else:
+        df_pivot["ADR_Premium_%"] = 0
+
+    fig = _dark_fig(height=340)
+    fig.add_trace(go.Scatter(
+        x=df_pivot["as_of_date"], y=df_pivot["ADR_Premium_%"],
+        mode="lines+markers", name="ADR Premium",
+        line=dict(color="#A78BFA", width=3),
+        marker=dict(size=5),
+        hovertemplate="<b>%{x|%b %d}</b><br>ADR Premium: %{y:.1f}%<extra></extra>",
+        fill="tozeroy", fillcolor="rgba(167,139,250,0.1)"
+    ))
+
+    # Add 0% reference line
+    fig.add_hline(y=0, line_dash="dash", line_color="#94A3B8", line_width=1)
+
+    fig.update_xaxes(title_text="Date")
+    fig.update_yaxes(title_text="Premium (%)")
+    fig.update_layout(title_text="Group ADR Premium vs Transient (%)", title_font_size=13, title_font_color=_TITLE_CLR)
+    return fig
+
+
+def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
+    """Bar chart: Group demand by property with event highlights."""
+    if df_group.empty:
+        fig = _dark_fig()
+        fig.add_annotation(text="No group segment data available", showarrow=False)
+        return fig
+
+    # Latest month: Group occupancy by property
+    latest = df_group["as_of_date"].max()
+    latest_month = df_group[df_group["as_of_date"].dt.to_period("M") == df_group[df_group["as_of_date"] == latest]["as_of_date"].dt.to_period("M")[0]]
+
+    # Sum occupancy by property for Group segment
+    prop_group = latest_month[
+        (latest_month["segment"] == "Grp.") &
+        (latest_month["metric_name"] == "Occupancy (%)")
+    ].groupby("property")["metric_value"].sum().sort_values(ascending=False).head(8)
+
+    fig = _dark_fig(height=340)
+    fig.add_trace(go.Bar(
+        x=prop_group.index,
+        y=prop_group.values,
+        marker=dict(color=_COLORWAY[0], line=dict(color="#0891B2", width=2)),
+        hovertemplate="<b>%{x}</b><br>Group Occupancy: %{y:.1f}%<extra></extra>",
+        name="Group Occupancy"
+    ))
+
+    fig.update_xaxes(title_text="Property", tickangle=-45)
+    fig.update_yaxes(title_text="Occupancy (%)")
+    fig.update_layout(title_text="Group Demand by Property (Latest Month)", title_font_size=13, title_font_color=_TITLE_CLR)
+    fig.update_layout(showlegend=False)
+    return fig
+
+
+def _chart_property_group_performance(df_group: pd.DataFrame) -> go.Figure:
+    """Horizontal bar chart: % Group demand by property (Top 10)."""
+    if df_group.empty:
+        fig = _dark_fig()
+        fig.add_annotation(text="No group segment data available", showarrow=False)
+        return fig
+
+    # For each property: average group occupancy as % of total
+    prop_data = []
+    for prop in df_group["property"].unique():
+        prop_df = df_group[df_group["property"] == prop]
+
+        # Latest values
+        latest = prop_df["as_of_date"].max()
+        latest_df = prop_df[prop_df["as_of_date"] == latest]
+
+        group_occ = latest_df[(latest_df["segment"] == "Grp.") & (latest_df["metric_name"] == "Occupancy (%)")]["metric_value"].sum()
+        total_occ = latest_df[latest_df["metric_name"] == "Occupancy (%)"]["metric_value"].sum()
+
+        if total_occ > 0:
+            group_pct = (group_occ / total_occ) * 100
+            prop_data.append({"property": prop, "group_pct": group_pct})
+
+    if prop_data:
+        prop_df = pd.DataFrame(prop_data).sort_values("group_pct", ascending=True).tail(10)
+
+        fig = _dark_fig(height=340)
+        fig.add_trace(go.Bar(
+            y=prop_df["property"],
+            x=prop_df["group_pct"],
+            orientation="h",
+            marker=dict(color="#10B981", line=dict(color="#059669", width=1.5)),
+            hovertemplate="<b>%{y}</b><br>Group %: %{x:.1f}%<extra></extra>",
+            name="Group %"
+        ))
+
+        fig.update_xaxes(title_text="Group Demand Share (%)")
+        fig.update_yaxes(title_text="Property")
+        fig.update_layout(title_text="Group Demand Share by Property (Top 10)", title_font_size=13, title_font_color=_TITLE_CLR)
+        fig.update_layout(showlegend=False)
+        return fig
+    else:
+        fig = _dark_fig()
+        fig.add_annotation(text="No property data available", showarrow=False)
+        return fig
+
+
+def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
+    """Heatmap: Property × Segment Occupancy (rows=properties, cols=Trans/Grp/Cont)."""
+    if df_group.empty:
+        fig = _dark_fig()
+        fig.add_annotation(text="No group segment data available", showarrow=False)
+        return fig
+
+    # Latest date: create pivot of property × segment
+    latest = df_group["as_of_date"].max()
+    latest_df = df_group[
+        (df_group["as_of_date"] == latest) &
+        (df_group["metric_name"] == "Occupancy (%)")
+    ]
+
+    heatmap_pivot = latest_df.pivot_table(
+        index="property",
+        columns="segment",
+        values="metric_value",
+        aggfunc="first"
+    )
+
+    if heatmap_pivot.empty:
+        fig = _dark_fig()
+        fig.add_annotation(text="No occupancy heatmap data available", showarrow=False)
+        return fig
+
+    # Sort by Group occupancy descending
+    heatmap_pivot = heatmap_pivot.sort_values("Grp.", ascending=True)
+
+    fig = _dark_fig(height=400)
+    fig.add_trace(go.Heatmap(
+        z=heatmap_pivot.values,
+        x=heatmap_pivot.columns,
+        y=heatmap_pivot.index,
+        colorscale="RdYlGn",
+        colorbar=dict(title="Occupancy %", len=0.7),
+        hovertemplate="<b>%{y}</b><br>%{x}: %{z:.1f}%<extra></extra>",
+    ))
+
+    fig.update_xaxes(side="bottom")
+    fig.update_layout(title_text="Segment Occupancy Heatmap (Latest Date)", title_font_size=13, title_font_color=_TITLE_CLR)
+    return fig
+
+
 # ── Sub-tab renderers ─────────────────────────────────────────────────────────
 
 def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
@@ -1131,6 +1401,9 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
                            df_pipeline: Optional[pd.DataFrame] = None,
                            web_groups: Optional[pd.DataFrame] = None,
                            med_groups: Optional[pd.DataFrame] = None) -> None:
+    # Load STR group segment data
+    df_group = _load_str_group_metrics()
+
     # ── Executive Brief ───────────────────────────────────────────────────────
     tbid_low   = g.get("estimated_group_tbid_rev_low",  3_603_940)
     tbid_high  = g.get("estimated_group_tbid_rev_high", 4_613_043)
@@ -1397,23 +1670,64 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
                 "#F5B940" if tbid_gap > 0 else "#22C55E",
             ), unsafe_allow_html=True)
 
-    # ── STR Group Segment Coming Soon ─────────────────────────────────────────
-    st.markdown("""
-    <div style="background:rgba(8,145,178,0.04);border:1px dashed rgba(8,145,178,0.30);
-                border-radius:8px;padding:14px 18px;margin:14px 0;">
-      <div style="color:#38BDF8;font-weight:700;font-size:11.5px;margin-bottom:6px;">
-        🔜 STR GROUP-SEGMENT DATA — COMING SOON
-      </div>
-      <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
-        When STR provides group-segment demand exports, this section will add live
-        <strong>group demand rooms</strong>, <strong>group ADR actuals</strong>,
-        <strong>SMERF vs. corporate split</strong>, and <strong>group vs. transient trend</strong>
-        replacing benchmark estimates above.<br>
-        To enable: save STR group export → <code>data/str/str_group_daily.xlsx</code>
-        → <code>python scripts/run_pipeline.py</code>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ── STR Group Segment Data Visualizations ────────────────────────────────
+    if not df_group.empty:
+        st.markdown("""
+        <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
+                    letter-spacing:.06em;margin:14px 0 10px;">
+        E. STR GROUP-SEGMENT ANALYTICS — Live Demand Trends
+        </div>
+        """, unsafe_allow_html=True)
+
+        # 1. Group vs Transient Trends
+        st.plotly_chart(_chart_group_vs_transient_trends(df_group), use_container_width=True,
+                       key="gt_group_trans_trends")
+
+        # 2. Segment Mix (Donut) and ADR Premium side-by-side
+        col_donut, col_premium = st.columns(2)
+        with col_donut:
+            st.plotly_chart(_chart_segment_mix_donut(df_group), use_container_width=True,
+                           key="gt_segment_donut")
+        with col_premium:
+            st.plotly_chart(_chart_group_adr_premium(df_group), use_container_width=True,
+                           key="gt_adr_premium")
+
+        # 3. Group Event Correlation and Property Performance side-by-side
+        col_event, col_prop = st.columns(2)
+        with col_event:
+            st.plotly_chart(_chart_group_event_correlation(df_group), use_container_width=True,
+                           key="gt_group_event")
+        with col_prop:
+            st.plotly_chart(_chart_property_group_performance(df_group), use_container_width=True,
+                           key="gt_prop_perf")
+
+        # 4. Occupancy Heatmap
+        st.plotly_chart(_chart_segment_occupancy_heatmap(df_group), use_container_width=True,
+                       key="gt_heatmap")
+
+        st.markdown("""
+        <div style="color:#64748B;font-size:11px;margin-top:12px;line-height:1.6;">
+        📊 <strong>Data Source:</strong> STR multi-segment weekly/monthly exports (Trans., Grp., Cont. segments) |
+        <strong>Updated:</strong> """ + df_group["as_of_date"].max().strftime("%b %d, %Y") + """ |
+        <strong>Coverage:</strong> """ + str(len(df_group["property"].unique())) + """ properties
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="background:rgba(8,145,178,0.04);border:1px dashed rgba(8,145,178,0.30);
+                    border-radius:8px;padding:14px 18px;margin:14px 0;">
+          <div style="color:#38BDF8;font-weight:700;font-size:11.5px;margin-bottom:6px;">
+            🔜 STR GROUP-SEGMENT DATA — READY TO LOAD
+          </div>
+          <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
+            STR group-segment exports have been configured for live ingestion. Visualizations will
+            appear here automatically once data is downloaded via <code>python scripts/fetch_str_dropbox.py</code>
+            and loaded via <code>python scripts/load_str_multiseg.py</code>.<br>
+            Run the pipeline to populate live <strong>group demand rooms</strong>, <strong>group ADR actuals</strong>,
+            and <strong>segment composition</strong> analyses.
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:14px;'></div>", unsafe_allow_html=True)
 
@@ -1458,20 +1772,31 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
                     accent=_aclr,
                 ), unsafe_allow_html=True)
 
-    # ── STR scaffold notice ───────────────────────────────────────────────────
-    if not g.get("str_group_data_available"):
+    # ── STR Data Status ───────────────────────────────────────────────────────
+    if not df_group.empty:
+        st.markdown(f"""
+        <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.30);
+                    border-radius:8px;padding:12px 16px;margin-top:12px;">
+          <div style="color:#10B981;font-weight:700;font-size:11px;margin-bottom:4px;">
+            ✅ STR GROUP-SEGMENT DATA — LIVE
+          </div>
+          <div style="color:#94A3B8;font-size:10.5px;">
+            {len(df_group)} segment records loaded · {df_group["as_of_date"].max().strftime("%b %d, %Y")} latest update ·
+            Covering {len(df_group["property"].unique())} properties and 3 segments (Transient, Group, Contract)
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
         st.markdown("""
         <div style="background:rgba(245,158,11,0.06);border:1px dashed rgba(245,158,11,0.35);
                     border-radius:8px;padding:14px 18px;margin-top:12px;">
           <div style="color:#FCD34D;font-weight:700;font-size:11.5px;margin-bottom:6px;">
-            📋 STR GROUP-SEGMENT DATA — PENDING INTEGRATION
+            ⏳ STR GROUP-SEGMENT DATA — WAITING FOR DATA
           </div>
           <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
-            When STR provides group-segment demand exports, this panel will auto-populate with:
-            <strong>group demand rooms</strong> · <strong>group ADR actuals</strong>
-            · <strong>SMERF vs. corporate mix</strong> · <strong>group vs. transient trend</strong>.<br>
-            To enable: save STR group export → <code>data/str/str_group_daily.xlsx</code>
-            → <code>python scripts/run_pipeline.py</code>
+            STR group-segment exports are configured for auto-ingestion.
+            Visualizations will populate automatically once data is fetched and loaded.<br>
+            To load data now: Run <code>python scripts/run_pipeline.py</code>
           </div>
         </div>
         """, unsafe_allow_html=True)
