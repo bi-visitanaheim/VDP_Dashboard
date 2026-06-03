@@ -202,9 +202,6 @@ def sync_folder(
     for entry in entries:
         name = entry["name"]
         dest = local_dir / name
-        # Dropbox shared folder listing doesn't always return path_lower,
-        # so we reconstruct it from the folder URL path + filename
-        file_path = entry.get("path_lower") or entry.get("path_display") or f"/{name}"
 
         if dest.exists():
             remote_modified = entry.get("server_modified", "")
@@ -217,9 +214,9 @@ def sync_folder(
                 continue
 
         print(f"  Downloading: {name} ...", end=" ", flush=True)
-        # Dropbox app may not have files.content.read on shared links;
-        # use sharing/get_shared_link_file which only needs the shared link URL + filename
-        ok = download_file_via_shared_link(token, DROPBOX_ROOT_URL, f"/{name}", dest)
+        # Download via shared link: the folder_url points directly to the subfolder,
+        # so just pass the filename as the path within that shared folder
+        ok = download_file_via_shared_link(token, folder_url, name, dest)
 
         if ok:
             print("OK")
