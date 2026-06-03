@@ -202,7 +202,7 @@ def sync_folder(
     for entry in entries:
         name = entry["name"]
         dest = local_dir / name
-        file_path = entry.get("path_lower", f"{subfolder_path}/{name}").lower()
+        file_path = entry.get("path_lower", f"/{name}")
 
         if dest.exists():
             remote_modified = entry.get("server_modified", "")
