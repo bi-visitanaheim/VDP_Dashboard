@@ -170,8 +170,19 @@ def _splash_html(data_uri: str) -> str:
   var SEL = '#{MARKER}';
   function ready(){{
     var root = document.getElementById('root');
-    // App has mounted once #root holds real, sized content.
-    return root && root.children.length > 0 && root.getBoundingClientRect().height > 80;
+    if(!root || root.children.length === 0) return false;
+    // NOTE: the app shell (.stApp) is position:absolute + height:100vh, so
+    // #root's own bounding height stays 0 even after the app mounts. Measuring
+    // #root here would never satisfy the height check and the splash would hang
+    // on its failsafe. Detect the real rendered content inside the main block
+    // container instead.
+    var main = document.querySelector('[data-testid="stMain"]') ||
+               document.querySelector('[data-testid="stAppViewContainer"]') ||
+               document.querySelector('.stApp');
+    if(!main) return false;
+    var content = main.querySelector(
+      '[data-testid="stMainBlockContainer"], .block-container, [data-testid="stVerticalBlock"]');
+    return !!(content && content.getBoundingClientRect().height > 80);
   }}
   function hide(){{
     var el = document.querySelector(SEL);
