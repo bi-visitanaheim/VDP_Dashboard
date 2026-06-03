@@ -184,25 +184,27 @@ def download_file_via_shared_link(
 def sync_folder(
     token: str, folder_url: str, local_dir: Path, label: str
 ) -> list[Path]:
-    """List and download all .xlsx files from a Dropbox shared folder."""
+    """List and download all .xlsx/.xls files from a Dropbox shared folder."""
     local_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n[{label}] Listing files from Dropbox...")
     entries = list_folder_files(token, folder_url)
 
     if not entries:
-        print(f"  No .xlsx files found.")
+        print(f"  No files found.")
         return []
 
-    print(f"  Found {len(entries)} .xlsx file(s):")
+    print(f"  Found {len(entries)} file(s):")
     for e in entries:
-        print(f"    {e['name']}  ({e.get('size', 0):,} bytes)  path: {e.get('path_lower','?')}")
+        print(f"    {e['name']}  ({e.get('size', 0):,} bytes)")
 
     downloaded = []
     for entry in entries:
         name = entry["name"]
         dest = local_dir / name
-        file_path = entry.get("path_lower", f"/{name}")
+        # Dropbox shared folder listing doesn't always return path_lower,
+        # so we reconstruct it from the folder URL path + filename
+        file_path = entry.get("path_lower") or entry.get("path_display") or f"/{name}"
 
         if dest.exists():
             remote_modified = entry.get("server_modified", "")
@@ -215,10 +217,9 @@ def sync_folder(
                 continue
 
         print(f"  Downloading: {name} ...", end=" ", flush=True)
-        # Try files/download first (needs only files.content.read); fall back to shared link
-        ok = download_file(token, file_path, dest)
-        if not ok:
-            ok = download_file_via_shared_link(token, DROPBOX_ROOT_URL, file_path, dest)
+        # Dropbox app may not have files.content.read on shared links;
+        # use sharing/get_shared_link_file which only needs the shared link URL + filename
+        ok = download_file_via_shared_link(token, DROPBOX_ROOT_URL, f"/{name}", dest)
 
         if ok:
             print("OK")
