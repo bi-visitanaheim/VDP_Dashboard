@@ -83,15 +83,28 @@ def extract_date_from_monthly(date_str):
 
 def parse_multiseg_sheet(df, grain):
     """
-    Parse 'Multi Seg Seg' sheet.
-    Returns list of (as_of_date, property, segment, metric_name, metric_value).
+    Parse 'Multi Seg Seg' sheet with proper column mapping.
+
+    Structure:
+      Row 1: Date range
+      Row 6: Metric names (Occupancy (%), ADR, RevPAR, repeated for sections)
+      Row 7: Segment names (Trans., Grp., Cont., Total, repeated)
+      Row 8+: Data by property
+
+    Column layout (Current Week section):
+      Col 1: Property name
+      Cols 2-5: Trans./Grp./Cont./Total Occupancy (%)
+      Cols 6-9: Trans./Grp./Cont./Total ADR
+      Cols 10-13: Trans./Grp./Cont./Total RevPAR
+      Col 14: Separator (NaN)
+      Cols 15-28: Same metrics for Percent Change section
     """
     results = []
 
-    # Extract date from row 1
-    if len(df) < 2:
+    if len(df) < 8:
         return results
 
+    # Extract date from row 1
     date_str = df.iloc[1, 1]
     if grain == "daily":
         as_of_date = extract_date_from_weekly(date_str)
@@ -101,32 +114,36 @@ def parse_multiseg_sheet(df, grain):
     if not as_of_date:
         return results
 
-    # Row 7 has segment names: Trans., Grp., Cont., Total
-    # Row 6 has metric names: Occupancy (%), ADR, RevPAR
-    # Columns are repeating: [Trans., Grp., Cont., Total] for each metric
+    # Extract segment names from row 7 (columns 2-5 are Trans., Grp., Cont., Total)
+    segments = []
+    for col_idx in range(2, 6):
+        seg = df.iloc[7, col_idx]
+        if pd.notna(seg):
+            segments.append(str(seg).strip())
 
-    # Identify where metrics and segments are
-    # Assume structure: col[0] = property name, then metrics with 4 segments each
+    if not segments or len(segments) < 4:
+        segments = ["Trans.", "Grp.", "Cont.", "Total"]
 
+    # Map metrics: Occ% (cols 2-5), ADR (cols 6-9), RevPAR (cols 10-13)
+    # The sections repeat for "Current Week" and "Percent Change", separated by NaN at col 14
+    metrics = ["Occupancy (%)", "ADR", "RevPAR"]
+    metric_col_starts = [2, 6, 10]  # Where each metric starts
+
+    # Parse data rows (row 8 onwards)
     for row_idx in range(8, len(df)):
-        property_name = df.iloc[row_idx, 0]
+        property_name = df.iloc[row_idx, 1]
         if pd.isna(property_name) or property_name == "":
             continue
 
         property_name = str(property_name).strip()
 
-        # Extract metrics: columns 1+ have data
-        # Structure: [Property, Trans Occ%, Grp Occ%, Cont Occ%, Total Occ%, Trans ADR, Grp ADR, ...]
-        col_idx = 1
-
-        # Metrics in order
-        metrics = ["Occupancy (%)", "ADR", "RevPAR"]
-        segments = ["Trans.", "Grp.", "Cont.", "Total"]
-
-        for metric in metrics:
-            for segment in segments:
-                if col_idx < len(df.columns):
-                    val = df.iloc[row_idx, col_idx]
+        # Extract current week metrics (cols 2-13)
+        for metric_idx, metric_name in enumerate(metrics):
+            col_start = metric_col_starts[metric_idx]
+            for seg_idx, segment in enumerate(segments):
+                col = col_start + seg_idx
+                if col < len(df.columns):
+                    val = df.iloc[row_idx, col]
                     try:
                         val = float(val) if pd.notna(val) else None
                     except (TypeError, ValueError):
@@ -137,10 +154,9 @@ def parse_multiseg_sheet(df, grain):
                             "as_of_date": as_of_date,
                             "property": property_name,
                             "segment": segment,
-                            "metric_name": metric,
+                            "metric_name": metric_name,
                             "metric_value": val,
                         })
-                    col_idx += 1
 
     return results
 
