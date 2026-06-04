@@ -65,13 +65,16 @@ def _dark_fig(height: int = 320) -> go.Figure:
         paper_bgcolor = _DARK_BG,
         font          = dict(color=_FONT_CLR, size=11.5, family="'Outfit',sans-serif"),
         height        = height,
-        margin        = dict(l=14, r=14, t=48, b=14),
+        # t=64 gives the horizontal legend at y=1.04 enough room above the plot area
+        margin        = dict(l=14, r=20, t=64, b=36, autoexpand=True),
         colorway      = _COLORWAY,
         legend        = dict(
-            orientation="h", yanchor="bottom", y=1.04,
+            orientation="h", yanchor="bottom", y=1.02,
             xanchor="left", x=0,
-            font=dict(size=11, color=_FONT_CLR),
-            bgcolor="rgba(0,0,0,0)",
+            font=dict(size=10.5, color=_FONT_CLR),
+            bgcolor="rgba(255,255,255,0.85)",
+            bordercolor="#E2E8F0", borderwidth=1,
+            tracegroupgap=4,
         ),
         hoverlabel    = dict(
             bgcolor="rgba(15,23,42,0.96)",
@@ -79,9 +82,10 @@ def _dark_fig(height: int = 320) -> go.Figure:
             font=dict(size=13, color="#F8FAFC"),
         ),
     )
-    fig.update_xaxes(showgrid=False, color=_LABEL_CLR, title_font=dict(color=_FONT_CLR))
+    fig.update_xaxes(showgrid=False, color=_LABEL_CLR, title_font=dict(color=_FONT_CLR),
+                     automargin=True)
     fig.update_yaxes(showgrid=True, gridcolor=_GRID_CLR, color=_LABEL_CLR,
-                     title_font=dict(color=_FONT_CLR))
+                     title_font=dict(color=_FONT_CLR), automargin=True)
     return fig
 
 
@@ -545,10 +549,17 @@ def _chart_occ_heatmap(df_monthly: pd.DataFrame) -> go.Figure:
         yaxis2=dict(title="ADR ($)", overlaying="y", side="right", showgrid=False,
                     tickprefix="$", color="#A78BFA") if adrs else {},
         showlegend=bool(adrs),
-        legend=dict(orientation="h", y=1.08, x=0, font=dict(size=10)),
-        margin=dict(l=14, r=80, t=52, b=14),
+        legend=dict(
+            orientation="h", yanchor="top", y=-0.14, xanchor="center", x=0.5,
+            font=dict(size=10, color=_FONT_CLR),
+            bgcolor="rgba(255,255,255,0.85)", bordercolor="#E2E8F0", borderwidth=1,
+        ),
+        margin=dict(l=14, r=90, t=52, b=50, autoexpand=True),
         barmode="group",
     )
+    # Remove ADR text labels to avoid overlap — hover shows them instead
+    if adrs:
+        fig.update_traces(texttemplate=None, selector=dict(type="scatter"))
     return fig
 
 
@@ -748,9 +759,9 @@ def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
                 line=dict(width=2, color="rgba(255,255,255,0.35)"),
                 opacity=0.88,
             ),
-            text=sub["property_name"].str[:16].tolist(),
+            text=sub["property_name"].str[:14].tolist(),
             textposition="top center",
-            textfont=dict(size=9.5, color="#CBD5E1"),
+            textfont=dict(size=9, color=_FONT_CLR),
             name=str(scale),
             hovertemplate=(
                 "<b>%{text}</b><br>"
@@ -776,8 +787,12 @@ def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
         xaxis=dict(title="Occupancy %", ticksuffix="%", gridcolor=_GRID_CLR),
         yaxis=dict(title="ADR ($)", tickprefix="$", gridcolor=_GRID_CLR),
         showlegend=True,
-        legend=dict(orientation="h", y=1.08, x=0, font=dict(size=10)),
-        margin=dict(l=14, r=14, t=60, b=14),
+        legend=dict(
+            orientation="h", yanchor="top", y=-0.14, xanchor="center", x=0.5,
+            font=dict(size=10, color=_FONT_CLR),
+            bgcolor="rgba(255,255,255,0.85)", bordercolor="#E2E8F0", borderwidth=1,
+        ),
+        margin=dict(l=14, r=14, t=52, b=70, autoexpand=True),
     )
     return fig
 
@@ -976,8 +991,8 @@ def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go
         yaxis2=dict(title="Est. Impact ($K)", overlaying="y", side="right",
                     color="#6EE7B7", tickprefix="$", ticksuffix="K", showgrid=False),
         showlegend=True,
-        legend=dict(orientation="h", y=1.08, x=0, font=dict(size=11)),
-        margin=dict(l=14, r=90, t=60, b=14),
+        legend=dict(orientation="h", yanchor="top", y=-0.14, xanchor="center", x=0.5, font=dict(size=10, color=_FONT_CLR), bgcolor="rgba(255,255,255,0.85)", bordercolor="#E2E8F0", borderwidth=1),
+        margin=dict(l=14, r=90, t=52, b=60, autoexpand=True),
     )
     return fig
 
@@ -1020,9 +1035,6 @@ def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> 
             line=dict(color="#10B981", width=2.5, dash="dot"),
             marker=dict(size=10, symbol="diamond", color="#10B981",
                         line=dict(color="#6EE7B7", width=1.5)),
-            text=[f"${v/1000:.0f}K" for v in q_totals["est_impact_usd"]],
-            textposition="top center",
-            textfont=dict(size=9.5, color="#6EE7B7"),
             yaxis="y2",
             hovertemplate="<b>%{x}</b><br>Impact: <b>$%{y:.0f}K</b><extra></extra>",
         ))
@@ -1035,8 +1047,8 @@ def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> 
         yaxis2=dict(title="Group Impact ($K)", overlaying="y", side="right",
                     color="#6EE7B7", tickprefix="$", ticksuffix="K", showgrid=False),
         showlegend=True,
-        legend=dict(orientation="h", y=1.08, x=0, font=dict(size=11)),
-        margin=dict(l=14, r=90, t=60, b=14),
+        legend=dict(orientation="h", yanchor="top", y=-0.14, xanchor="center", x=0.5, font=dict(size=10, color=_FONT_CLR), bgcolor="rgba(255,255,255,0.85)", bordercolor="#E2E8F0", borderwidth=1),
+        margin=dict(l=14, r=90, t=52, b=60, autoexpand=True),
     )
     return fig
 
@@ -1146,249 +1158,352 @@ def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> No
 # ── STR Group Segment Visualizations ──────────────────────────────────────────
 
 def _chart_group_vs_transient_trends(df_group: pd.DataFrame) -> go.Figure:
-    """Line chart: Group vs Transient Occ/ADR/RevPAR trends over time."""
+    """Line chart: Group vs Transient Occ/ADR/RevPAR trends over time — one metric per sub-chart."""
     if df_group.empty:
         fig = _dark_fig()
         fig.add_annotation(text="No group segment data available", showarrow=False)
         return fig
 
-    # Pivot to wide: as_of_date × segment × metric
     df_pivot = df_group.pivot_table(
         index="as_of_date",
         columns=["segment", "metric_name"],
         values="metric_value",
         aggfunc="first"
-    )
-    df_pivot = df_pivot.reset_index()
+    ).reset_index()
     df_pivot["as_of_date"] = pd.to_datetime(df_pivot["as_of_date"])
     df_pivot = df_pivot.sort_values("as_of_date")
 
-    fig = _dark_fig(height=380)
+    # Show only ADR to keep chart readable — most actionable single metric
+    fig = _dark_fig(height=360)
 
-    # Extract series for Group and Transient
-    metrics_to_plot = ["Occupancy (%)", "ADR", "RevPAR"]
-    for metric in metrics_to_plot:
-        group_col = ("Grp.", metric)
-        trans_col = ("Trans.", metric)
-
-        if group_col in df_pivot.columns:
+    _SEG_CFG = [
+        ("Grp.",   "Group",     "#10B981", "solid"),
+        ("Trans.", "Transient", "#F5B940", "dash"),
+        ("Cont.",  "Contract",  "#A78BFA", "dot"),
+        ("Total",  "Total",     "#64748B", "dashdot"),
+    ]
+    for metric, m_label, m_color in [("ADR", "ADR ($)", "#0891B2"),
+                                      ("Occupancy (%)", "Occupancy (%)", "#10B981"),
+                                      ("RevPAR", "RevPAR ($)", "#F5B940")]:
+        for seg, seg_label, color, dash in _SEG_CFG:
+            col = (seg, metric)
+            if col not in df_pivot.columns:
+                continue
             fig.add_trace(go.Scatter(
-                x=df_pivot["as_of_date"], y=df_pivot[group_col],
-                mode="lines", name=f"Group {metric}",
-                line=dict(color="#10B981", width=2.5),
-                hovertemplate="<b>%{x|%b %d}</b><br>Group " + metric + ": %{y:.2f}<extra></extra>"
-            ))
-        if trans_col in df_pivot.columns:
-            fig.add_trace(go.Scatter(
-                x=df_pivot["as_of_date"], y=df_pivot[trans_col],
-                mode="lines", name=f"Transient {metric}",
-                line=dict(color="#F5B940", width=2.5, dash="dash"),
-                hovertemplate="<b>%{x|%b %d}</b><br>Transient " + metric + ": %{y:.2f}<extra></extra>"
+                x=df_pivot["as_of_date"],
+                y=df_pivot[col],
+                mode="lines",
+                name=f"{seg_label} {m_label}",
+                line=dict(color=color, width=2, dash=dash),
+                visible=(metric == "ADR"),  # default: show ADR only
+                hovertemplate=f"<b>%{{x|%b %d}}</b><br>{seg_label} {m_label}: %{{y:.2f}}<extra></extra>",
             ))
 
-    fig.update_xaxes(title_text="Date")
-    fig.update_yaxes(title_text="Value")
-    fig.update_layout(title_text="Group vs Transient Segment Trends", title_font_size=13, title_font_color=_TITLE_CLR)
+    # Dropdown to switch metric
+    n_segs = sum(1 for s, _, _, _ in _SEG_CFG if (s, "ADR") in df_pivot.columns)
+    n_per = n_segs  # traces per metric group
+
+    def _vis(metric_idx):
+        n = len(fig.data)
+        v = [False] * n
+        start = metric_idx * n_per
+        for i in range(start, min(start + n_per, n)):
+            v[i] = True
+        return v
+
+    fig.update_layout(
+        title_text="Group vs Transient Segment Trends",
+        title_font=dict(size=13, color=_TITLE_CLR),
+        showlegend=True,
+        legend=dict(
+            orientation="h", yanchor="top", y=-0.18,
+            xanchor="center", x=0.5,
+            font=dict(size=10, color=_FONT_CLR),
+            bgcolor="rgba(255,255,255,0.85)", bordercolor="#E2E8F0", borderwidth=1,
+        ),
+        margin=dict(l=14, r=20, t=56, b=90, autoexpand=True),
+        updatemenus=[dict(
+            type="buttons", direction="right",
+            x=0.0, xanchor="left", y=1.12, yanchor="top",
+            showactive=True,
+            buttons=[
+                dict(label="ADR", method="update",
+                     args=[{"visible": _vis(0)}, {"yaxis.title.text": "ADR ($)"}]),
+                dict(label="Occupancy %", method="update",
+                     args=[{"visible": _vis(1)}, {"yaxis.title.text": "Occupancy (%)"}]),
+                dict(label="RevPAR", method="update",
+                     args=[{"visible": _vis(2)}, {"yaxis.title.text": "RevPAR ($)"}]),
+            ],
+            bgcolor="#F1F5F9", bordercolor="#CBD5E1",
+            font=dict(size=11, color="#0F172A"),
+            pad=dict(r=4, t=4),
+        )],
+    )
+    fig.update_xaxes(tickangle=-30, tickfont=dict(size=10))
+    fig.update_yaxes(title_text="ADR ($)")
     return fig
 
 
 def _chart_segment_mix_donut(df_group: pd.DataFrame) -> go.Figure:
-    """Donut chart: Group demand share vs Transient vs Contract."""
+    """Donut chart: Group demand share vs Transient vs Contract (latest date)."""
     if df_group.empty:
-        fig = go.Figure()
+        fig = _dark_fig(height=360)
         fig.add_annotation(text="No group segment data available", showarrow=False)
         return fig
 
-    # Latest date only, sum demand (occupancy proxy) by segment
     latest = df_group["as_of_date"].max()
     latest_df = df_group[df_group["as_of_date"] == latest]
-
-    # Group by segment, sum occupancy
-    seg_sum = latest_df[latest_df["metric_name"] == "Occupancy (%)"].groupby("segment")["metric_value"].sum()
-
+    seg_sum = (
+        latest_df[latest_df["metric_name"] == "Occupancy (%)"]
+        .groupby("segment")["metric_value"].sum()
+    )
     if seg_sum.empty:
-        fig = go.Figure()
+        fig = _dark_fig(height=360)
         fig.add_annotation(text="No occupancy data for latest date", showarrow=False)
         return fig
 
-    fig = _dark_fig(height=380)
+    fig = _dark_fig(height=360)
     fig.add_trace(go.Pie(
         labels=seg_sum.index,
         values=seg_sum.values,
-        hole=0.4,
-        marker=dict(colors=[_COLORWAY[i % len(_COLORWAY)] for i in range(len(seg_sum))]),
-        hovertemplate="<b>%{label}</b><br>Occupancy: %{value:.1f}%<br>Share: %{percentRoot}<extra></extra>",
+        hole=0.42,
+        marker=dict(colors=[_COLORWAY[i % len(_COLORWAY)] for i in range(len(seg_sum))],
+                    line=dict(color="#FFFFFF", width=2)),
+        textinfo="label+percent",
+        textposition="outside",
+        textfont=dict(size=11, color=_FONT_CLR),
+        insidetextorientation="horizontal",
+        hovertemplate="<b>%{label}</b><br>Occupancy sum: %{value:.1f}%<br>Share: %{percent}<extra></extra>",
     ))
-    fig.update_layout(title_text="Segment Mix (Latest Date)", title_font_size=13, title_font_color=_TITLE_CLR)
+    fig.update_layout(
+        title_text="Segment Demand Mix — Latest Week",
+        title_font=dict(size=13, color=_TITLE_CLR),
+        showlegend=False,
+        margin=dict(l=30, r=30, t=56, b=30, autoexpand=True),
+    )
     return fig
 
 
 def _chart_group_adr_premium(df_group: pd.DataFrame) -> go.Figure:
-    """Line chart: Group ADR premium/discount vs Transient over time."""
+    """Area chart: Group ADR premium vs Transient over time."""
     if df_group.empty:
-        fig = _dark_fig()
+        fig = _dark_fig(height=340)
         fig.add_annotation(text="No group segment data available", showarrow=False)
         return fig
 
-    # Pivot to wide by segment and metric
     df_pivot = df_group.pivot_table(
         index="as_of_date",
         columns=["segment", "metric_name"],
         values="metric_value",
         aggfunc="first"
-    )
-    df_pivot = df_pivot.reset_index()
+    ).reset_index()
     df_pivot["as_of_date"] = pd.to_datetime(df_pivot["as_of_date"])
     df_pivot = df_pivot.sort_values("as_of_date")
 
-    # Calculate ADR premium as % difference
-    if ("Grp.", "ADR") in df_pivot.columns and ("Trans.", "ADR") in df_pivot.columns:
-        df_pivot["ADR_Premium_%"] = (
-            (df_pivot[("Grp.", "ADR")] - df_pivot[("Trans.", "ADR")]) / df_pivot[("Trans.", "ADR")] * 100
-        )
-    else:
-        df_pivot["ADR_Premium_%"] = 0
+    has_grp   = ("Grp.",   "ADR") in df_pivot.columns
+    has_trans = ("Trans.", "ADR") in df_pivot.columns
 
     fig = _dark_fig(height=340)
-    fig.add_trace(go.Scatter(
-        x=df_pivot["as_of_date"], y=df_pivot["ADR_Premium_%"],
-        mode="lines+markers", name="ADR Premium",
-        line=dict(color="#A78BFA", width=3),
-        marker=dict(size=5),
-        hovertemplate="<b>%{x|%b %d}</b><br>ADR Premium: %{y:.1f}%<extra></extra>",
-        fill="tozeroy", fillcolor="rgba(167,139,250,0.1)"
-    ))
 
-    # Add 0% reference line
-    fig.add_hline(y=0, line_dash="dash", line_color="#94A3B8", line_width=1)
+    if has_grp and has_trans:
+        df_pivot["_premium"] = (
+            (df_pivot[("Grp.", "ADR")] - df_pivot[("Trans.", "ADR")])
+            / df_pivot[("Trans.", "ADR")] * 100
+        )
+        fig.add_trace(go.Scatter(
+            x=df_pivot["as_of_date"], y=df_pivot["_premium"],
+            mode="lines", name="Group ADR Premium %",
+            line=dict(color="#A78BFA", width=2.5),
+            fill="tozeroy", fillcolor="rgba(167,139,250,0.12)",
+            hovertemplate="<b>%{x|%b %d}</b><br>ADR Premium: %{y:+.1f}%<extra></extra>",
+        ))
+        fig.add_hline(y=0, line_dash="dot", line_color="#94A3B8", line_width=1)
+        y_title = "Premium vs Transient (%)"
+    elif has_grp:
+        fig.add_trace(go.Scatter(
+            x=df_pivot["as_of_date"], y=df_pivot[("Grp.", "ADR")],
+            mode="lines", name="Group ADR",
+            line=dict(color="#10B981", width=2.5),
+            hovertemplate="<b>%{x|%b %d}</b><br>Group ADR: $%{y:.2f}<extra></extra>",
+        ))
+        y_title = "Group ADR ($)"
+    else:
+        fig.add_annotation(text="ADR data not available", showarrow=False)
+        y_title = ""
 
-    fig.update_xaxes(title_text="Date")
-    fig.update_yaxes(title_text="Premium (%)")
-    fig.update_layout(title_text="Group ADR Premium vs Transient (%)", title_font_size=13, title_font_color=_TITLE_CLR)
+    fig.update_layout(
+        title_text="Group ADR Premium vs Transient",
+        title_font=dict(size=13, color=_TITLE_CLR),
+        showlegend=False,
+        margin=dict(l=14, r=20, t=56, b=40, autoexpand=True),
+    )
+    fig.update_xaxes(tickangle=-30, tickfont=dict(size=10))
+    fig.update_yaxes(title_text=y_title)
     return fig
 
 
 def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
-    """Bar chart: Group demand by property with event highlights."""
+    """Horizontal bar: Group occupancy by property — latest week, sorted descending."""
     if df_group.empty:
-        fig = _dark_fig()
+        fig = _dark_fig(height=360)
         fig.add_annotation(text="No group segment data available", showarrow=False)
         return fig
 
-    # Latest month: Group occupancy by property
     latest = df_group["as_of_date"].max()
-    latest_month = df_group[df_group["as_of_date"].dt.to_period("M") == df_group[df_group["as_of_date"] == latest]["as_of_date"].dt.to_period("M")[0]]
+    prop_group = (
+        df_group[
+            (df_group["as_of_date"] == latest) &
+            (df_group["segment"] == "Grp.") &
+            (df_group["metric_name"] == "Occupancy (%)")
+        ]
+        .groupby("property")["metric_value"].sum()
+        .sort_values(ascending=True)
+        .tail(10)
+    )
 
-    # Sum occupancy by property for Group segment
-    prop_group = latest_month[
-        (latest_month["segment"] == "Grp.") &
-        (latest_month["metric_name"] == "Occupancy (%)")
-    ].groupby("property")["metric_value"].sum().sort_values(ascending=False).head(8)
+    if prop_group.empty:
+        fig = _dark_fig(height=360)
+        fig.add_annotation(text="No group occupancy data for latest date", showarrow=False)
+        return fig
 
-    fig = _dark_fig(height=340)
+    # Shorten long names
+    short_names = [n[:28] + "…" if len(n) > 28 else n for n in prop_group.index]
+
+    fig = _dark_fig(height=max(320, 36 * len(prop_group) + 80))
     fig.add_trace(go.Bar(
-        x=prop_group.index,
-        y=prop_group.values,
-        marker=dict(color=_COLORWAY[0], line=dict(color="#0891B2", width=2)),
-        hovertemplate="<b>%{x}</b><br>Group Occupancy: %{y:.1f}%<extra></extra>",
-        name="Group Occupancy"
+        y=short_names,
+        x=prop_group.values,
+        orientation="h",
+        marker=dict(
+            color=prop_group.values,
+            colorscale=[[0, "#BAE6FD"], [1, "#0891B2"]],
+            line=dict(color="#0369A1", width=1),
+        ),
+        text=[f"{v:.1f}%" for v in prop_group.values],
+        textposition="outside",
+        textfont=dict(size=10, color=_FONT_CLR),
+        cliponaxis=False,
+        hovertemplate="<b>%{y}</b><br>Group Occ: %{x:.1f}%<extra></extra>",
     ))
-
-    fig.update_xaxes(title_text="Property", tickangle=-45)
-    fig.update_yaxes(title_text="Occupancy (%)")
-    fig.update_layout(title_text="Group Demand by Property (Latest Month)", title_font_size=13, title_font_color=_TITLE_CLR)
-    fig.update_layout(showlegend=False)
+    fig.update_layout(
+        title_text=f"Group Occupancy by Property — {pd.Timestamp(latest).strftime('%b %d, %Y')}",
+        title_font=dict(size=13, color=_TITLE_CLR),
+        showlegend=False,
+        margin=dict(l=14, r=60, t=56, b=36, autoexpand=True),
+    )
+    fig.update_xaxes(title_text="Group Occupancy (%)", range=[0, prop_group.max() * 1.25])
+    fig.update_yaxes(automargin=True, tickfont=dict(size=10))
     return fig
 
 
 def _chart_property_group_performance(df_group: pd.DataFrame) -> go.Figure:
-    """Horizontal bar chart: % Group demand by property (Top 10)."""
+    """Horizontal bar: Group demand share % by property (top 10)."""
     if df_group.empty:
-        fig = _dark_fig()
+        fig = _dark_fig(height=360)
         fig.add_annotation(text="No group segment data available", showarrow=False)
         return fig
 
-    # For each property: average group occupancy as % of total
+    latest = df_group["as_of_date"].max()
+    latest_df = df_group[df_group["as_of_date"] == latest]
+
     prop_data = []
-    for prop in df_group["property"].unique():
-        prop_df = df_group[df_group["property"] == prop]
-
-        # Latest values
-        latest = prop_df["as_of_date"].max()
-        latest_df = prop_df[prop_df["as_of_date"] == latest]
-
-        group_occ = latest_df[(latest_df["segment"] == "Grp.") & (latest_df["metric_name"] == "Occupancy (%)")]["metric_value"].sum()
-        total_occ = latest_df[latest_df["metric_name"] == "Occupancy (%)"]["metric_value"].sum()
-
+    for prop in latest_df["property"].unique():
+        sub = latest_df[latest_df["property"] == prop]
+        grp_occ   = sub[(sub["segment"] == "Grp.")   & (sub["metric_name"] == "Occupancy (%)")]["metric_value"].sum()
+        total_occ = sub[sub["metric_name"] == "Occupancy (%)"]["metric_value"].sum()
         if total_occ > 0:
-            group_pct = (group_occ / total_occ) * 100
-            prop_data.append({"property": prop, "group_pct": group_pct})
+            prop_data.append({"property": prop, "group_pct": grp_occ / total_occ * 100})
 
-    if prop_data:
-        prop_df = pd.DataFrame(prop_data).sort_values("group_pct", ascending=True).tail(10)
-
-        fig = _dark_fig(height=340)
-        fig.add_trace(go.Bar(
-            y=prop_df["property"],
-            x=prop_df["group_pct"],
-            orientation="h",
-            marker=dict(color="#10B981", line=dict(color="#059669", width=1.5)),
-            hovertemplate="<b>%{y}</b><br>Group %: %{x:.1f}%<extra></extra>",
-            name="Group %"
-        ))
-
-        fig.update_xaxes(title_text="Group Demand Share (%)")
-        fig.update_yaxes(title_text="Property")
-        fig.update_layout(title_text="Group Demand Share by Property (Top 10)", title_font_size=13, title_font_color=_TITLE_CLR)
-        fig.update_layout(showlegend=False)
-        return fig
-    else:
-        fig = _dark_fig()
+    if not prop_data:
+        fig = _dark_fig(height=360)
         fig.add_annotation(text="No property data available", showarrow=False)
         return fig
 
+    prop_df = pd.DataFrame(prop_data).sort_values("group_pct", ascending=True).tail(10)
+    short_names = [n[:28] + "…" if len(n) > 28 else n for n in prop_df["property"]]
+
+    fig = _dark_fig(height=max(320, 36 * len(prop_df) + 80))
+    fig.add_trace(go.Bar(
+        y=short_names,
+        x=prop_df["group_pct"].values,
+        orientation="h",
+        marker=dict(
+            color=prop_df["group_pct"].values,
+            colorscale=[[0, "#D1FAE5"], [1, "#059669"]],
+            line=dict(color="#047857", width=1),
+        ),
+        text=[f"{v:.1f}%" for v in prop_df["group_pct"].values],
+        textposition="outside",
+        textfont=dict(size=10, color=_FONT_CLR),
+        cliponaxis=False,
+        hovertemplate="<b>%{y}</b><br>Group Share: %{x:.1f}%<extra></extra>",
+    ))
+    fig.update_layout(
+        title_text="Group Demand Share by Property (Top 10)",
+        title_font=dict(size=13, color=_TITLE_CLR),
+        showlegend=False,
+        margin=dict(l=14, r=60, t=56, b=36, autoexpand=True),
+    )
+    fig.update_xaxes(title_text="Group Demand Share (%)",
+                     range=[0, prop_df["group_pct"].max() * 1.25])
+    fig.update_yaxes(automargin=True, tickfont=dict(size=10))
+    return fig
+
 
 def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
-    """Heatmap: Property × Segment Occupancy (rows=properties, cols=Trans/Grp/Cont)."""
+    """Heatmap: Property × Segment Occupancy — latest date."""
     if df_group.empty:
-        fig = _dark_fig()
+        fig = _dark_fig(height=420)
         fig.add_annotation(text="No group segment data available", showarrow=False)
         return fig
 
-    # Latest date: create pivot of property × segment
     latest = df_group["as_of_date"].max()
     latest_df = df_group[
         (df_group["as_of_date"] == latest) &
         (df_group["metric_name"] == "Occupancy (%)")
     ]
-
     heatmap_pivot = latest_df.pivot_table(
-        index="property",
-        columns="segment",
-        values="metric_value",
-        aggfunc="first"
+        index="property", columns="segment",
+        values="metric_value", aggfunc="first"
     )
-
     if heatmap_pivot.empty:
-        fig = _dark_fig()
+        fig = _dark_fig(height=420)
         fig.add_annotation(text="No occupancy heatmap data available", showarrow=False)
         return fig
 
-    # Sort by Group occupancy descending
-    heatmap_pivot = heatmap_pivot.sort_values("Grp.", ascending=True)
+    # Sort by group occupancy; shorten long names
+    sort_col = "Grp." if "Grp." in heatmap_pivot.columns else heatmap_pivot.columns[0]
+    heatmap_pivot = heatmap_pivot.sort_values(sort_col, ascending=True)
+    short_y = [n[:26] + "…" if len(n) > 26 else n for n in heatmap_pivot.index]
 
-    fig = _dark_fig(height=400)
+    n_rows = len(heatmap_pivot)
+    row_h  = max(22, min(36, 420 // max(n_rows, 1)))
+    fig = _dark_fig(height=max(340, row_h * n_rows + 120))
+
     fig.add_trace(go.Heatmap(
         z=heatmap_pivot.values,
-        x=heatmap_pivot.columns,
-        y=heatmap_pivot.index,
+        x=heatmap_pivot.columns.tolist(),
+        y=short_y,
         colorscale="RdYlGn",
-        colorbar=dict(title="Occupancy %", len=0.7),
+        zmin=0, zmax=100,
+        colorbar=dict(
+            title=dict(text="Occ %", font=dict(size=11, color=_FONT_CLR)),
+            thickness=12, len=0.75, x=1.01,
+            tickfont=dict(size=10, color=_FONT_CLR),
+        ),
+        text=[[f"{v:.0f}%" if v == v else "" for v in row] for row in heatmap_pivot.values],
+        texttemplate="%{text}",
+        textfont=dict(size=9.5, color="#0F172A"),
         hovertemplate="<b>%{y}</b><br>%{x}: %{z:.1f}%<extra></extra>",
     ))
-
-    fig.update_xaxes(side="bottom")
-    fig.update_layout(title_text="Segment Occupancy Heatmap (Latest Date)", title_font_size=13, title_font_color=_TITLE_CLR)
+    fig.update_layout(
+        title_text=f"Segment Occupancy Heatmap — {pd.Timestamp(latest).strftime('%b %d, %Y')}",
+        title_font=dict(size=13, color=_TITLE_CLR),
+        showlegend=False,
+        margin=dict(l=14, r=80, t=56, b=40, autoexpand=True),
+    )
+    fig.update_xaxes(side="bottom", tickfont=dict(size=11), automargin=True)
+    fig.update_yaxes(automargin=True, tickfont=dict(size=10))
     return fig
 
 

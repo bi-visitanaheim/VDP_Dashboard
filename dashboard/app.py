@@ -6418,18 +6418,20 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         font    = dict(family=_font, size=12.5, color="#334155"),
         height  = height,
         autosize = True,
-        margin  = dict(l=14, r=20, t=52, b=14, autoexpand=True),
+        margin  = dict(l=14, r=20, t=64, b=36, autoexpand=True),
         transition = {"duration": 500, "easing": "cubic-in-out"},
         legend = dict(
             orientation = "h",
-            yanchor = "bottom", y = 1.04,
+            yanchor = "bottom", y = 1.02,
             xanchor = "left",   x = 0,
-            font    = dict(size=11.5, family=_font, color="#64748B"),
-            bgcolor = "rgba(0,0,0,0)",
-            borderwidth = 0,
+            font    = dict(size=11, family=_font, color="#64748B"),
+            bgcolor = "rgba(255,255,255,0.80)",
+            bordercolor = "rgba(100,116,139,0.20)",
+            borderwidth = 1,
             itemsizing  = "constant",
             tracegroupgap = 4,
         ),
+        uniformtext = dict(minsize=9, mode="hide"),
         hoverlabel = dict(
             bgcolor     = "rgba(20,50,80,0.96)",
             bordercolor = "rgba(0,212,200,0.60)",
@@ -12339,9 +12341,10 @@ with tab_ev:
                         x=_bub["visitor_days_share_pct"].values,
                         y=_bub["avg_spend_usd"].values,
                         mode="markers+text",
-                        text=_bub["dma"].values,
+                        text=[n[:12] for n in _bub["dma"].values],
                         textposition="top center",
-                        textfont=dict(size=10, family="Syne, DM Sans, sans-serif"),
+                        textfont=dict(size=9, family="Syne, DM Sans, sans-serif"),
+                        cliponaxis=False,
                         marker=dict(
                             size=[max(12, v * 3) for v in _bub["visitor_days_share_pct"]],
                             color=_bubble_colors,
@@ -12527,8 +12530,9 @@ with tab_ev:
                                 gridcolor="rgba(0,0,0,0.07)",
                             ),
                             height=340,
-                            margin=dict(l=40, r=10, t=30, b=120),
-                            legend=dict(orientation="h", y=1.05, x=0, font=dict(size=11)),
+                            margin=dict(l=40, r=10, t=52, b=60),
+                            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0, font=dict(size=10)),
+                            uniformtext=dict(minsize=9, mode="hide"),
                             paper_bgcolor="rgba(0,0,0,0)",
                             plot_bgcolor="rgba(0,0,0,0)",
                         )
@@ -13099,9 +13103,7 @@ with tab_fm:
                         "Avg spend: $%{customdata[1]:,.0f}<br>"
                         "Spending share: %{customdata[2]:.1f}%<extra></extra>"
                     ),
-                    mode="markers+text",
-                    textposition="top center",
-                    textfont=dict(size=9, family="Syne, DM Sans, sans-serif", color="#21808D"),
+                    mode="markers",
                     marker=dict(
                         size=[max(8, v * 4) for v in _map_df["visitor_days_share_pct"]],
                         color=_map_df["avg_spend_usd"],
@@ -13121,7 +13123,7 @@ with tab_fm:
                         showcoastlines=True, coastlinecolor="rgba(0,0,0,0.15)",
                         showsubunits=True, subunitcolor="rgba(0,0,0,0.10)",
                     ),
-                    margin=dict(l=0, r=0, t=0, b=0),
+                    margin=dict(l=4, r=4, t=8, b=4),
                 )
                 st.plotly_chart(style_fig(fig_fm_map, height=420), width="stretch", config=PLOTLY_CONFIG)
             except Exception as _map_err:
@@ -13172,9 +13174,10 @@ with tab_fm:
                 x=_bub_fm["visitor_days_share_pct"].values,
                 y=_bub_fm["avg_spend_usd"].values,
                 mode="markers+text",
-                text=_bub_fm["dma"].values,
+                text=[n[:12] for n in _bub_fm["dma"].values],
                 textposition="top center",
-                textfont=dict(size=10, family="Syne, DM Sans, sans-serif"),
+                textfont=dict(size=9, family="Syne, DM Sans, sans-serif"),
+                cliponaxis=False,
                 marker=dict(
                     size=_bubble_sizes,
                     color=_bub_colors_fm,
@@ -15606,8 +15609,10 @@ with tab_cs:
                         x=[row_cs["occupancy_pct"]],
                         y=[row_cs["adr_usd"]],
                         mode="markers+text",
-                        text=[row_cs["property_name"].split(" ")[0]],
+                        text=[row_cs["property_name"][:12]],
                         textposition="top center",
+                        textfont=dict(size=9),
+                        cliponaxis=False,
                         marker=dict(
                             size=max(10, min(40, row_cs["rooms"] / 15)),
                             color=scale_color.get(row_cs["chain_scale"], "#626C71"),
