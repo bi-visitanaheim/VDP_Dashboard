@@ -88,6 +88,9 @@ STEPS = [
     ("fetch_str_dropbox", os.path.join(BASE_DIR, "fetch_str_dropbox.py"),       False),
     ("load_str_daily",    os.path.join(BASE_DIR, "load_str_daily_sqlite.py"),   True),
     ("load_str_monthly",  os.path.join(BASE_DIR, "load_str_monthly_sqlite.py"), True),
+    # Group/segment multi-tab loader — must run after daily/monthly so fact_str_group_metrics
+    # is populated before compute_insights and seed_group_benchmarks read it.
+    ("load_str_multiseg", os.path.join(BASE_DIR, "load_str_multiseg.py"),       False),
     ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),            True),
     ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),     False),
     ("load_costar",           os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
