@@ -81,28 +81,31 @@ def get_connection() -> sqlite3.Connection:
 
 
 def load_costar_chain_scale(conn: sqlite3.Connection) -> dict:
-    """Pull chain scale breakdown to estimate group-primary room count."""
+    """Pull chain scale breakdown for the most recent year (South OC market)."""
     rows = conn.execute(
         """
-        SELECT chain_scale, supply_rooms, occupancy_pct, adr_usd, revpar_usd
+        SELECT chain_scale, supply_rooms, occupancy_pct, adr_usd, revpar_usd,
+               room_revenue_usd, year
         FROM costar_chain_scale_breakdown
-        ORDER BY loaded_at DESC
+        ORDER BY year DESC, loaded_at DESC
         """
     ).fetchall()
 
     if not rows:
         return {}
 
-    # Use the most recent year's data (first half of results if two years present)
-    # Upper Upscale + Upscale = highest group amenity density in any market
+    # Use the most recent year only; skip duplicate chain_scale rows
+    most_recent_year = rows[0]["year"]
     total_rooms = 0
     group_primary_rooms = 0
     chain_data = {}
     seen = set()
     for r in rows:
+        if r["year"] != most_recent_year:
+            continue
         scale = (r["chain_scale"] or "").strip()
         if scale in seen:
-            continue  # skip duplicate year
+            continue
         seen.add(scale)
         rooms = int(r["supply_rooms"] or 0)
         total_rooms += rooms
@@ -112,25 +115,39 @@ def load_costar_chain_scale(conn: sqlite3.Connection) -> dict:
             "rooms": rooms,
             "occ": float(r["occupancy_pct"] or 0),
             "adr": float(r["adr_usd"] or 0),
+            "room_revenue": float(r["room_revenue_usd"] or 0),
         }
 
     return {
         "total_rooms": total_rooms,
         "group_primary_rooms": group_primary_rooms,
         "chain_data": chain_data,
+        "year": most_recent_year,
     }
 
 
 def load_market_snapshot(conn: sqlite3.Connection) -> dict:
-    """Pull most recent full-year CoStar market snapshot."""
+    """Pull most recent CoStar market snapshot for Newport Beach/Dana Point submarket."""
     row = conn.execute(
         """
         SELECT occupancy_pct, adr_usd, revpar_usd, room_revenue_usd
         FROM costar_market_snapshot
+        WHERE market LIKE '%Newport%' OR market LIKE '%Dana Point%'
         ORDER BY report_period DESC
         LIMIT 1
         """
     ).fetchone()
+    if not row:
+        # Fallback: any market snapshot
+        row = conn.execute(
+            """
+            SELECT occupancy_pct, adr_usd, revpar_usd, room_revenue_usd
+            FROM costar_market_snapshot
+            WHERE market NOT LIKE '%United States%'
+            ORDER BY report_period DESC
+            LIMIT 1
+            """
+        ).fetchone()
     if not row:
         return {}
     return {
@@ -139,6 +156,16 @@ def load_market_snapshot(conn: sqlite3.Connection) -> dict:
         "revpar": float(row["revpar_usd"] or 0),
         "room_revenue": float(row["room_revenue_usd"] or 0),
     }
+
+
+# Dana Point TBID tiered assessment rates (per City ordinance)
+# ≤$199.99 → 1.0%  |  $200–$399.99 → 1.5%  |  ≥$400 → 2.0%
+def _tbid_rate(adr: float) -> float:
+    if adr >= 400.0:
+        return 0.020
+    if adr >= 200.0:
+        return 0.015
+    return 0.010
 
 
 def load_compression_annual(conn: sqlite3.Connection) -> int:
@@ -161,14 +188,19 @@ def seed(conn: sqlite3.Connection) -> None:
     group_primary_rooms = chain.get("group_primary_rooms", 3098)  # UU + Upscale fallback
     group_primary_pct = round(group_primary_rooms / total_rooms, 3) if total_rooms else 0.605
 
-    market_adr = snap.get("adr") or 288.50
-    market_occ = snap.get("occ_pct") or 76.4
-    # CoStar room_revenue_usd is sometimes 0.0 (not NULL) when unavailable.
-    # Compute from ADR × occupancy × rooms × 365 as a reliable fallback.
-    _costar_rev = snap.get("room_revenue") or 0
-    annual_room_rev = _costar_rev if _costar_rev > 1_000_000 else round(
-        market_adr * (market_occ / 100) * total_rooms * 365, 2
-    )
+    # Prefer Newport Beach/Dana Point submarket ADR/occ from market snapshot
+    market_adr = snap.get("adr") or 300.89
+    market_occ = snap.get("occ_pct") or 71.4
+
+    # Annual room revenue: sum directly from CoStar chain scale (most accurate source).
+    # CoStar reports actual room_revenue_usd per chain scale for South OC 2024.
+    chain_data = chain.get("chain_data", {})
+    chain_total_rev = sum(v["room_revenue"] for v in chain_data.values() if v["room_revenue"] > 0)
+    if chain_total_rev > 1_000_000:
+        annual_room_rev = round(chain_total_rev, 2)
+    else:
+        # Fallback: estimate from ADR × occ × rooms × 365
+        annual_room_rev = round(market_adr * (market_occ / 100) * total_rooms * 365, 2)
 
     # Industry benchmarks: STR/CBRE upper-upscale resort coastal (2024)
     BENCH_GROUP_SHARE_LOW = 0.25
@@ -179,14 +211,27 @@ def seed(conn: sqlite3.Connection) -> None:
     group_rev_low = round(annual_room_rev * BENCH_GROUP_SHARE_LOW, 2)
     group_rev_high = round(annual_room_rev * BENCH_GROUP_SHARE_HIGH, 2)
 
-    # TBID impact
-    tbid_low = round(group_rev_low * 0.0125, 2)
-    tbid_high = round(group_rev_high * 0.0125, 2)
+    # TBID impact — tiered by chain scale per Dana Point ordinance:
+    #   ≤$199.99 → 1.0%  |  $200–$399.99 → 1.5%  |  ≥$400 → 2.0%
+    # Compute total market TBID using actual room revenue + per-scale ADR tier.
+    # Then apply group demand share to estimate group-originated TBID.
+    if chain_data:
+        total_market_tbid = sum(
+            v["room_revenue"] * _tbid_rate(v["adr"])
+            for v in chain_data.values()
+            if v["room_revenue"] > 0 and v["adr"] > 0
+        )
+    else:
+        total_market_tbid = annual_room_rev * 0.0125  # blended fallback
+
+    tbid_low = round(total_market_tbid * BENCH_GROUP_SHARE_LOW, 2)
+    tbid_high = round(total_market_tbid * BENCH_GROUP_SHARE_HIGH, 2)
     tot_low = round(group_rev_low * 0.10, 2)
     tot_high = round(group_rev_high * 0.10, 2)
 
-    # Incremental TBID if group mix grows +5pp
-    tbid_uplift = round(annual_room_rev * 0.05 * 0.0125, 2)
+    # Incremental TBID if group mix grows +5pp (using blended rate from chain data)
+    blended_tbid_rate = (total_market_tbid / annual_room_rev) if annual_room_rev > 0 else 0.0125
+    tbid_uplift = round(annual_room_rev * 0.05 * blended_tbid_rate, 2)
 
     # Displacement note
     if compression_days >= 30:
