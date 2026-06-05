@@ -13050,25 +13050,25 @@ with tab_fm:
         _fm_k1, _fm_k2, _fm_k3 = st.columns(3)
         with _fm_k1:
             st.markdown(
-                f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);border-radius:10px;padding:14px 16px;">'
-                f'<div style="font-size:1.4rem;font-weight:800;color:#21808D;">{_top_mkt}</div>'
-                f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">Top Feeder Market</div>'
-                f'<div style="font-size:11px;color:#21808D;font-weight:600;margin-top:3px;">{_top_mkt_pct:.1f}% of visitor days</div>'
+                f'<div style="background:#EFF6FF;border:2px solid #2563EB;border-radius:12px;padding:18px 20px;">'
+                f'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;margin-bottom:6px;">Top Feeder Market</div>'
+                f'<div style="font-size:2rem;font-weight:900;color:#0F172A;line-height:1.1;">{_top_mkt}</div>'
+                f'<div style="font-size:15px;font-weight:700;color:#2563EB;margin-top:6px;">{_top_mkt_pct:.1f}% of visitor days</div>'
                 f'</div>', unsafe_allow_html=True)
         with _fm_k2:
             st.markdown(
-                f'<div style="background:rgba(230,129,97,0.06);border:1px solid rgba(230,129,97,0.15);border-radius:10px;padding:14px 16px;">'
-                f'<div style="font-size:1.4rem;font-weight:800;color:#E68161;">{_high_spend_mkt}</div>'
-                f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">Highest Value Market</div>'
-                f'<div style="font-size:11px;color:#E68161;font-weight:600;margin-top:3px;">${_high_spend_val:,.0f} avg spend/visitor</div>'
+                f'<div style="background:#FFF7ED;border:2px solid #EA580C;border-radius:12px;padding:18px 20px;">'
+                f'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#EA580C;margin-bottom:6px;">Highest Value Market</div>'
+                f'<div style="font-size:2rem;font-weight:900;color:#0F172A;line-height:1.1;">{_high_spend_mkt}</div>'
+                f'<div style="font-size:15px;font-weight:700;color:#EA580C;margin-top:6px;">${_high_spend_val:,.0f} avg spend/visitor</div>'
                 f'</div>', unsafe_allow_html=True)
         with _fm_k3:
             _oos_pct_fm = float(df_dfy_ov.iloc[0].get("out_of_state_vd_pct", 0) or 0) if not df_dfy_ov.empty else 0
             st.markdown(
-                f'<div style="background:rgba(33,128,141,0.06);border:1px solid rgba(33,128,141,0.15);border-radius:10px;padding:14px 16px;">'
-                f'<div style="font-size:1.4rem;font-weight:800;color:#21808D;">{_oos_pct_fm:.1f}%</div>'
-                f'<div style="font-size:11px;font-weight:600;opacity:0.70;margin-top:2px;">Out-of-State Visitor Days</div>'
-                f'<div style="font-size:11px;color:#21808D;font-weight:600;margin-top:3px;">OOS visitors generate higher ADR per trip</div>'
+                f'<div style="background:#F0FDF4;border:2px solid #16A34A;border-radius:12px;padding:18px 20px;">'
+                f'<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#16A34A;margin-bottom:6px;">Out-of-State Visitor Days</div>'
+                f'<div style="font-size:2rem;font-weight:900;color:#0F172A;line-height:1.1;">{_oos_pct_fm:.1f}%</div>'
+                f'<div style="font-size:15px;font-weight:700;color:#16A34A;margin-top:6px;">OOS visitors generate higher ADR per trip</div>'
                 f'</div>', unsafe_allow_html=True)
 
         st.markdown("---")
@@ -13194,7 +13194,7 @@ with tab_fm:
                     marker=dict(
                         size=[max(8, v * 4) for v in _map_df["visitor_days_share_pct"]],
                         color=_map_df["avg_spend_usd"],
-                        colorscale=[[0, "#B7D7DC"], [0.5, "#21808D"], [1.0, "#E68161"]],
+                        colorscale=[[0, "#1E3A5F"], [0.4, "#2563EB"], [0.7, "#10B981"], [1.0, "#F59E0B"]],
                         showscale=True,
                         colorbar=dict(title="Avg Spend ($)", tickprefix="$", len=0.6),
                         opacity=0.85,
@@ -13756,6 +13756,64 @@ with tab_ei:
                 f'</div>',
                 unsafe_allow_html=True,
             )
+    except Exception:
+        pass
+
+    # ── Approaching Events — same card style as Ohana Fest ────────────────────
+    try:
+        from datetime import date as _evdate
+        _ev_today = _evdate.today()
+        if not df_vdp_events.empty:
+            _upcoming_evs = df_vdp_events[
+                (pd.to_datetime(df_vdp_events["event_date"]).dt.date >= _ev_today) &
+                (df_vdp_events["event_name"] != "Ohana Fest")
+            ].copy()
+            _upcoming_evs["_days"] = (pd.to_datetime(_upcoming_evs["event_date"]).dt.date - _ev_today).apply(lambda d: d.days)
+            _upcoming_evs = _upcoming_evs.sort_values("_days").head(5)
+
+            _ev_configs = {
+                "Doheny Days Music Festival":  ("🎵", "#7C3AED", "rgba(124,58,237,0.10)", "rgba(124,58,237,0.28)", "+$80–100 ADR lift · 3-day festival · 15–20pp occ boost · Shoulder bookings critical"),
+                "Tall Ships Festival":         ("⛵", "#0891B2", "rgba(8,145,178,0.10)",  "rgba(8,145,178,0.28)",  "+$50–70 ADR lift · Heritage tourism · Family + international visitors · Harbor activation"),
+                "Dana Point Whale Festival":   ("🐋", "#0369A1", "rgba(3,105,161,0.10)",  "rgba(3,105,161,0.28)",  "+$40–60 ADR lift · Peak Q1 demand driver · Extended LOS · OOS visitor magnet"),
+                "OC Marathon":                 ("🏃", "#16A34A", "rgba(22,163,74,0.10)",   "rgba(22,163,74,0.28)",  "+$35–50 ADR lift · Multi-day participants · Early booking window · Regional draw"),
+                "July 4th Holiday":            ("🎆", "#DC2626", "rgba(220,38,38,0.10)",   "rgba(220,38,38,0.28)",  "+$30–50 ADR lift · Highest leisure demand weekend · Compression risk day"),
+                "Golden Sails Car Show":       ("🚗", "#D97706", "rgba(217,119,6,0.10)",   "rgba(217,119,6,0.28)",  "+$30–45 ADR lift · Weekend event · Drive market visitors · Shoulder weekend boost"),
+                "Holiday Boat Parade":         ("🎄", "#16A34A", "rgba(22,163,74,0.10)",   "rgba(22,163,74,0.28)",  "+$25–40 ADR lift · Peak holiday season · Family travel · Harbor District focal point"),
+                "Dana Point Turkey Trot":      ("🦃", "#EA580C", "rgba(234,88,12,0.10)",   "rgba(234,88,12,0.28)",  "+$20–35 ADR lift · Thanksgiving weekend · Regional event · Drive market strong"),
+                "SoCal Wahine Surf Classic":   ("🏄", "#0891B2", "rgba(8,145,178,0.10)",   "rgba(8,145,178,0.28)",  "+$20–35 ADR lift · Surf culture · Beach Recreation cluster · Niche loyal audience"),
+                "Blessing of the Waves":       ("🌊", "#2563EB", "rgba(37,99,235,0.10)",   "rgba(37,99,235,0.28)",  "+$15–25 ADR lift · New Year opener · Harbor activation · Cultural draw"),
+            }
+            _default_cfg = ("🎉", "#475569", "rgba(71,85,105,0.08)", "rgba(71,85,105,0.25)", "+$20–40 ADR lift est. · Major Dana Point event · Demand driver")
+
+            for _, _ev in _upcoming_evs.iterrows():
+                _ename = str(_ev.get("event_name",""))
+                _edate = str(_ev.get("event_date",""))[:10]
+                _days_away = int(_ev.get("_days", 0))
+                _is_major = bool(_ev.get("is_major", 0))
+                _icon, _color, _bg, _border_color, _impact = _ev_configs.get(_ename, _default_cfg)
+                _urgency = "🔴 THIS MONTH" if _days_away <= 31 else ("🟡 NEXT 90 DAYS" if _days_away <= 90 else f"📅 {_days_away} DAYS AWAY")
+                _major_badge = '<span style="background:#FEF3C7;color:#92400E;font-size:9px;font-weight:800;letter-spacing:.06em;padding:3px 10px;border-radius:99px;margin-left:6px;">★ MAJOR</span>' if _is_major else ""
+                st.markdown(
+                    f'<div style="margin-bottom:14px;padding:18px 22px;'
+                    f'background:linear-gradient(135deg,{_bg} 0%,rgba(255,255,255,0.04) 100%);'
+                    f'border:1px solid {_border_color};border-radius:14px;'
+                    f'border-left:5px solid {_color};">'
+                    f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">'
+                    f'<span style="font-size:22px;">{_icon}</span>'
+                    f'<div style="flex:1;">'
+                    f'<div style="font-size:13px;font-weight:800;color:{_color};letter-spacing:.04em;">{_ename}</div>'
+                    f'<div style="font-size:11px;color:#475569;margin-top:1px;">{_edate} · {_days_away} days away</div>'
+                    f'</div>'
+                    f'<span style="background:{_bg};color:{_color};font-size:9px;font-weight:800;'
+                    f'letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:99px;'
+                    f'border:1px solid {_border_color};">{_urgency}</span>'
+                    f'{_major_badge}'
+                    f'</div>'
+                    f'<div style="font-size:12px;color:#374151;line-height:1.6;">'
+                    f'<strong style="color:{_color};">Anticipated Impact:</strong> {_impact}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
     except Exception:
         pass
 

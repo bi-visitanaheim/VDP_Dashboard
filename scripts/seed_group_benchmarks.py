@@ -161,9 +161,14 @@ def seed(conn: sqlite3.Connection) -> None:
     group_primary_rooms = chain.get("group_primary_rooms", 3098)  # UU + Upscale fallback
     group_primary_pct = round(group_primary_rooms / total_rooms, 3) if total_rooms else 0.605
 
-    market_adr = snap.get("adr", 288.50)
-    market_occ = snap.get("occ_pct", 76.4)
-    annual_room_rev = snap.get("room_revenue", 1_153_261_000.0)
+    market_adr = snap.get("adr") or 288.50
+    market_occ = snap.get("occ_pct") or 76.4
+    # CoStar room_revenue_usd is sometimes 0.0 (not NULL) when unavailable.
+    # Compute from ADR × occupancy × rooms × 365 as a reliable fallback.
+    _costar_rev = snap.get("room_revenue") or 0
+    annual_room_rev = _costar_rev if _costar_rev > 1_000_000 else round(
+        market_adr * (market_occ / 100) * total_rooms * 365, 2
+    )
 
     # Industry benchmarks: STR/CBRE upper-upscale resort coastal (2024)
     BENCH_GROUP_SHARE_LOW = 0.25
