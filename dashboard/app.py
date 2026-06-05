@@ -2630,6 +2630,15 @@ st.markdown("""
     display: block !important;
     margin-top: 2px !important;
   }
+  .pulse-ticker-date {
+    display: block;
+    font-size: 8px;
+    opacity: 0.45;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    margin-top: 1px;
+    line-height: 1;
+  }
   .pulse-ticker-dot {
     width: 6px; height: 6px; border-radius: 50%;
     background: #22D3EE;
@@ -2661,6 +2670,39 @@ st.markdown("""
     .pulse-ticker-label { font-size: 9px !important; }
     [data-testid="stTab"] button p { font-size: 12px !important; }
   }
+
+  /* Scroll-triggered section reveal */
+  .dp-section-reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+  }
+  .dp-section-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── Spotlight / spinning highlight card ────────────────────────────── */
+  .dp-spotlight-card {
+    position: relative;
+    width: 100%;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #050A14 0%, #0F2537 50%, #050A14 100%);
+    padding: 28px 32px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+    margin-bottom: 20px;
+  }
+  .dp-spotlight-card:hover { transform: perspective(800px) rotateY(4deg) rotateX(-2deg) scale(1.01); box-shadow: 0 20px 60px rgba(0,195,190,0.25); }
+  .dp-spotlight-card::before {
+    content:'';position:absolute;inset:0;
+    background:conic-gradient(from var(--dp-angle,0deg) at 50% 50%, transparent 0deg, rgba(0,195,190,0.15) 60deg, transparent 120deg);
+    animation: dp-spotlight-spin 6s linear infinite;
+    border-radius:16px;
+  }
+  @keyframes dp-spotlight-spin { to { --dp-angle: 360deg; } }
+  .dp-spotlight-inner { position:relative;z-index:1; }
 
   /* ── Scroll-Reveal Animations (byhook clip-path style) ───────────────── */
   .reveal-card {
@@ -6756,17 +6798,18 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
     """Bloomberg/1ax-style dual-row KPI ticker with live data."""
     import math
 
-    def _item(label: str, val: str, delta: str = "", positive: bool | None = None, is_status: bool = False) -> str:
+    def _item(label: str, val: str, delta: str = "", positive: bool | None = None, is_status: bool = False, date_label: str = "") -> str:
         delta_cls = ""
         if delta and positive is True:   delta_cls = "pulse-ticker-pos"
         elif delta and positive is False: delta_cls = "pulse-ticker-neg"
         delta_html = f'<span class="{delta_cls}">{delta}</span>' if delta else ""
         status_cls = "pulse-ticker-status" if is_status else ""
+        date_html = f'<span class="pulse-ticker-date">{date_label}</span>' if date_label else ""
         return (
             f'<div class="pulse-ticker-item {status_cls}">'
             f'<span class="pulse-ticker-label {status_cls}">{label}</span>'
             f'<span class="pulse-ticker-val {status_cls}">{val}</span>'
-            f'{delta_html}'
+            f'{delta_html}{date_html}'
             f'</div>'
         )
 
@@ -6803,24 +6846,33 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
         except Exception: pass
 
     ig_val = "—"
+    _ig_date_label = ""
     if not df_later_ig.empty:
         try:
             _ig = df_later_ig.sort_values("date").iloc[-1]
             ig_val = f"{int(float(_ig.get('followers',0))):,}" if _ig.get('followers') else "—"
+            _ig_date_label = str(_ig.get("date", ""))[:7]
+        except Exception: pass
+
+    # ── Extract STR date label ──────────────────────────────────────────────────
+    _str_date_label = ""
+    if not df_kpi.empty:
+        try:
+            _str_date_label = f"as of {str(_rec.get('as_of_date', ''))[:7]}"
         except Exception: pass
 
     # ── Build rows (skip items with no data) ────────────────────────────────────
     row1_items = []
     if occ_val != "—": row1_items.append(_item("⬤ LIVE", "DANA POINT PULSE", is_status=True))
     else: row1_items.append(_item("⬤ LIVE", "DANA POINT PULSE", is_status=True))  # Always show LIVE
-    if occ_val != "—": row1_items.append(_item("OCCUPANCY", occ_val, occ_d, occ_pos))
-    if adr_val != "—": row1_items.append(_item("ADR", adr_val, adr_d, adr_pos))
-    if rvp_val != "—": row1_items.append(_item("REVPAR", rvp_val, rvp_d, rvp_pos))
-    if trips_val != "—": row1_items.append(_item("ANNUAL TRIPS", trips_val))
-    if oos_val != "—": row1_items.append(_item("OUT-OF-STATE", oos_val))
-    if roas_val != "—": row1_items.append(_item("MEDIA ROAS", roas_val))
-    if top_dma != "—": row1_items.append(_item("TOP FEEDER DMA", top_dma))
-    if ig_val != "—": row1_items.append(_item("IG FOLLOWING", ig_val))
+    if occ_val != "—": row1_items.append(_item("OCCUPANCY", occ_val, occ_d, occ_pos, date_label=_str_date_label))
+    if adr_val != "—": row1_items.append(_item("ADR", adr_val, adr_d, adr_pos, date_label=_str_date_label))
+    if rvp_val != "—": row1_items.append(_item("REVPAR", rvp_val, rvp_d, rvp_pos, date_label=_str_date_label))
+    if trips_val != "—": row1_items.append(_item("ANNUAL TRIPS", trips_val, date_label="2024 Annual"))
+    if oos_val != "—": row1_items.append(_item("OUT-OF-STATE", oos_val, date_label="2024 Annual"))
+    if roas_val != "—": row1_items.append(_item("MEDIA ROAS", roas_val, date_label="2024 Annual"))
+    if top_dma != "—": row1_items.append(_item("TOP FEEDER DMA", top_dma, date_label="2024 Annual"))
+    if ig_val != "—": row1_items.append(_item("IG FOLLOWING", ig_val, date_label=_ig_date_label))
 
     # Group KPIs for ticker
     _grp_tbid_str = "—"; _grp_uplift_str = "—"; _grp_risk_str = "—"
@@ -6846,10 +6898,10 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
         pass
 
     row2_items = [
-        _item("TBID BLEND", "1.25%"),
-        _item("TOT RATE", "10%"),
-        _item("GROUP TBID EST", _grp_tbid_str),
-        _item("GROUP MIX UPLIFT", _grp_uplift_str),
+        _item("TBID BLEND", "1.25%", date_label="City Ordinance"),
+        _item("TOT RATE", "10%", date_label="City Ordinance"),
+        _item("GROUP TBID EST", _grp_tbid_str, date_label="CoStar Est."),
+        _item("GROUP MIX UPLIFT", _grp_uplift_str, date_label="CoStar Est."),
         _item("GROUP DISPLACE RISK", _grp_risk_str),
         _item("OHANA FEST ADR LIFT", "+$139"),
         _item("SPEND MULTIPLIER", "3.2×"),
@@ -7463,7 +7515,7 @@ def _sh(icon: str, title: str, color: str = "teal", tag: str = "") -> str:
     """Generate an enterprise section header block HTML."""
     _tag_html = f'<span class="sh-tag">{tag}</span>' if tag else ""
     return (
-        f'<div class="sh-block sh-{color}">'
+        f'<div class="dp-section-reveal sh-block sh-{color}">'
         f'<span class="sh-icon">{icon}</span>'
         f'<span class="sh-title">{title}</span>'
         f'{_tag_html}'
@@ -9643,6 +9695,23 @@ with tab_ov:
   <!-- Top insight brief -->
   {'<div style="padding:16px 20px;background:#F8FAFC;border-left:4px solid #0891B2;border-radius:0 8px 8px 0;margin-bottom:16px;"><div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.10em;color:#0891B2;margin-bottom:8px;">⚡ Top Priority Signal</div><div style="font-size:14px;font-weight:700;color:#0F172A;line-height:1.5;margin-bottom:6px;">' + _top_insight_txt + '</div><div style="font-size:13px;color:#475569;line-height:1.65;">' + _top_insight_body + '</div></div>' if _top_insight_txt else ''}
 </div>""", unsafe_allow_html=True)
+        # ── Spotlight card ───────────────────────────────────────────────────
+        try:
+            _spot_insight = df_insights[df_insights["audience"].isin(["cross","dmo"])].sort_values("priority").iloc[0] if not df_insights.empty else None
+            if _spot_insight is not None:
+                _spot_head = str(_spot_insight.get("headline","") or "")
+                _spot_body = str(_spot_insight.get("body","") or "")[:200]
+                st.markdown(f'''
+<div class="dp-spotlight-card">
+  <div class="dp-spotlight-inner">
+    <div style="font-size:9px;font-weight:800;letter-spacing:.14em;color:#00C3BE;text-transform:uppercase;margin-bottom:10px;">⚡ Top Signal</div>
+    <div style="font-size:18px;font-weight:800;color:#FFFFFF;line-height:1.3;margin-bottom:10px;">{_spot_head}</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.65);line-height:1.6;">{_spot_body}</div>
+  </div>
+</div>
+''', unsafe_allow_html=True)
+        except Exception as _se:
+            _logger.debug(f"Spotlight card error: {_se}")
     except Exception as e:
         _logger.debug(f"Overview brief render error: {e}")
 
@@ -18154,6 +18223,11 @@ st.markdown(
     'All data is proprietary and confidential. &nbsp;·&nbsp; '
     '<a href="https://www.visitdanapoint.com" target="_blank" style="color:inherit;opacity:.7;">'
     'visitdanapoint.com</a>'
+    ' &nbsp;·&nbsp; '
+    '<a href="mailto:john.picou@gloconsolutions.com" '
+    'style="color:inherit;opacity:.7;text-decoration:none;" '
+    'onmouseover="this.style.opacity=\'1\'" onmouseout="this.style.opacity=\'.7\'">'
+    'Support</a>'
     '</div>'
     '<div style="font-size:10px;opacity:0.30;margin-top:4px;">'
     'Data sources: STR · Datafy · CoStar · Later.com · Visit California · FRED · EIA · TSA · NOAA · Census ACS · BLS · Open-Meteo · Google Trends'
