@@ -47,6 +47,9 @@ Pipeline steps:
   29. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
   30. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
 
+# NOTE: All skip-safe steps use try/except and log WARN rather than raising — this prevents
+# a single broken data source from crashing the dashboard.
+
 Steps 1, 2, 3, 6 are FAIL-FAST (abort on failure). All others are skip-safe.
 Each step is logged to logs/pipeline.log:
   YYYY-MM-DD HH:MM:SS | STEP                 | OK/FAIL | message

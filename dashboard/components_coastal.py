@@ -140,7 +140,7 @@ def render_beach_intelligence(df_beach: pd.DataFrame, df_kpi: pd.DataFrame):
                 customdata=beach_df["grade"],
             ))
 
-        fig.update_yaxis(tickvals=[1, 2, 3, 4, 5], ticktext=["F", "D", "C", "B", "A"])
+        fig.update_yaxes(tickvals=[1, 2, 3, 4, 5], ticktext=["F", "D", "C", "B", "A"])
         fig.update_layout(
             title="Beach Water Quality Grade Trend (6mo)",
             yaxis_title="Grade",
@@ -234,8 +234,8 @@ def render_whale_watching(df_whale: pd.DataFrame, df_kpi: pd.DataFrame):
             secondary_y=True,
         )
 
-        fig.update_yaxis(title_text="Whale Index", secondary_y=False)
-        fig.update_yaxis(title_text="Sightings", secondary_y=True)
+        fig.update_yaxes(title_text="Whale Index", secondary_y=False)
+        fig.update_yaxes(title_text="Sightings", secondary_y=True)
         fig.update_layout(hovermode="x unified")
 
         st.plotly_chart(style_fig(fig, height=320), use_container_width=True)

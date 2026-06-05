@@ -412,7 +412,7 @@ def _chart_tbid_bar(g: dict) -> go.Figure:
     bar_colors = ["#0891B2", "#06B6D4", "#F5B940"]
     line_colors= ["#38BDF8", "#22D3EE", "#FCD34D"]
     # Inside label: dollar amount; outside annotation: % of mid
-    pct_of_mid = [v / tbid_mid * 100 for v in values]
+    pct_of_mid = [v / tbid_mid * 100 if tbid_mid else 0 for v in values]
     sub_labels = ["baseline range", "upside scenario", f"{pct_of_mid[2]:.0f}% of midpoint"]
 
     fig = _dark_fig(height=320)
@@ -640,7 +640,7 @@ def _chart_revenue_funnel(g: dict) -> go.Figure:
     ))
     # Pct-of-national annotations on the right
     for i, (lbl, val) in enumerate(zip(labels, values)):
-        pct = val / national_group * 100
+        pct = val / national_group * 100 if national_group else 0
         fig.add_annotation(
             x=val, y=lbl,
             text=f"  {pct:.2f}% of U.S." if i > 0 else "  100% baseline",
@@ -1308,8 +1308,8 @@ def _chart_group_adr_premium(df_group: pd.DataFrame) -> go.Figure:
     if has_grp and has_trans:
         df_pivot["_premium"] = (
             (df_pivot[("Grp.", "ADR")] - df_pivot[("Trans.", "ADR")])
-            / df_pivot[("Trans.", "ADR")] * 100
-        )
+            / df_pivot[("Trans.", "ADR")].replace(0, float("nan")) * 100
+        ).fillna(0)
         fig.add_trace(go.Scatter(
             x=df_pivot["as_of_date"], y=df_pivot["_premium"],
             mode="lines", name="Group ADR Premium %",

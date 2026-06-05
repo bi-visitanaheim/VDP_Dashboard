@@ -1050,8 +1050,21 @@ st.markdown("""
     transform: none;
     box-shadow: none;
   }
+  .dp-flip-front {
+    transform: rotateY(0deg);
+    z-index: 2;
+  }
   .dp-flip-back {
     transform: rotateY(180deg);
+    z-index: 1;
+  }
+  .dp-flip-card.is-flipped .dp-flip-front {
+    transform: rotateY(180deg);
+    z-index: 1;
+  }
+  .dp-flip-card.is-flipped .dp-flip-back {
+    transform: rotateY(0deg);
+    z-index: 2;
   }
   .dp-flip-hint {
     font-size: 9px;
@@ -11918,15 +11931,20 @@ with tab_ev:
     ]
     for _vic, (_icon, _vcap, _vsub, _vgrad, _vtxt) in zip([_ve_img_c1, _ve_img_c2, _ve_img_c3], _vdp_spots):
         with _vic:
+            # Parse out the visitor share % and description from _vsub
+            _vsub_parts = _vsub.split(" · ", 1)
+            _vshare_pct = _vsub_parts[0] if _vsub_parts else _vsub
+            _vshare_desc = _vsub_parts[1] if len(_vsub_parts) > 1 else ""
             st.markdown(
-                f'<div style="background:{_vgrad};border-radius:14px;padding:24px 16px 20px;'
+                f'<div style="background:{_vgrad};border-radius:14px;padding:14px 16px 16px;'
                 f'text-align:center;margin-bottom:8px;position:relative;overflow:hidden;'
                 f'box-shadow:0 4px 20px rgba(0,0,0,0.25);">'
                 f'<div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;'
                 f'border-radius:50%;background:rgba(0,0,0,0.04);"></div>'
-                f'<div style="font-size:38px;margin-bottom:8px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">{_icon}</div>'
-                f'<div style="font-size:14px;font-weight:800;color:#fff;letter-spacing:-.01em;">{_vcap}</div>'
-                f'<div style="font-size:10px;color:{_vtxt};margin-top:4px;font-weight:500;opacity:0.9;">{_vsub}</div>'
+                f'<div style="font-size:34px;margin-bottom:6px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">{_icon}</div>'
+                f'<div style="font-size:15px;font-weight:800;color:#fff;letter-spacing:-.01em;">{_vcap}</div>'
+                f'<div style="font-size:18px;font-weight:800;color:{_vtxt};margin-top:6px;">{_vshare_pct}</div>'
+                f'<div style="font-size:12px;color:{_vtxt};margin-top:4px;font-weight:500;opacity:0.9;">{_vshare_desc}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -13803,6 +13821,85 @@ with tab_ei:
     else:
         st.info("No events loaded from vdp_events table. Run `python scripts/fetch_vdp_events.py` to seed the calendar.")
 
+    # ── Past / Upcoming Event Cards Grid ───────────────────────────────────────
+    if not df_vdp_events.empty:
+        _eg_df = df_vdp_events.copy()
+        _eg_df["event_date"] = pd.to_datetime(_eg_df["event_date"], errors="coerce")
+        _eg_df = _eg_df.dropna(subset=["event_date"]).sort_values("event_date")
+        _today_eg = pd.Timestamp.today().normalize()
+        _past_evts   = _eg_df[_eg_df["event_date"] < _today_eg]
+        _upcoming_evts = _eg_df[_eg_df["event_date"] >= _today_eg]
+
+        # ── Impact estimates by event type ─────────────────────────────────────
+        def _evt_impact_est(event_type: str, name: str) -> str:
+            name_l = name.lower()
+            et = str(event_type).lower()
+            if any(k in name_l for k in ["ohana", "doheny days", "music"]) or "music" in et:
+                return "ADR lift est. +$100–139 · occ impact +15–25pp"
+            elif any(k in name_l for k in ["car show", "golden sails"]) or "car" in et:
+                return "ADR lift est. +$40–60 · occ impact +8–12pp"
+            elif any(k in name_l for k in ["marathon", "wahine", "turkey trot", "sport", "race"]) or "sport" in et or "race" in et:
+                return "ADR lift est. +$30–50 · occ impact +10–15pp"
+            elif any(k in name_l for k in ["4th", "holiday", "parade", "festival"]) or "holiday" in et:
+                return "ADR lift est. +$30–50 · occ impact +10–15pp"
+            else:
+                return "ADR lift est. +$20–40 · occ impact +5–8pp"
+
+        if not _upcoming_evts.empty:
+            st.markdown(sec_div("📅 Upcoming Events — Anticipated Impact"), unsafe_allow_html=True)
+            _up_cols = st.columns(min(3, len(_upcoming_evts)))
+            for _ui, (_, _ue) in enumerate(_upcoming_evts.iterrows()):
+                with _up_cols[_ui % 3]:
+                    _is_maj = _ue.get("is_major") == 1
+                    _ue_name = str(_ue.get("event_name", "Event"))
+                    _ue_type = str(_ue.get("event_type", "Festival"))
+                    _ue_date = _ue["event_date"].strftime("%b %d, %Y")
+                    _ue_days = (_ue["event_date"] - _today_eg).days
+                    _ue_impact = _evt_impact_est(_ue_type, _ue_name)
+                    _ue_accent = "#21808D" if _is_maj else "#64748B"
+                    st.markdown(
+                        f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;'
+                        f'border-top:3px solid {_ue_accent};border-radius:10px;'
+                        f'padding:12px 14px;margin-bottom:8px;">'
+                        f'<div style="font-size:10px;font-weight:700;color:{_ue_accent};'
+                        f'text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">'
+                        f'{"⭐ MAJOR" if _is_maj else "📌 EVENT"} · {_ue_type.upper()}</div>'
+                        f'<div style="font-size:14px;font-weight:800;color:#0F172A;margin-bottom:4px;">{_ue_name}</div>'
+                        f'<div style="font-size:12px;color:#475569;">📅 {_ue_date}'
+                        f'{"  ·  <strong>" + str(_ue_days) + " days away</strong>" if _ue_days <= 90 else ""}</div>'
+                        f'<div style="font-size:11px;color:#64748B;margin-top:6px;font-style:italic;">{_ue_impact}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+        if not _past_evts.empty:
+            st.markdown(sec_div("🏆 Past Events — Historical Performance"), unsafe_allow_html=True)
+            _ohana_benchmark = "Ohana Fest 2025 benchmark: $14.6M spend · ADR +$139 · 68% OOS · 3.2× multiplier"
+            st.caption(_ohana_benchmark)
+            _past_cols = st.columns(min(3, len(_past_evts)))
+            for _pi, (_, _pe) in enumerate(_past_evts.sort_values("event_date", ascending=False).iterrows()):
+                with _past_cols[_pi % 3]:
+                    _is_maj = _pe.get("is_major") == 1
+                    _pe_name = str(_pe.get("event_name", "Event"))
+                    _pe_type = str(_pe.get("event_type", "Festival"))
+                    _pe_date = _pe["event_date"].strftime("%b %d, %Y")
+                    _pe_accent = "#21808D" if _is_maj else "#94A3B8"
+                    st.markdown(
+                        f'<div style="background:#F8FAFC;border:1px solid #E2E8F0;'
+                        f'border-top:3px solid {_pe_accent};border-radius:10px;'
+                        f'padding:12px 14px;margin-bottom:8px;">'
+                        f'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+                        f'<div style="font-size:10px;font-weight:700;color:{_pe_accent};'
+                        f'text-transform:uppercase;letter-spacing:.06em;">{_pe_type.upper()}</div>'
+                        f'<span style="font-size:9px;background:#E2E8F0;color:#64748B;'
+                        f'padding:2px 8px;border-radius:99px;font-weight:600;">HISTORICAL</span>'
+                        f'</div>'
+                        f'<div style="font-size:14px;font-weight:800;color:#334155;margin:4px 0;">{_pe_name}</div>'
+                        f'<div style="font-size:12px;color:#64748B;">📅 {_pe_date}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
     st.markdown(sec_div("📊 Event Performance Scorecard — STR vs. Baseline"), unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -15206,8 +15303,15 @@ with tab_cs:
         st.markdown(sec_div("🏨 South OC Market Overview"), unsafe_allow_html=True)
 
         # ── Market Overview KPI Cards ──────────────────────────────────────────────
-        st.markdown(_sh("🏨", "South OC Market Overview · Full Year 2024 (Latest Available)", "indigo", "COSTAR"), unsafe_allow_html=True)
-        st.caption("Source: CoStar Hospitality Analytics · Full Year 2024 Annual Data · Extracted from March 2026 CoStar Report · Current STR data (through Feb 2026) is in the Hotel Performance tab")
+        _cs_period = df_cs_snap["report_period"].iloc[0] if not df_cs_snap.empty else "Full Year 2024"
+        # Format as readable label: "2024-12-31" → "Full Year 2024", "2025-06-30" → "Mid-Year 2025", etc.
+        try:
+            _cs_period_dt = pd.to_datetime(_cs_period)
+            _cs_period_label = f"Full Year {_cs_period_dt.year}" if _cs_period_dt.month == 12 else f"{_cs_period_dt.strftime('%b %Y')} (Latest Available)"
+        except Exception:
+            _cs_period_label = str(_cs_period)
+        st.markdown(_sh("🏨", f"South OC Market Overview · {_cs_period_label}", "indigo", "COSTAR"), unsafe_allow_html=True)
+        st.caption(f"Source: CoStar Hospitality Analytics · {_cs_period_label} Annual Data · Extracted from March 2026 CoStar Report · Current STR data (through Feb 2026) is in the Hotel Performance tab")
 
         if not df_cs_snap.empty:
             # Prefer South OC or Newport Beach/Dana Point 2024 annual data
@@ -17176,13 +17280,17 @@ with tab_cs:
                 g_total_rooms = int(g.get("total_market_rooms") or 5120)
                 g_group_rooms = int(g.get("group_primary_rooms") or 3098)
                 g_group_pct   = float(g.get("group_primary_pct") or 0.605)
-                g_tbid_low    = float(g.get("estimated_group_tbid_rev_low") or 0)
-                g_tbid_high   = float(g.get("estimated_group_tbid_rev_high") or 0)
-                g_tot_low     = float(g.get("estimated_group_tot_rev_low") or 0)
-                g_tot_high    = float(g.get("estimated_group_tot_rev_high") or 0)
-                g_uplift      = float(g.get("tbid_uplift_per_5pp_shift") or 0)
-                g_group_adr   = float(g.get("estimated_group_adr") or 0)
-                g_market_adr  = float(g.get("market_blended_adr") or 0)
+                def _gv(col: str, fb: float = 0.0) -> float:
+                    """Safe float accessor for a pandas Series row."""
+                    val = g[col] if col in g.index else g.get(col)
+                    return float(val) if pd.notna(val) else fb
+                g_tbid_low    = _gv("estimated_group_tbid_rev_low")
+                g_tbid_high   = _gv("estimated_group_tbid_rev_high")
+                g_tot_low     = _gv("estimated_group_tot_rev_low")
+                g_tot_high    = _gv("estimated_group_tot_rev_high")
+                g_uplift      = _gv("tbid_uplift_per_5pp_shift")
+                g_group_adr   = _gv("estimated_group_adr")
+                g_market_adr  = _gv("market_blended_adr")
                 g_disc        = float(g.get("benchmark_group_adr_discount_pct") or 0.18)
                 g_share_low   = float(g.get("benchmark_group_demand_share_low") or 0.25)
                 g_share_high  = float(g.get("benchmark_group_demand_share_high") or 0.32)
@@ -17445,7 +17553,11 @@ with tab_cs:
 
         # ── Coastal Intelligence: Beach + Whale + Revenue ────────────────────────
         st.markdown("")
-        render_coastal_intelligence(df_kpi)
+        try:
+            render_coastal_intelligence(df_kpi)
+        except Exception as _ce:
+            _logger.error("Coastal intelligence render error: %s", _ce, exc_info=True)
+            st.error(f"Coastal intelligence temporarily unavailable: {_ce}")
 
 
     # TAB: GROUP & TRAVELER INTELLIGENCE
@@ -17917,7 +18029,10 @@ with tab_dl:
                            file_name="db_inventory.csv", mime="text/csv", key="dl_brain")
 
     # ── App Audit Report ──────────────────────────────────────────────────────
-    render_audit_report()
+    try:
+        render_audit_report()
+    except Exception as _e:
+        st.warning(f"Audit report unavailable: {_e}")
 
     # ── Data Vault Intel Panel ────────────────────────────────────────────────
     try:
