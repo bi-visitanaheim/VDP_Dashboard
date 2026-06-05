@@ -53,6 +53,7 @@ FOLDER_MAP: list[tuple[str, str]] = [
     ("DRIVE_FOLDER_ZARTICO", "data/Zartico"),
     ("DRIVE_FOLDER_VISIT_CA", "data/Visit_California"),
     ("DRIVE_FOLDER_LATER", "data/later"),
+    ("DRIVE_FOLDER_US_TRAVEL", "data/us_travel"),
 ]
 
 # Project root = two levels up from this script (scripts/ → project root)
