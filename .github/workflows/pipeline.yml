@@ -48,6 +48,8 @@ jobs:
   run-pipeline:
     name: ETL Pipeline
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       # -----------------------------------------------------------------------
