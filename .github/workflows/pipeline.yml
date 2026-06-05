@@ -1,0 +1,140 @@
+# ============================================================================
+# VDP Analytics — Automated Pipeline (GitHub Actions)
+# ============================================================================
+#
+# REQUIRED SECRETS (Settings → Secrets and variables → Actions → New repository secret):
+#
+#   GOOGLE_SERVICE_ACCOUNT_JSON  — Full JSON content of the Google service account key.
+#                                  The service account must have Viewer access to all
+#                                  Drive folders listed below.
+#
+#   DRIVE_FOLDER_STR             — Google Drive folder ID for STR Excel exports
+#   DRIVE_FOLDER_DATAFY          — Google Drive folder ID for Datafy CSVs
+#   DRIVE_FOLDER_COSTAR          — Google Drive folder ID for CoStar PDFs/CSVs
+#   DRIVE_FOLDER_ZARTICO         — Google Drive folder ID for Zartico PDF reports
+#   DRIVE_FOLDER_VISIT_CA        — Google Drive folder ID for Visit California Excel files
+#   DRIVE_FOLDER_LATER           — Google Drive folder ID for Later.com CSV exports
+#   DRIVE_FOLDER_US_TRAVEL       — Google Drive folder ID for US Travel Association PDFs
+#
+#   ANTHROPIC_API_KEY            — Anthropic API key (used by compute_insights.py)
+#   FRED_API_KEY                 — FRED API key (used by fetch_fred_data.py)
+#
+# OPTIONAL SECRETS (pipeline continues without them, data will be seeded/skipped):
+#   EIA_API_KEY                  — EIA API key (fetch_eia_gas.py seeds demo data if absent)
+#
+# HOW TO GET A DRIVE FOLDER ID:
+#   Open the folder in Google Drive → copy the ID from the URL:
+#   https://drive.google.com/drive/folders/<FOLDER_ID_HERE>
+#
+# ============================================================================
+
+name: Monthly Pipeline Run
+
+on:
+  # Run automatically on the 1st of each month at 8:00 AM UTC
+  schedule:
+    - cron: "0 8 1 * *"
+
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+    inputs:
+      skip_drive_sync:
+        description: "Skip Google Drive sync (use existing local data files)"
+        type: boolean
+        required: false
+        default: false
+
+jobs:
+  run-pipeline:
+    name: ETL Pipeline
+    runs-on: ubuntu-latest
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout repository with full history (needed for git push back)
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # -----------------------------------------------------------------------
+      # 2. Set up Python 3.11
+      # -----------------------------------------------------------------------
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # -----------------------------------------------------------------------
+      # 3. Install dependencies
+      # -----------------------------------------------------------------------
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install \
+            "google-auth>=2.0.0,<3.0.0" \
+            "google-auth-httplib2>=0.2.0,<1.0.0" \
+            "google-api-python-client>=2.0.0,<3.0.0"
+
+      # -----------------------------------------------------------------------
+      # 4. Write Google service account key from secret to /tmp/sa_key.json
+      #    (Only needed for Drive sync step; skipped if secret is absent)
+      # -----------------------------------------------------------------------
+      - name: Write service account key
+        if: ${{ inputs.skip_drive_sync != true }}
+        run: |
+          echo '${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' > /tmp/sa_key.json
+          chmod 600 /tmp/sa_key.json
+
+      # -----------------------------------------------------------------------
+      # 5. Sync data files from Google Drive
+      # -----------------------------------------------------------------------
+      - name: Sync data from Google Drive
+        if: ${{ inputs.skip_drive_sync != true }}
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: /tmp/sa_key.json
+          DRIVE_FOLDER_STR: ${{ secrets.DRIVE_FOLDER_STR }}
+          DRIVE_FOLDER_DATAFY: ${{ secrets.DRIVE_FOLDER_DATAFY }}
+          DRIVE_FOLDER_COSTAR: ${{ secrets.DRIVE_FOLDER_COSTAR }}
+          DRIVE_FOLDER_ZARTICO: ${{ secrets.DRIVE_FOLDER_ZARTICO }}
+          DRIVE_FOLDER_VISIT_CA: ${{ secrets.DRIVE_FOLDER_VISIT_CA }}
+          DRIVE_FOLDER_LATER: ${{ secrets.DRIVE_FOLDER_LATER }}
+          DRIVE_FOLDER_US_TRAVEL: ${{ secrets.DRIVE_FOLDER_US_TRAVEL }}
+        run: python scripts/sync_from_drive.py
+
+      # -----------------------------------------------------------------------
+      # 6. Run the full ETL pipeline
+      # -----------------------------------------------------------------------
+      - name: Run ETL pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: python scripts/run_pipeline.py
+
+      # -----------------------------------------------------------------------
+      # 7. Commit updated database and any new data files back to main
+      # -----------------------------------------------------------------------
+      - name: Commit updated data to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Stage the SQLite database (always updated after pipeline run)
+          git add data/analytics.sqlite
+
+          # Stage any new or modified files in data/ directories
+          git add data/str/ data/datafy/ data/costar/ data/Zartico/ data/Visit_California/ data/later/ data/us_travel/ 2>/dev/null || true
+
+          # Only commit if there are actual changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit — database and data files are unchanged."
+          else
+            RUN_DATE=$(date -u +"%Y-%m-%d")
+            git commit -m "chore: pipeline run ${RUN_DATE} [automated]"
+            git push origin main
+            echo "Changes committed and pushed to main."
+          fi
