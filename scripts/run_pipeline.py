@@ -155,6 +155,12 @@ STEPS = [
     ("fetch_godly_design", os.path.join(BASE_DIR, "fetch_godly_design.py"),      False),
     # NWS weather.gov — free, no API key; 7-day forecast + 48h hourly + 30-day observations
     ("fetch_nws_weather",  os.path.join(BASE_DIR, "fetch_nws_weather.py"),       False),
+    # BTS T-100 Domestic Segment — SoCal airport route passenger volumes for feeder market analysis
+    ("fetch_bts_routes",      os.path.join(BASE_DIR, "fetch_bts_routes.py"),      False),
+    # InsideAirbnb STVR — Dana Point short-term rental market summary (hotel vs. STVR comparison)
+    ("fetch_inside_airbnb",   os.path.join(BASE_DIR, "fetch_inside_airbnb.py"),   False),
+    # SoCal gas prices — LA Basin weekly retail price (drive-market demand signal)
+    ("fetch_socal_gas",       os.path.join(BASE_DIR, "fetch_socal_gas.py"),       False),
     # ALWAYS LAST — rebuilds all table relationships after every pipeline run
     # Add new relationship entries to build_table_relationships.py when adding new data sources
     ("build_relationships", os.path.join(BASE_DIR, "build_table_relationships.py"), False),
