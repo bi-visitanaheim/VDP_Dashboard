@@ -4942,6 +4942,45 @@ def load_datafy_clusters() -> pd.DataFrame:
     return _sql("SELECT * FROM datafy_overview_cluster_visitation ORDER BY report_period_start DESC", "load_datafy_clusters")
 
 
+# ─── Wave 3 New Data Loaders ──────────────────────────────────────────────────
+
+@st.cache_data(ttl=1800)
+def load_stvr_summary():
+    try:
+        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
+            return pd.read_sql_query("SELECT * FROM stvr_market_summary ORDER BY month", conn)
+    except Exception:
+        _logger.debug("stvr_market_summary unavailable")
+        return pd.DataFrame()
+
+@st.cache_data(ttl=1800)
+def load_bts_routes():
+    try:
+        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
+            return pd.read_sql_query("SELECT * FROM bts_route_passengers ORDER BY year, quarter, passengers DESC", conn)
+    except Exception:
+        _logger.debug("bts_route_passengers unavailable")
+        return pd.DataFrame()
+
+@st.cache_data(ttl=3600)
+def load_socal_gas():
+    try:
+        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
+            return pd.read_sql_query("SELECT * FROM socal_gas_prices ORDER BY period", conn)
+    except Exception:
+        _logger.debug("socal_gas_prices unavailable")
+        return pd.DataFrame()
+
+@st.cache_data(ttl=300)
+def load_weather_forecast():
+    try:
+        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
+            return pd.read_sql_query("SELECT * FROM weather_forecast ORDER BY period_number", conn)
+    except Exception:
+        _logger.debug("weather_forecast unavailable")
+        return pd.DataFrame()
+
+
 # ─── New External Data Loaders ────────────────────────────────────────────────
 
 @st.cache_data(ttl=300)
@@ -6510,6 +6549,292 @@ def event_stat(val, label, icon: str = "", date: str = "") -> str:
         f'</div>'
     )
 
+
+# ─── Wave 3 Chart Functions ───────────────────────────────────────────────────
+
+def render_occ_heatmap(df_kpi):
+    """12-month occupancy heatmap calendar."""
+    if df_kpi.empty:
+        return
+    df = df_kpi.copy()
+    df['as_of_date'] = pd.to_datetime(df['as_of_date'])
+    df = df[df['as_of_date'] >= (pd.Timestamp.now() - pd.DateOffset(months=12))]
+    if df.empty:
+        return
+    df['week'] = df['as_of_date'].dt.isocalendar().week.astype(int)
+    df['dow'] = df['as_of_date'].dt.dayofweek  # 0=Mon
+    df['month_label'] = df['as_of_date'].dt.strftime('%b %Y')
+
+    fig = go.Figure(go.Heatmap(
+        x=df['as_of_date'].dt.strftime('%Y-%m-%d'),
+        y=df['as_of_date'].dt.strftime('%a'),
+        z=df['occ_pct'],
+        colorscale=[[0, '#e8f4fd'], [0.5, '#2196F3'], [0.8, '#FF9800'], [1.0, '#F44336']],
+        zmin=40, zmax=100,
+        colorbar=dict(title='Occ %', thickness=12),
+        hovertemplate='%{x}<br>Occ: %{z:.1f}%<extra></extra>'
+    ))
+    fig.update_layout(
+        title='Rolling 12-Month Occupancy Calendar',
+        height=200,
+        margin=dict(l=40, r=20, t=40, b=20),
+        xaxis=dict(showgrid=False, tickangle=-45, tickfont=dict(size=9)),
+        yaxis=dict(showgrid=False, categoryorder='array', categoryarray=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'])
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_comp_set_radar(df_str):
+    """Dana Point vs comp set radar chart across 6 metrics."""
+    import plotly.express as px
+    try:
+        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
+            df_group = pd.read_sql_query("""
+                SELECT market, metric_name, AVG(metric_value) as avg_val
+                FROM fact_str_metrics
+                WHERE grain='daily' AND as_of_date >= date('now','-90 days')
+                  AND metric_name IN ('occ','adr','revpar')
+                GROUP BY market, metric_name
+            """, conn)
+    except Exception:
+        return
+
+    if df_group.empty:
+        return
+
+    pivot = df_group.pivot_table(index='market', columns='metric_name', values='avg_val').reset_index()
+    if 'occ' in pivot.columns:
+        pivot['occ'] = pivot['occ'] * 100  # decimal → pct
+
+    markets = pivot['market'].tolist()
+    categories = ['Occupancy %', 'ADR ($)', 'RevPAR ($)']
+
+    fig = go.Figure()
+    colors = ['#1a3a5c','#2196F3','#FF9800','#4CAF50','#9C27B0','#F44336']
+    for i, row in pivot.iterrows():
+        vals = []
+        for col in ['occ','adr','revpar']:
+            if col in pivot.columns and pd.notna(row.get(col)):
+                col_max = pivot[col].max()
+                vals.append((row[col] / col_max * 100) if col_max > 0 else 0)
+            else:
+                vals.append(0)
+        vals_closed = vals + [vals[0]]
+        cats_closed = categories + [categories[0]]
+        fig.add_trace(go.Scatterpolar(
+            r=vals_closed, theta=cats_closed,
+            fill='toself', name=row['market'],
+            line=dict(color=colors[i % len(colors)]),
+            opacity=0.7
+        ))
+
+    fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 110])),
+        title='Comp Set Performance Index (90-Day Avg, Normalized)',
+        height=420,
+        legend=dict(font=dict(size=10))
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption("Values normalized to 100 = best performer in set. Source: STR.")
+
+
+def render_adr_gas_scatter(df_kpi, df_gas):
+    """ADR vs SoCal gas price correlation scatter."""
+    import plotly.express as px
+    if df_kpi.empty or df_gas.empty:
+        st.info("Gas price data not yet available.")
+        return
+
+    df_kpi = df_kpi.copy()
+    df_kpi['as_of_date'] = pd.to_datetime(df_kpi['as_of_date'])
+    df_kpi['month'] = df_kpi['as_of_date'].dt.to_period('M').astype(str)
+    monthly_adr = df_kpi.groupby('month')['adr'].mean().reset_index()
+
+    df_gas = df_gas.copy()
+    df_gas['month'] = pd.to_datetime(df_gas['period']).dt.to_period('M').astype(str)
+    monthly_gas = df_gas.groupby('month')['price_per_gallon'].mean().reset_index()
+
+    merged = monthly_adr.merge(monthly_gas, on='month')
+    if merged.empty:
+        return
+
+    fig = px.scatter(merged, x='price_per_gallon', y='adr',
+        trendline='ols', text='month',
+        labels={'price_per_gallon': 'SoCal Gas Price ($/gal)', 'adr': 'Dana Point ADR ($)'},
+        title='ADR vs. SoCal Gas Price Correlation',
+        color_discrete_sequence=['#1a3a5c'])
+    fig.update_traces(textposition='top center', textfont_size=8)
+    fig.update_layout(height=380)
+    st.plotly_chart(fig, use_container_width=True)
+
+    corr = merged['adr'].corr(merged['price_per_gallon'])
+    direction = "positive" if corr > 0 else "negative"
+    st.caption(f"Correlation: {corr:.2f} ({direction}). {'Higher gas prices correlate with lower ADR, consistent with drive-market sensitivity.' if corr < -0.3 else 'Weak correlation suggests other demand drivers dominate over gas prices.'}")
+
+
+def render_dma_bubble_map(df_dma):
+    """US map with DMA bubbles sized by visitor days, colored by spend efficiency."""
+    import plotly.express as px
+    if df_dma.empty:
+        return
+
+    dma_coords = {
+        'Los Angeles': (34.05, -118.25),
+        'San Diego': (32.72, -117.16),
+        'San Francisco': (37.77, -122.42),
+        'Phoenix': (33.45, -112.07),
+        'Las Vegas': (36.17, -115.14),
+        'Salt Lake City': (40.76, -111.89),
+        'Denver': (39.74, -104.98),
+        'Dallas': (32.78, -96.80),
+        'Chicago': (41.88, -87.63),
+        'New York': (40.71, -74.01),
+        'Seattle': (47.61, -122.33),
+        'Portland': (45.52, -122.68),
+        'Boston': (42.36, -71.06),
+        'Washington DC': (38.91, -77.04),
+        'Atlanta': (33.75, -84.39),
+    }
+
+    df = df_dma.copy()
+    df['lat'] = df['dma'].map(lambda d: next((v[0] for k,v in dma_coords.items() if k.lower() in d.lower()), None))
+    df['lon'] = df['dma'].map(lambda d: next((v[1] for k,v in dma_coords.items() if k.lower() in d.lower()), None))
+    df = df.dropna(subset=['lat','lon'])
+
+    if df.empty:
+        st.info("DMA coordinate mapping not available for current markets.")
+        return
+
+    size_col = 'visitor_days_share_pct' if 'visitor_days_share_pct' in df.columns else df.select_dtypes('number').columns[0]
+    color_col = 'avg_spend_usd' if 'avg_spend_usd' in df.columns else size_col
+
+    fig = px.scatter_geo(df, lat='lat', lon='lon',
+        size=size_col, color=color_col,
+        hover_name='dma',
+        hover_data={size_col: ':.1f', color_col: ':,.0f'},
+        color_continuous_scale='Blues',
+        size_max=40,
+        scope='usa',
+        title='Visitor Origin Markets — Bubble Size: Visitor Days Share, Color: Avg Spend/Trip')
+    fig.update_layout(height=420, geo=dict(showland=True, landcolor='#f0f0f0', showlakes=False))
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_feeder_sankey(df_dma, df_spending):
+    """Sankey: Origin DMA → Transport Mode → Spend Category."""
+    if df_dma.empty:
+        return
+
+    top_dmas = df_dma.nlargest(5, 'visitor_days_share_pct')['dma'].tolist() if 'visitor_days_share_pct' in df_dma.columns else df_dma['dma'].head(5).tolist()
+    transport_modes = ['Drive Market', 'Fly Market']
+    spend_cats = ['Accommodation', 'Dining', 'Retail']
+
+    all_nodes = top_dmas + transport_modes + spend_cats
+    node_idx = {n: i for i, n in enumerate(all_nodes)}
+
+    sources, targets, values, labels_list = [], [], [], all_nodes
+
+    drive_dmas = {'Los Angeles', 'San Diego', 'San Francisco', 'Las Vegas', 'Phoenix'}
+    for dma in top_dmas:
+        share = df_dma[df_dma['dma']==dma]['visitor_days_share_pct'].values[0] if 'visitor_days_share_pct' in df_dma.columns else 10
+        is_drive = any(d.lower() in dma.lower() for d in drive_dmas)
+        sources.append(node_idx[dma]); targets.append(node_idx['Drive Market' if is_drive else 'Fly Market']); values.append(float(share))
+
+    drive_total = sum(float(df_dma[df_dma['dma']==d]['visitor_days_share_pct'].values[0]) for d in top_dmas if any(x.lower() in d.lower() for x in drive_dmas) and 'visitor_days_share_pct' in df_dma.columns and len(df_dma[df_dma['dma']==d]) > 0)
+    fly_total = sum(float(df_dma[df_dma['dma']==d]['visitor_days_share_pct'].values[0]) for d in top_dmas if not any(x.lower() in d.lower() for x in drive_dmas) and 'visitor_days_share_pct' in df_dma.columns and len(df_dma[df_dma['dma']==d]) > 0)
+    for mode, total in [('Drive Market', drive_total), ('Fly Market', fly_total)]:
+        for cat, pct in [('Accommodation', 0.35), ('Dining', 0.30), ('Retail', 0.35)]:
+            sources.append(node_idx[mode]); targets.append(node_idx[cat]); values.append(total * pct)
+
+    fig = go.Figure(go.Sankey(
+        node=dict(label=labels_list, pad=15, thickness=20,
+                  color=['#1a3a5c']*len(top_dmas) + ['#2196F3','#FF9800'] + ['#4CAF50','#E91E63','#9C27B0']),
+        link=dict(source=sources, target=targets, value=values, color='rgba(33,150,243,0.3)')
+    ))
+    fig.update_layout(title='Visitor Journey: Origin Market → Transport Mode → Spend Category', height=380)
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption("Spend splits estimated from Datafy category data. Drive vs. fly classification based on distance from Dana Point.")
+
+
+def render_booking_pace(df_kpi):
+    """Rolling 90-day occupancy vs same-period-last-year."""
+    if df_kpi.empty:
+        return
+
+    df = df_kpi.copy()
+    df['as_of_date'] = pd.to_datetime(df['as_of_date'])
+    df = df.sort_values('as_of_date')
+
+    end = df['as_of_date'].max()
+    start = end - pd.Timedelta(days=90)
+    current = df[(df['as_of_date'] >= start) & (df['as_of_date'] <= end)][['as_of_date','occ_pct','adr','revpar']].copy()
+
+    prior = df[(df['as_of_date'] >= start - pd.DateOffset(years=1)) &
+               (df['as_of_date'] <= end - pd.DateOffset(years=1))][['as_of_date','occ_pct']].copy()
+    prior['as_of_date'] = prior['as_of_date'] + pd.DateOffset(years=1)
+    prior = prior.rename(columns={'occ_pct': 'occ_pct_prior'})
+
+    merged = current.merge(prior, on='as_of_date', how='left')
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=merged['as_of_date'], y=merged['occ_pct'],
+        name='Current Year', line=dict(color='#1a3a5c', width=2.5)))
+    if 'occ_pct_prior' in merged.columns and merged['occ_pct_prior'].notna().any():
+        fig.add_trace(go.Scatter(x=merged['as_of_date'], y=merged['occ_pct_prior'],
+            name='Prior Year', line=dict(color='#90CAF9', width=1.5, dash='dash')))
+
+    fig.add_hline(y=80, line_dash='dot', line_color='#FF9800',
+        annotation_text='80% Compression', annotation_position='right')
+
+    fig.update_layout(
+        title='Rolling 90-Day Occupancy Pace vs. Prior Year',
+        xaxis_title='Date', yaxis_title='Occupancy %',
+        yaxis=dict(range=[30, 105]),
+        height=360, legend=dict(orientation='h', y=1.02)
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_content_funnel():
+    """Social engagement → sessions → attributed trips funnel."""
+    try:
+        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
+            eng_df = pd.read_sql_query("""
+                SELECT COALESCE(SUM(likes + comments), 0) as total_eng
+                FROM later_ig_posts
+                WHERE date >= date('now','-30 days')
+            """, conn)
+            engagements = int(eng_df['total_eng'].iloc[0]) if not eng_df.empty else 0
+
+            sess_df = pd.read_sql_query("""
+                SELECT COALESCE(SUM(sessions), 0) as total_sessions
+                FROM datafy_social_traffic_sources
+                WHERE channel LIKE '%social%' OR channel LIKE '%Social%'
+            """, conn)
+            sessions = int(sess_df['total_sessions'].iloc[0]) if not sess_df.empty else 0
+
+            trips_df = pd.read_sql_query("""
+                SELECT COALESCE(SUM(attributable_trips), 0) as total_trips
+                FROM datafy_attribution_website_kpis
+            """, conn)
+            trips = int(trips_df['total_trips'].iloc[0]) if not trips_df.empty else 0
+    except Exception:
+        return
+
+    if engagements == 0 and sessions == 0 and trips == 0:
+        return
+
+    fig = go.Figure(go.Funnel(
+        y=['Social Engagements', 'Website Sessions', 'Attributed Trips'],
+        x=[max(engagements, 1), max(sessions, 1), max(trips, 1)],
+        textinfo='value+percent initial',
+        marker=dict(color=['#1a3a5c', '#2196F3', '#4CAF50'])
+    ))
+    fig.update_layout(title='Content-to-Visit Attribution Funnel (30-Day)', height=320)
+    st.plotly_chart(fig, use_container_width=True)
+
+
+# ─── End Wave 3 Chart Functions ───────────────────────────────────────────────
 
 def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
     """Deep Ocean dark chart theme — Dana Point PULSE v9.
@@ -9533,6 +9858,34 @@ if 'tab_index_to_select' in st.session_state and st.session_state['tab_index_to_
     _requested_tab_idx = st.session_state['tab_index_to_select']
     st.session_state['tab_index_to_select'] = None  # Clear after reading
 
+# ── Board Report Mode (?view=board) ──────────────────────────────────────────
+_view_mode = st.query_params.get("view", "").lower()
+if _view_mode == "board":
+    st.title("Dana Point PULSE — Board Report")
+    st.caption(f"Generated {datetime.now().strftime('%B %d, %Y')}")
+
+    _br_kpi = load_kpi_daily()
+    if not _br_kpi.empty:
+        _br_latest = _br_kpi.iloc[-1]
+        _br_c1, _br_c2, _br_c3, _br_c4 = st.columns(4)
+        _br_c1.metric("Occupancy", f"{_br_latest.get('occ_pct',0):.1f}%", f"{_br_latest.get('occ_yoy',0):+.1f}% YOY")
+        _br_c2.metric("ADR", f"${_br_latest.get('adr',0):,.0f}", f"{_br_latest.get('adr_yoy',0):+.1f}% YOY")
+        _br_c3.metric("RevPAR", f"${_br_latest.get('revpar',0):,.0f}", f"{_br_latest.get('revpar_yoy',0):+.1f}% YOY")
+        _br_c4.metric("Data Through", pd.to_datetime(_br_kpi['as_of_date'].max()).strftime('%b %d, %Y'))
+
+    _br_ins = load_insights()
+    if not _br_ins.empty:
+        for _br_aud, _br_label in [('dmo','DMO Strategy'),('city','City/Finance'),('visitor','Visitor Intel'),('resident','Community'),('cross','Hidden Signals')]:
+            _br_subset = _br_ins[_br_ins['audience']==_br_aud].head(2)
+            if not _br_subset.empty:
+                st.subheader(_br_label)
+                for _, _br_row in _br_subset.iterrows():
+                    _br_body = str(_br_row.get('body',''))
+                    st.markdown(f"**{_br_row['headline']}** — {_br_body[:200]}")
+
+    render_occ_heatmap(load_kpi_daily())
+    st.stop()
+
 _requested_tab = st.query_params.get('tab_index')
 if _requested_tab:
     _requested_tab_idx = int(_requested_tab)
@@ -9981,6 +10334,13 @@ with tab_ov:
             )
     except Exception as e:
         _logger.debug(f"Failed to render hidden signals: {str(e)}")
+
+    # ── OCCUPANCY CALENDAR ───────────────────────────────────────────────────────
+    try:
+        st.markdown('<div style="font-size:1.05rem;font-weight:800;letter-spacing:-0.02em;margin:24px 0 8px;">📅 Occupancy Calendar</div>', unsafe_allow_html=True)
+        render_occ_heatmap(load_kpi_daily())
+    except Exception as _occ_cal_e:
+        _logger.debug("Occupancy calendar error: %s", _occ_cal_e)
 
     # ── EXPLORE SECTION: Large Exploration Cards with Better Spacing ──────────────
 
@@ -11650,6 +12010,13 @@ with tab_fo:
     except Exception:
         pass
 
+    # ── Booking Pace ─────────────────────────────────────────────────────────
+    try:
+        st.markdown('<div style="font-size:1.05rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:8px;">📈 Booking Pace vs. Prior Year</div>', unsafe_allow_html=True)
+        render_booking_pace(load_kpi_daily())
+    except Exception as _bp_e:
+        _logger.debug("Booking pace error: %s", _bp_e)
+
     # ── Key Forward Metrics ──────────────────────────────────────────────────
     st.markdown(
         '<div style="font-size:1.05rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:12px;">'
@@ -13120,6 +13487,13 @@ with tab_ev:
             _logger.debug(f"Failed to render social summary: {str(e)}")
             st.info("Social media summary not available.")
 
+        # ── Content Attribution Funnel ────────────────────────────────────────────
+        st.markdown(sec_div("📊 Content-to-Visit Attribution Funnel"), unsafe_allow_html=True)
+        try:
+            render_content_funnel()
+        except Exception as _cf_e:
+            _logger.debug("Content funnel error: %s", _cf_e)
+
         st.markdown("---")
 
         # ── Zartico Historical Reference ─────────────────────────────────────────
@@ -13895,6 +14269,21 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
             '</div>',
             unsafe_allow_html=True,
         )
+
+
+    # ── Origin Map ───────────────────────────────────────────────────────────────
+    st.markdown(sec_div("🗺️ Visitor Origin Map"), unsafe_allow_html=True)
+    try:
+        render_dma_bubble_map(df_dfy_dma)
+    except Exception as _map_e:
+        _logger.debug("DMA bubble map error: %s", _map_e)
+
+    # ── Visitor Journey Sankey ────────────────────────────────────────────────────
+    st.markdown(sec_div("🔀 Visitor Journey Flow"), unsafe_allow_html=True)
+    try:
+        render_feeder_sankey(df_dfy_dma, pd.DataFrame())
+    except Exception as _sk_e:
+        _logger.debug("Feeder Sankey error: %s", _sk_e)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -16669,6 +17058,20 @@ with tab_cs:
 
     # ── External Signals → sub-tab 2 ──────────────────────────────────────────
     with _cs_t2:
+        # ── Comp Set Benchmarking ─────────────────────────────────────────────────
+        st.markdown(sec_div("🎯 Comp Set Benchmarking"), unsafe_allow_html=True)
+        try:
+            render_comp_set_radar(None)
+        except Exception as _csr_e:
+            _logger.debug("Comp set radar error: %s", _csr_e)
+
+        # ── ADR vs Gas Price Correlation ──────────────────────────────────────────
+        st.markdown(sec_div("⛽ ADR vs. SoCal Gas Price Correlation"), unsafe_allow_html=True)
+        try:
+            render_adr_gas_scatter(load_kpi_daily(), load_socal_gas())
+        except Exception as _adr_gas_e:
+            _logger.debug("ADR/gas scatter error: %s", _adr_gas_e)
+
         # ── FRED Economic Climate ─────────────────────────────────────────────────
         st.markdown(sec_div("📉 Economic Climate Indicators"), unsafe_allow_html=True)
         st.markdown(_sh("📉", "Economic Climate Indicators", "indigo", "FRED · Federal Reserve"), unsafe_allow_html=True)
