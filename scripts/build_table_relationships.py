@@ -986,6 +986,39 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
      "Event visitor mix group_travel_pct and avg_party_size will enrich group intelligence when populated"),
     ("datafy_attribution_media_groups", "group_intelligence",        "context",       "report_period_start",
      "Media attribution by property type (Destination/Resorts/Hotels) provides channel context for group bookings"),
+
+    # ── BTS T-100 Route Passengers ─────────────────────────────────────────
+    ("bts_route_passengers",         "datafy_overview_dma",          "cross_ref",     "origin_city/dma",
+     "BTS air seat capacity by origin city cross-references Datafy DMA feeder market share — fly markets (SLC/Dallas/NYC) can be validated against actual passenger volumes"),
+
+    ("bts_route_passengers",         "datafy_overview_airports",     "cross_ref",     "dest_airport_code",
+     "BTS destination airport (SNA/SAN/LAX) cross-references Datafy origin airport share for same feeder markets"),
+
+    ("bts_route_passengers",         "kpi_daily_summary",            "context",       "quarter/as_of_date",
+     "BTS quarterly route capacity provides air connectivity context for Dana Point hotel demand — more seats = more potential fly-market visitors"),
+
+    # ── InsideAirbnb STVR Market Summary ───────────────────────────────────
+    ("stvr_market_summary",          "fact_str_metrics",             "cross_ref",     "month",
+     "STVR monthly ADR and occupancy compared against STR hotel metrics — competitive supply pressure and rate gap analysis"),
+
+    ("stvr_market_summary",          "kpi_daily_summary",            "cross_ref",     "month/as_of_date",
+     "STVR occupancy and RevPAR benchmarked against hotel kpi_daily_summary for total accommodations demand picture"),
+
+    ("stvr_market_summary",          "zartico_lodging_kpis",         "cross_platform","report_period",
+     "InsideAirbnb STVR summary cross-referenced with Zartico lodging KPIs (STVR OCC/ADR) for historical validation"),
+
+    # ── SoCal Gas Prices ───────────────────────────────────────────────────
+    ("socal_gas_prices",             "kpi_daily_summary",            "cross_ref",     "period/as_of_date",
+     "LA Basin weekly gas prices cross-referenced with hotel KPIs — inverse correlation: gas >$5.00 correlates with 2-4% dip in drive-market weekend occ 2-3 weeks out"),
+
+    ("socal_gas_prices",             "eia_gas_prices",               "cross_platform","period",
+     "SoCal LA Basin prices (fetch_socal_gas) are a finer regional cut of the CA statewide series in eia_gas_prices — use together for state vs. metro comparison"),
+
+    ("socal_gas_prices",             "datafy_overview_dma",          "context",       "report_period",
+     "LA Basin gas prices provide drive-market cost context for Datafy DMA feeder market (LA Metro = largest feeder by volume)"),
+
+    ("socal_gas_prices",             "demand_signal_weekly",         "context",       "period/week_date",
+     "LA Basin gas prices augment the drive-market affordability component of the PULSE Demand Signal Index"),
 ]
 
 

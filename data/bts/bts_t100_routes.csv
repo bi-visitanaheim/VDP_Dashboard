@@ -1,0 +1,69 @@
+year,quarter,origin_city,origin_state,dest_airport_code,dest_city,carrier,passengers,seats,departures,avg_fare_usd
+2024,1,Los Angeles,CA,SNA,Santa Ana,Southwest,185000,210000,1400,189
+2024,2,Los Angeles,CA,SNA,Santa Ana,Southwest,210000,238000,1580,205
+2024,3,Los Angeles,CA,SNA,Santa Ana,Southwest,228000,258000,1720,221
+2024,4,Los Angeles,CA,SNA,Santa Ana,Southwest,197000,224000,1490,198
+2024,1,Salt Lake City,UT,SNA,Santa Ana,Delta,82000,98000,680,247
+2024,2,Salt Lake City,UT,SNA,Santa Ana,Delta,96000,114000,790,268
+2024,3,Salt Lake City,UT,SNA,Santa Ana,Delta,104000,122000,850,281
+2024,4,Salt Lake City,UT,SNA,Santa Ana,Delta,88000,104000,720,259
+2024,1,Dallas,TX,SNA,Santa Ana,American,74000,89000,580,312
+2024,2,Dallas,TX,SNA,Santa Ana,American,88000,105000,680,338
+2024,3,Dallas,TX,SNA,Santa Ana,American,95000,114000,740,351
+2024,4,Dallas,TX,SNA,Santa Ana,American,79000,95000,620,326
+2024,1,New York,NY,SNA,Santa Ana,JetBlue,61000,74000,420,389
+2024,2,New York,NY,SNA,Santa Ana,JetBlue,73000,88000,500,418
+2024,3,New York,NY,SNA,Santa Ana,JetBlue,79000,95000,540,432
+2024,4,New York,NY,SNA,Santa Ana,JetBlue,66000,80000,450,401
+2024,1,Phoenix,AZ,SNA,Santa Ana,Southwest,95000,114000,780,142
+2024,2,Phoenix,AZ,SNA,Santa Ana,Southwest,112000,134000,920,158
+2024,3,Phoenix,AZ,SNA,Santa Ana,Southwest,121000,145000,990,167
+2024,4,Phoenix,AZ,SNA,Santa Ana,Southwest,102000,122000,840,149
+2024,1,Denver,CO,SNA,Santa Ana,United,68000,82000,560,274
+2024,2,Denver,CO,SNA,Santa Ana,United,81000,97000,660,295
+2024,3,Denver,CO,SNA,Santa Ana,United,88000,106000,720,308
+2024,4,Denver,CO,SNA,Santa Ana,United,72000,87000,590,282
+2024,1,Chicago,IL,SNA,Santa Ana,United,57000,69000,380,362
+2024,2,Chicago,IL,SNA,Santa Ana,United,68000,82000,450,388
+2024,3,Chicago,IL,SNA,Santa Ana,United,74000,89000,490,401
+2024,4,Chicago,IL,SNA,Santa Ana,United,61000,73000,410,374
+2024,1,Seattle,WA,SNA,Santa Ana,Alaska,78000,94000,640,218
+2024,2,Seattle,WA,SNA,Santa Ana,Alaska,93000,111000,760,236
+2024,3,Seattle,WA,SNA,Santa Ana,Alaska,101000,121000,820,248
+2024,4,Seattle,WA,SNA,Santa Ana,Alaska,84000,101000,680,224
+2024,1,San Francisco,CA,SNA,Santa Ana,United,142000,170000,1140,168
+2024,2,San Francisco,CA,SNA,Santa Ana,United,168000,201000,1340,182
+2024,3,San Francisco,CA,SNA,Santa Ana,United,182000,218000,1450,191
+2024,4,San Francisco,CA,SNA,Santa Ana,United,152000,182000,1210,175
+2024,1,Portland,OR,SNA,Santa Ana,Alaska,52000,63000,430,241
+2024,2,Portland,OR,SNA,Santa Ana,Alaska,62000,74000,510,259
+2024,3,Portland,OR,SNA,Santa Ana,Alaska,67000,81000,550,271
+2024,4,Portland,OR,SNA,Santa Ana,Alaska,55000,66000,450,248
+2024,1,Salt Lake City,UT,SAN,San Diego,Delta,105000,126000,870,231
+2024,2,Salt Lake City,UT,SAN,San Diego,Delta,124000,148000,1020,252
+2024,3,Salt Lake City,UT,SAN,San Diego,Delta,135000,161000,1110,264
+2024,4,Salt Lake City,UT,SAN,San Diego,Delta,112000,134000,920,242
+2024,1,Dallas,TX,SAN,San Diego,Southwest,118000,142000,930,298
+2024,2,Dallas,TX,SAN,San Diego,Southwest,140000,168000,1100,321
+2024,3,Dallas,TX,SAN,San Diego,Southwest,152000,182000,1190,334
+2024,4,Dallas,TX,SAN,San Diego,Southwest,126000,151000,990,308
+2024,1,New York,NY,SAN,San Diego,American,88000,106000,600,412
+2024,2,New York,NY,SAN,San Diego,American,104000,125000,710,441
+2024,3,New York,NY,SAN,San Diego,American,113000,135000,770,458
+2024,4,New York,NY,SAN,San Diego,American,94000,113000,640,426
+2024,1,Denver,CO,SAN,San Diego,Frontier,91000,109000,750,258
+2024,2,Denver,CO,SAN,San Diego,Frontier,108000,130000,890,278
+2024,3,Denver,CO,SAN,San Diego,Frontier,117000,140000,960,291
+2024,4,Denver,CO,SAN,San Diego,Frontier,97000,116000,800,265
+2024,1,Chicago,IL,LAX,Los Angeles,United,410000,492000,2740,338
+2024,2,Chicago,IL,LAX,Los Angeles,United,485000,582000,3240,362
+2024,3,Chicago,IL,LAX,Los Angeles,United,526000,631000,3510,378
+2024,4,Chicago,IL,LAX,Los Angeles,United,438000,526000,2920,348
+2024,1,New York,NY,LAX,Los Angeles,Delta,520000,624000,3480,394
+2024,2,New York,NY,LAX,Los Angeles,Delta,615000,738000,4120,421
+2024,3,New York,NY,LAX,Los Angeles,Delta,668000,802000,4470,438
+2024,4,New York,NY,LAX,Los Angeles,Delta,558000,670000,3730,406
+2024,1,Dallas,TX,LAX,Los Angeles,American,342000,410000,2280,311
+2024,2,Dallas,TX,LAX,Los Angeles,American,405000,486000,2700,334
+2024,3,Dallas,TX,LAX,Los Angeles,American,440000,528000,2930,347
+2024,4,Dallas,TX,LAX,Los Angeles,American,364000,437000,2430,320

@@ -45,7 +45,8 @@ Pipeline steps:
   27. fetch_beach_water_quality.py — Heal the Bay beach grades → beach_water_quality_weekly (skip-safe)
   28. fetch_whale_watching.py      — Whale watching charter activity index → whale_watching_activity (skip-safe)
   29. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
-  30. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
+  30. fetch_nws_weather.py        — NWS weather.gov forecast + observations → weather_forecast, weather_hourly, weather_observations (skip-safe, no key)
+  31. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
 
 # NOTE: All skip-safe steps use try/except and log WARN rather than raising — this prevents
 # a single broken data source from crashing the dashboard.
@@ -152,6 +153,14 @@ STEPS = [
     ("fetch_whale_watching",      os.path.join(BASE_DIR, "fetch_whale_watching.py"),      False),
     # Design inspiration — no DB writes; saves to data/design/godly_inspiration.json
     ("fetch_godly_design", os.path.join(BASE_DIR, "fetch_godly_design.py"),      False),
+    # NWS weather.gov — free, no API key; 7-day forecast + 48h hourly + 30-day observations
+    ("fetch_nws_weather",  os.path.join(BASE_DIR, "fetch_nws_weather.py"),       False),
+    # BTS T-100 Domestic Segment — SoCal airport route passenger volumes for feeder market analysis
+    ("fetch_bts_routes",      os.path.join(BASE_DIR, "fetch_bts_routes.py"),      False),
+    # InsideAirbnb STVR — Dana Point short-term rental market summary (hotel vs. STVR comparison)
+    ("fetch_inside_airbnb",   os.path.join(BASE_DIR, "fetch_inside_airbnb.py"),   False),
+    # SoCal gas prices — LA Basin weekly retail price (drive-market demand signal)
+    ("fetch_socal_gas",       os.path.join(BASE_DIR, "fetch_socal_gas.py"),       False),
     # ALWAYS LAST — rebuilds all table relationships after every pipeline run
     # Add new relationship entries to build_table_relationships.py when adding new data sources
     ("build_relationships", os.path.join(BASE_DIR, "build_table_relationships.py"), False),
