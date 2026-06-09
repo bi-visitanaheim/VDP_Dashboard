@@ -563,6 +563,9 @@ Layer 1 (STR, Datafy, CoStar) = current truth. Layer 1.5 (Zartico) = historical 
   Columns: source, grain, as_of_date, market, segment, metric_name, metric_value, unit, data_period (current/pct_change/prior_year).
 - `fact_str_response_markets` — Property roster for all 6 comp markets. Each hotel in the STR comp set with \
   STR code, rooms, city/state. Columns: grain, as_of_date, market, property_name, city_state, zip_code, str_code, rooms.
+- `str_holiday_calendar` — Holiday dates TY vs LY from STR Translation Table sheets. Explains YOY variance in \
+  weeks containing holidays (e.g., Easter shifted 2 weeks = occupancy comparison is misleading). \
+  Columns: as_of_date, year_label (this_year/last_year), holiday_name, holiday_date, weekdays, weekend_days.
 - `kpi_daily_summary` — Wide-format daily KPIs with YOY deltas and compression flags. \
   Columns: as_of_date, occ_pct, adr, revpar, occ_yoy, adr_yoy, revpar_yoy, is_occ_80, is_occ_90.
 - `kpi_compression_quarterly` — Days per quarter above 80% / 90% occupancy. \
@@ -5204,6 +5207,23 @@ def load_str_compset(grain: str = "weekly") -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
     df["as_of_date"] = pd.to_datetime(df["as_of_date"])
+    return df
+
+
+@st.cache_data(ttl=1800)
+def load_str_holiday_calendar() -> pd.DataFrame:
+    """Load holiday calendar TY vs LY from str_holiday_calendar."""
+    conn = get_connection()
+    df = pd.read_sql_query(
+        """SELECT as_of_date, year_label, holiday_name, holiday_date,
+                  holiday_raw, weekdays, weekend_days
+           FROM str_holiday_calendar
+           ORDER BY as_of_date, year_label, holiday_name""",
+        conn,
+    )
+    conn.close()
+    if not df.empty:
+        df["as_of_date"] = pd.to_datetime(df["as_of_date"])
     return df
 
 
@@ -11342,7 +11362,7 @@ with tab_tr:
     st.markdown("---")
     st.markdown(_sh("🏁", "Competitive Set & Segment Mix", "indigo", "STR MULTI-SEG"), unsafe_allow_html=True)
 
-    _cs_tab1, _cs_tab2, _cs_tab3 = st.tabs(["📊 Market Comparison", "🍰 Segment Mix", "🏨 Property Roster"])
+    _cs_tab1, _cs_tab2, _cs_tab3, _cs_tab4 = st.tabs(["📊 Market Comparison", "🍰 Segment Mix", "🏨 Property Roster", "📅 Holiday Context"])
 
     with _cs_tab1:
         try:
@@ -11527,6 +11547,51 @@ with tab_tr:
         except Exception as _rpe:
             _logger.debug("Property roster tab error: %s", _rpe)
             st.warning("Property roster unavailable.")
+
+    with _cs_tab4:
+        try:
+            _df_hol = load_str_holiday_calendar()
+            if _df_hol.empty:
+                st.info("Holiday calendar not loaded. Run the pipeline to populate.")
+            else:
+                st.caption("Holiday dates shift year-over-year — this explains apparent YOY performance variance in weeks containing holidays.")
+                # Week selector
+                _hol_weeks = sorted(_df_hol["as_of_date"].dt.strftime("%b %d, %Y").unique(), reverse=True)
+                _sel_week = st.selectbox("Select week", _hol_weeks, key="hol_week_sel")
+                _sel_dt = pd.to_datetime(_sel_week, format="%b %d, %Y")
+                _df_hol_week = _df_hol[_df_hol["as_of_date"] == _sel_dt]
+
+                # Weekday/weekend counts
+                _ty_row = _df_hol_week[_df_hol_week["year_label"] == "this_year"]
+                _ly_row = _df_hol_week[_df_hol_week["year_label"] == "last_year"]
+                if not _ty_row.empty:
+                    _wkd_ty = _ty_row["weekdays"].iloc[0]
+                    _wke_ty = _ty_row["weekend_days"].iloc[0]
+                    _wkd_ly = _ly_row["weekdays"].iloc[0] if not _ly_row.empty else None
+                    _wke_ly = _ly_row["weekend_days"].iloc[0] if not _ly_row.empty else None
+                    _c1, _c2, _c3, _c4 = st.columns(4)
+                    _c1.metric("TY Weekdays (YTD)", int(_wkd_ty) if pd.notna(_wkd_ty) else "—")
+                    _c2.metric("TY Weekend Days (YTD)", int(_wke_ty) if pd.notna(_wke_ty) else "—")
+                    _c3.metric("LY Weekdays (YTD)", int(_wkd_ly) if pd.notna(_wkd_ly) else "—")
+                    _c4.metric("LY Weekend Days (YTD)", int(_wke_ly) if pd.notna(_wke_ly) else "—")
+
+                # Side-by-side holiday comparison
+                _ty_hols = _ty_row[["holiday_name", "holiday_raw"]].rename(columns={"holiday_name": "Holiday", "holiday_raw": "This Year"})
+                _ly_hols = _ly_row[["holiday_name", "holiday_raw"]].rename(columns={"holiday_name": "Holiday", "holiday_raw": "Last Year"})
+                _hol_merged = pd.merge(_ty_hols, _ly_hols, on="Holiday", how="outer").fillna("—")
+                if not _hol_merged.empty:
+                    st.markdown("**Holiday Date Comparison — This Year vs. Last Year**")
+                    st.dataframe(_hol_merged, use_container_width=True, hide_index=True)
+
+                # Full holiday table across all weeks
+                with st.expander("All holiday data (all weeks)", expanded=False):
+                    _hol_all = _df_hol[_df_hol["year_label"] == "this_year"][["as_of_date", "holiday_name", "holiday_raw", "weekdays", "weekend_days"]].copy()
+                    _hol_all["as_of_date"] = _hol_all["as_of_date"].dt.strftime("%b %d, %Y")
+                    _hol_all = _hol_all.rename(columns={"as_of_date": "Week", "holiday_name": "Holiday", "holiday_raw": "Date", "weekdays": "YTD Weekdays", "weekend_days": "YTD Weekend Days"})
+                    st.dataframe(_hol_all, use_container_width=True, hide_index=True)
+        except Exception as _hce:
+            _logger.debug("Holiday context tab error: %s", _hce)
+            st.warning("Holiday calendar data unavailable.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — FORWARD OUTLOOK
