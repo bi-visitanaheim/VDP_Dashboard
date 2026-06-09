@@ -557,6 +557,15 @@ Layer 1 (STR, Datafy, CoStar) = current truth. Layer 1.5 (Zartico) = historical 
 **STR & KPI Tables (Layer 1 — Current Truth):**
 - `fact_str_metrics` — Long-format daily/monthly STR hotel data (supply, demand, revenue, occ, adr, revpar). \
   Columns: source, grain, property_name, market, submarket, as_of_date, metric_name, metric_value, unit.
+- `fact_str_group_metrics` — Multi-segment competitive set performance. All 6 comp markets (Dana Point, Newport Beach, \
+  La Jolla, Santa Barbara, Monterey-Carmel, Huntington Beach) × segments (Trans./Grp./Con./Total) × metrics \
+  (occ_pct %, adr USD, revpar USD, supply room-nights, demand room-nights, revenue USD). \
+  Columns: source, grain, as_of_date, market, segment, metric_name, metric_value, unit, data_period (current/pct_change/prior_year).
+- `fact_str_response_markets` — Property roster for all 6 comp markets. Each hotel in the STR comp set with \
+  STR code, rooms, city/state. Columns: grain, as_of_date, market, property_name, city_state, zip_code, str_code, rooms.
+- `str_holiday_calendar` — Holiday dates TY vs LY from STR Translation Table sheets. Explains YOY variance in \
+  weeks containing holidays (e.g., Easter shifted 2 weeks = occupancy comparison is misleading). \
+  Columns: as_of_date, year_label (this_year/last_year), holiday_name, holiday_date, weekdays, weekend_days.
 - `kpi_daily_summary` — Wide-format daily KPIs with YOY deltas and compression flags. \
   Columns: as_of_date, occ_pct, adr, revpar, occ_yoy, adr_yoy, revpar_yoy, is_occ_80, is_occ_90.
 - `kpi_compression_quarterly` — Days per quarter above 80% / 90% occupancy. \
@@ -5181,6 +5190,57 @@ def load_ca_state_parks() -> pd.DataFrame:
     except Exception as _e:
         _logger.debug("loader error: %s", _e)
         return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_str_compset(grain: str = "weekly") -> pd.DataFrame:
+    """Load competitive market performance from fact_str_group_metrics (current week/month)."""
+    conn = get_connection()
+    df = pd.read_sql_query(
+        """SELECT as_of_date, market, segment, metric_name, metric_value, data_period
+           FROM fact_str_group_metrics
+           WHERE grain=? AND data_period IN ('current','pct_change')
+           ORDER BY as_of_date, market, segment""",
+        conn, params=(grain,),
+    )
+    conn.close()
+    if df.empty:
+        return pd.DataFrame()
+    df["as_of_date"] = pd.to_datetime(df["as_of_date"])
+    return df
+
+
+@st.cache_data(ttl=1800)
+def load_str_holiday_calendar() -> pd.DataFrame:
+    """Load holiday calendar TY vs LY from str_holiday_calendar."""
+    conn = get_connection()
+    df = pd.read_sql_query(
+        """SELECT as_of_date, year_label, holiday_name, holiday_date,
+                  holiday_raw, weekdays, weekend_days
+           FROM str_holiday_calendar
+           ORDER BY as_of_date, year_label, holiday_name""",
+        conn,
+    )
+    conn.close()
+    if not df.empty:
+        df["as_of_date"] = pd.to_datetime(df["as_of_date"])
+    return df
+
+
+@st.cache_data(ttl=300)
+def load_str_property_roster() -> pd.DataFrame:
+    """Load property roster from fact_str_response_markets (latest weekly snapshot)."""
+    conn = get_connection()
+    df = pd.read_sql_query(
+        """SELECT market, property_name, city_state, rooms, str_code, as_of_date
+           FROM fact_str_response_markets
+           WHERE grain='weekly'
+             AND as_of_date = (SELECT MAX(as_of_date) FROM fact_str_response_markets WHERE grain='weekly')
+           ORDER BY market, rooms DESC""",
+        conn,
+    )
+    conn.close()
+    return df
 
 
 @st.cache_data(ttl=300)
@@ -11297,6 +11357,241 @@ with tab_tr:
                 '</div>',
                 unsafe_allow_html=True,
             )
+
+    # ── STR Competitive Set & Segment Mix ─────────────────────────────────────
+    st.markdown("---")
+    st.markdown(_sh("🏁", "Competitive Set & Segment Mix", "indigo", "STR MULTI-SEG"), unsafe_allow_html=True)
+
+    _cs_tab1, _cs_tab2, _cs_tab3, _cs_tab4 = st.tabs(["📊 Market Comparison", "🍰 Segment Mix", "🏨 Property Roster", "📅 Holiday Context"])
+
+    with _cs_tab1:
+        try:
+            _cs_grain = st.radio("Grain", ["weekly", "monthly"], horizontal=True, key="cs_grain_sel")
+            _df_cs = load_str_compset(_cs_grain)
+            if _df_cs.empty:
+                st.info("No competitive set data loaded. Run the pipeline to populate.")
+            else:
+                _cs_current = _df_cs[(_df_cs["data_period"] == "current") & (_df_cs["segment"] == "Total")]
+                _markets_all = ["Dana Point", "Newport Beach", "La Jolla", "Santa Barbara", "Monterey-Carmel", "Huntington Beach"]
+                _mkt_sel = st.multiselect("Markets", _markets_all, default=_markets_all, key="cs_mkt_sel")
+                _cs_plot = _cs_current[_cs_current["market"].isin(_mkt_sel)]
+
+                # Latest date for bar charts
+                _latest_dt = _cs_plot["as_of_date"].max()
+                _cs_latest = _cs_plot[_cs_plot["as_of_date"] == _latest_dt]
+
+                _period_label = f"Week of {_latest_dt.strftime('%b %d, %Y')}" if _cs_grain == "weekly" else _latest_dt.strftime("%B %Y")
+
+                # Hero metrics — Dana Point vs field
+                _dp_row = _cs_latest[_cs_latest["market"] == "Dana Point"]
+                if not _dp_row.empty:
+                    def _dp_metric(mn):
+                        r = _dp_row[_dp_row["metric_name"] == mn]
+                        return r["metric_value"].iloc[0] if not r.empty else None
+                    _c1, _c2, _c3 = st.columns(3)
+                    _c1.metric("Dana Point OCC%", f"{_dp_metric('occ_pct'):.1f}%" if _dp_metric('occ_pct') else "—")
+                    _c2.metric("Dana Point ADR", f"${_dp_metric('adr'):,.0f}" if _dp_metric('adr') else "—")
+                    _c3.metric("Dana Point RevPAR", f"${_dp_metric('revpar'):,.0f}" if _dp_metric('revpar') else "—")
+
+                st.caption(f"Latest: {_period_label} · Total segment only")
+
+                # ADR over time by market
+                _adr_ts = _cs_plot[_cs_plot["metric_name"] == "adr"].pivot_table(
+                    index="as_of_date", columns="market", values="metric_value"
+                ).reset_index()
+                if not _adr_ts.empty:
+                    import plotly.express as px
+                    _mkt_cols = [c for c in _adr_ts.columns if c != "as_of_date"]
+                    _fig_adr = px.line(
+                        _adr_ts, x="as_of_date", y=_mkt_cols,
+                        title=f"ADR by Market ({_cs_grain.title()})",
+                        labels={"value": "ADR ($)", "as_of_date": "Date", "variable": "Market"},
+                        color_discrete_sequence=px.colors.qualitative.Set2,
+                    )
+                    _fig_adr.update_layout(height=340, legend=dict(orientation="h", y=-0.2))
+                    st.plotly_chart(style_fig(_fig_adr), use_container_width=True)
+
+                # RevPAR bar chart — latest period
+                _rvp_latest = _cs_latest[_cs_latest["metric_name"] == "revpar"].sort_values("metric_value", ascending=True)
+                if not _rvp_latest.empty:
+                    _bar_colors = ["#4F46E5" if m == "Dana Point" else "#94A3B8" for m in _rvp_latest["market"]]
+                    _fig_rvp = px.bar(
+                        _rvp_latest, x="metric_value", y="market", orientation="h",
+                        title=f"RevPAR Comparison — {_period_label}",
+                        labels={"metric_value": "RevPAR ($)", "market": ""},
+                        color="market",
+                        color_discrete_map={"Dana Point": "#4F46E5", **{m: "#94A3B8" for m in _markets_all if m != "Dana Point"}},
+                    )
+                    _fig_rvp.update_layout(height=300, showlegend=False)
+                    st.plotly_chart(style_fig(_fig_rvp), use_container_width=True)
+
+                # OCC % over time
+                _occ_ts = _cs_plot[_cs_plot["metric_name"] == "occ_pct"].pivot_table(
+                    index="as_of_date", columns="market", values="metric_value"
+                ).reset_index()
+                if not _occ_ts.empty:
+                    _fig_occ = px.line(
+                        _occ_ts, x="as_of_date", y=[c for c in _occ_ts.columns if c != "as_of_date"],
+                        title=f"Occupancy % by Market ({_cs_grain.title()})",
+                        labels={"value": "Occ %", "as_of_date": "Date", "variable": "Market"},
+                        color_discrete_sequence=px.colors.qualitative.Set2,
+                    )
+                    _fig_occ.update_layout(height=300, legend=dict(orientation="h", y=-0.2))
+                    st.plotly_chart(style_fig(_fig_occ), use_container_width=True)
+        except Exception as _cse:
+            _logger.debug("Competitive set tab error: %s", _cse)
+            st.warning("Competitive set data unavailable.")
+
+    with _cs_tab2:
+        try:
+            _seg_grain = st.radio("Grain", ["weekly", "monthly"], horizontal=True, key="seg_grain_sel")
+            _df_seg = load_str_compset(_seg_grain)
+            if _df_seg.empty:
+                st.info("No segment data loaded.")
+            else:
+                _seg_mkt = st.selectbox("Market", ["Dana Point", "Newport Beach", "La Jolla", "Santa Barbara", "Monterey-Carmel", "Huntington Beach"], key="seg_mkt_sel")
+                _df_seg_mkt = _df_seg[(_df_seg["market"] == _seg_mkt) & (_df_seg["data_period"] == "current")]
+                _latest_seg_dt = _df_seg_mkt["as_of_date"].max()
+                _df_seg_latest = _df_seg_mkt[_df_seg_mkt["as_of_date"] == _latest_seg_dt]
+
+                _period_seg_label = f"Week of {_latest_seg_dt.strftime('%b %d, %Y')}" if _seg_grain == "weekly" else _latest_seg_dt.strftime("%B %Y")
+                st.caption(f"Latest: {_period_seg_label} · {_seg_mkt}")
+
+                # Segment donut: demand by segment
+                _raw_demand = load_str_compset(_seg_grain)
+                _raw_demand = _raw_demand[
+                    (_raw_demand["market"] == _seg_mkt) &
+                    (_raw_demand["metric_name"] == "demand") &
+                    (_raw_demand["data_period"] == "current") &
+                    (_raw_demand["segment"].isin(["Trans.", "Grp.", "Con."]))
+                ]
+                _raw_latest = _raw_demand[_raw_demand["as_of_date"] == _raw_demand["as_of_date"].max()]
+                if not _raw_latest.empty:
+                    import plotly.graph_objects as go
+                    _seg_labels = {"Trans.": "Transient", "Grp.": "Group", "Con.": "Contract"}
+                    _raw_latest = _raw_latest.copy()
+                    _raw_latest["seg_label"] = _raw_latest["segment"].map(_seg_labels)
+                    _fig_donut = go.Figure(go.Pie(
+                        labels=_raw_latest["seg_label"],
+                        values=_raw_latest["metric_value"],
+                        hole=0.5,
+                        marker_colors=["#4F46E5", "#10B981", "#F59E0B"],
+                    ))
+                    _fig_donut.update_layout(
+                        title=f"Demand Mix — {_seg_mkt} ({_period_seg_label})",
+                        height=320, showlegend=True,
+                    )
+                    st.plotly_chart(style_fig(_fig_donut), use_container_width=True)
+
+                # ADR by segment bar
+                _adr_seg = _df_seg_latest[(_df_seg_latest["metric_name"] == "adr") & (_df_seg_latest["segment"].isin(["Trans.", "Grp.", "Con.", "Total"]))]
+                if not _adr_seg.empty:
+                    _adr_seg = _adr_seg.copy()
+                    _adr_seg["seg_label"] = _adr_seg["segment"].map({"Trans.": "Transient", "Grp.": "Group", "Con.": "Contract", "Total": "Total"})
+                    _fig_adr_seg = px.bar(
+                        _adr_seg.sort_values("metric_value", ascending=False),
+                        x="seg_label", y="metric_value",
+                        title=f"ADR by Segment — {_seg_mkt}",
+                        labels={"metric_value": "ADR ($)", "seg_label": "Segment"},
+                        color_discrete_sequence=["#4F46E5"],
+                    )
+                    _fig_adr_seg.update_layout(height=280, showlegend=False)
+                    st.plotly_chart(style_fig(_fig_adr_seg), use_container_width=True)
+
+                # Trend: Dana Point Transient ADR over time
+                _trans_trend = _df_seg_mkt[(_df_seg_mkt["metric_name"] == "adr") & (_df_seg_mkt["segment"].isin(["Trans.", "Grp.", "Total"]))].pivot_table(
+                    index="as_of_date", columns="segment", values="metric_value"
+                ).reset_index()
+                if len(_trans_trend) > 2:
+                    _fig_seg_trend = px.line(
+                        _trans_trend, x="as_of_date",
+                        y=[c for c in _trans_trend.columns if c != "as_of_date"],
+                        title=f"ADR Trend by Segment — {_seg_mkt}",
+                        labels={"value": "ADR ($)", "as_of_date": "Date", "variable": "Segment"},
+                        color_discrete_map={"Trans.": "#4F46E5", "Grp.": "#10B981", "Total": "#94A3B8"},
+                    )
+                    _fig_seg_trend.update_layout(height=300, legend=dict(orientation="h", y=-0.2))
+                    st.plotly_chart(style_fig(_fig_seg_trend), use_container_width=True)
+        except Exception as _sge:
+            _logger.debug("Segment mix tab error: %s", _sge)
+            st.warning("Segment mix data unavailable.")
+
+    with _cs_tab3:
+        try:
+            _roster = load_str_property_roster()
+            if _roster.empty:
+                st.info("Property roster not loaded. Run the pipeline.")
+            else:
+                _roster_mkt = st.selectbox(
+                    "Market", ["All"] + sorted(_roster["market"].unique().tolist()),
+                    key="roster_mkt_sel"
+                )
+                _roster_disp = _roster if _roster_mkt == "All" else _roster[_roster["market"] == _roster_mkt]
+
+                # Summary cards
+                _c1, _c2, _c3 = st.columns(3)
+                _c1.metric("Properties", len(_roster_disp["property_name"].unique()))
+                _total_rooms = _roster_disp["rooms"].dropna().astype(int)
+                _c2.metric("Total Rooms", f"{_total_rooms.sum():,}")
+                _c3.metric("Avg Rooms/Property", f"{_total_rooms.mean():.0f}" if len(_total_rooms) > 0 else "—")
+
+                st.caption(f"Data as of {_roster['as_of_date'].max()}")
+                st.dataframe(
+                    _roster_disp[["market", "property_name", "city_state", "rooms", "str_code"]].rename(columns={
+                        "market": "Market", "property_name": "Property",
+                        "city_state": "City/State", "rooms": "Rooms", "str_code": "STR Code"
+                    }),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+        except Exception as _rpe:
+            _logger.debug("Property roster tab error: %s", _rpe)
+            st.warning("Property roster unavailable.")
+
+    with _cs_tab4:
+        try:
+            _df_hol = load_str_holiday_calendar()
+            if _df_hol.empty:
+                st.info("Holiday calendar not loaded. Run the pipeline to populate.")
+            else:
+                st.caption("Holiday dates shift year-over-year — this explains apparent YOY performance variance in weeks containing holidays.")
+                # Week selector
+                _hol_weeks = sorted(_df_hol["as_of_date"].dt.strftime("%b %d, %Y").unique(), reverse=True)
+                _sel_week = st.selectbox("Select week", _hol_weeks, key="hol_week_sel")
+                _sel_dt = pd.to_datetime(_sel_week, format="%b %d, %Y")
+                _df_hol_week = _df_hol[_df_hol["as_of_date"] == _sel_dt]
+
+                # Weekday/weekend counts
+                _ty_row = _df_hol_week[_df_hol_week["year_label"] == "this_year"]
+                _ly_row = _df_hol_week[_df_hol_week["year_label"] == "last_year"]
+                if not _ty_row.empty:
+                    _wkd_ty = _ty_row["weekdays"].iloc[0]
+                    _wke_ty = _ty_row["weekend_days"].iloc[0]
+                    _wkd_ly = _ly_row["weekdays"].iloc[0] if not _ly_row.empty else None
+                    _wke_ly = _ly_row["weekend_days"].iloc[0] if not _ly_row.empty else None
+                    _c1, _c2, _c3, _c4 = st.columns(4)
+                    _c1.metric("TY Weekdays (YTD)", int(_wkd_ty) if pd.notna(_wkd_ty) else "—")
+                    _c2.metric("TY Weekend Days (YTD)", int(_wke_ty) if pd.notna(_wke_ty) else "—")
+                    _c3.metric("LY Weekdays (YTD)", int(_wkd_ly) if pd.notna(_wkd_ly) else "—")
+                    _c4.metric("LY Weekend Days (YTD)", int(_wke_ly) if pd.notna(_wke_ly) else "—")
+
+                # Side-by-side holiday comparison
+                _ty_hols = _ty_row[["holiday_name", "holiday_raw"]].rename(columns={"holiday_name": "Holiday", "holiday_raw": "This Year"})
+                _ly_hols = _ly_row[["holiday_name", "holiday_raw"]].rename(columns={"holiday_name": "Holiday", "holiday_raw": "Last Year"})
+                _hol_merged = pd.merge(_ty_hols, _ly_hols, on="Holiday", how="outer").fillna("—")
+                if not _hol_merged.empty:
+                    st.markdown("**Holiday Date Comparison — This Year vs. Last Year**")
+                    st.dataframe(_hol_merged, use_container_width=True, hide_index=True)
+
+                # Full holiday table across all weeks
+                with st.expander("All holiday data (all weeks)", expanded=False):
+                    _hol_all = _df_hol[_df_hol["year_label"] == "this_year"][["as_of_date", "holiday_name", "holiday_raw", "weekdays", "weekend_days"]].copy()
+                    _hol_all["as_of_date"] = _hol_all["as_of_date"].dt.strftime("%b %d, %Y")
+                    _hol_all = _hol_all.rename(columns={"as_of_date": "Week", "holiday_name": "Holiday", "holiday_raw": "Date", "weekdays": "YTD Weekdays", "weekend_days": "YTD Weekend Days"})
+                    st.dataframe(_hol_all, use_container_width=True, hide_index=True)
+        except Exception as _hce:
+            _logger.debug("Holiday context tab error: %s", _hce)
+            st.warning("Holiday calendar data unavailable.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — FORWARD OUTLOOK

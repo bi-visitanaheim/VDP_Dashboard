@@ -359,6 +359,7 @@ After every session or error correction:
 - **Insight body truncation:** 160 chars is too short for actionable context. Use first 2 sentences (up to 280 chars for overview, 320 for audience tabs). Always find the first `. ` after 60 chars to split at a natural sentence boundary.
 - **Audience-labeled insight cards:** When showing group/category insights from multiple audiences, always label each card with the audience name and provide audience-specific action guidance (not a generic "review" CTA).
 - **Splash "stuck on loading" bug:** The build-time splash (`patch_streamlit_splash.py`) self-removes when the app mounts. Its `ready()` check must NOT measure `#root` height — the app shell (`.stApp`) is `position:absolute; height:100vh`, so it's pulled out of normal flow and `#root` collapses to height 0 forever. Detect content height inside `[data-testid="stMainBlockContainer"]/.block-container` instead. A broken detector makes the splash hang on its 12 s failsafe = "stuck on loading screen." Verified fix clears the splash in ~0.9 s.
+- **STR comp set market is Dana Point, NOT Anaheim.** The 6 comp markets in `fact_str_group_metrics` are: Dana Point, Newport Beach, La Jolla, Santa Barbara, Monterey-Carmel, Huntington Beach. Never default to "Anaheim Area" — that is wrong.
 
 ---
 

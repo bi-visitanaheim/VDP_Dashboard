@@ -93,7 +93,11 @@ STEPS = [
     ("load_str_monthly",  os.path.join(BASE_DIR, "load_str_monthly_sqlite.py"), True),
     # Group/segment multi-tab loader — must run after daily/monthly so fact_str_group_metrics
     # is populated before compute_insights and seed_group_benchmarks read it.
-    ("load_str_multiseg", os.path.join(BASE_DIR, "load_str_multiseg.py"),       False),
+    ("load_str_multiseg",   os.path.join(BASE_DIR, "load_str_multiseg.py"),          False),
+    # Response sheet loader — property roster + competitive set membership (6 markets)
+    ("load_str_response",   os.path.join(BASE_DIR, "load_str_response_sheets.py"),   False),
+    # Translation Table — holiday calendar TY vs LY (explains YOY variance)
+    ("load_str_translation", os.path.join(BASE_DIR, "load_str_translation_table.py"), False),
     ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),            True),
     ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),     False),
     ("load_costar",           os.path.join(BASE_DIR, "load_costar_reports.py"),     False),

@@ -45,6 +45,27 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
     ("fact_str_metrics",         "kpi_daily_summary",            "derived_from",  "as_of_date",
      "kpi_daily_summary is computed from fact_str_metrics (pivot long→wide, occ conversion, YOY delta)"),
 
+    ("fact_str_response_markets", "fact_str_metrics",            "same_source",   "grain,as_of_date",
+     "fact_str_response_markets is the property-roster companion to fact_str_metrics — same STR files, different granularity (roster vs. aggregate performance)"),
+
+    ("fact_str_response_markets", "kpi_daily_summary",           "context",       "as_of_date",
+     "fact_str_response_markets property roster provides comp-set context for kpi_daily_summary performance figures"),
+
+    ("fact_str_group_metrics",    "fact_str_metrics",            "same_source",   "grain,as_of_date",
+     "fact_str_group_metrics (multi-seg: OCC/ADR/RevPAR/Supply/Demand/Revenue by segment and comp market) derived from same STR exports as fact_str_metrics"),
+
+    ("fact_str_group_metrics",    "kpi_daily_summary",           "context",       "as_of_date",
+     "fact_str_group_metrics competitive market performance provides comp-set context alongside kpi_daily_summary Dana Point aggregates"),
+
+    ("fact_str_group_metrics",    "fact_str_response_markets",   "related",       "grain,as_of_date,market",
+     "fact_str_group_metrics (performance by market/segment) joins to fact_str_response_markets (property roster by market) on grain+as_of_date+market"),
+
+    ("str_holiday_calendar",      "fact_str_group_metrics",      "context",       "as_of_date",
+     "str_holiday_calendar holiday shift (TY vs LY) explains YOY variance in fact_str_group_metrics weekly performance"),
+
+    ("str_holiday_calendar",      "kpi_daily_summary",           "context",       "as_of_date",
+     "str_holiday_calendar holiday alignment context for kpi_daily_summary YOY delta interpretation"),
+
     ("fact_str_metrics",         "kpi_compression_quarterly",    "derived_from",  "as_of_date→quarter",
      "Compression quarters derived by counting fact_str_metrics days ≥80%/90% occ per quarter"),
 
