@@ -3663,7 +3663,7 @@ def main() -> None:
             ("city",  "tbid_tot_forecast"):             lambda: gen_city_tbid_tot_forecast(kpi_recent, str_rev),
             ("cross", "daytrip_conversion_scenario"):   lambda: gen_cross_daytrip_conversion_scenario(overview, kpi_recent, spending),
             ("dmo",   "booking_window_alert"):          lambda: gen_dmo_booking_window_alert(kpi_recent),
-            ("dmo",   "content_attribution_funnel"):    lambda: gen_dmo_content_attribution_funnel(social_data, web_kpis, conn),
+            ("dmo",   "content_attribution_funnel"):    lambda: gen_dmo_content_attribution_funnel(social_data, web_kpis, sqlite3.connect(DB_PATH)),
         }
 
         inserted = 0
