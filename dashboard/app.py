@@ -4409,22 +4409,46 @@ def _init_db(conn: sqlite3.Connection) -> None:
             priority_markets INTEGER, top_country TEXT, top_country_arrivals INTEGER,
             loaded_at TEXT DEFAULT (datetime('now'))
         );
-
-        -- ── Hot-path indexes ──────────────────────────────────────────────
-        -- Speed up the dashboard's most frequent filters on every load.
-        -- IF NOT EXISTS keeps this safe to run on every connection.
-        CREATE INDEX IF NOT EXISTS idx_str_src_grain_date
-            ON fact_str_metrics (source, grain, as_of_date);
-        CREATE INDEX IF NOT EXISTS idx_str_metric
-            ON fact_str_metrics (metric_name);
-        CREATE INDEX IF NOT EXISTS idx_kpi_daily_date
-            ON kpi_daily_summary (as_of_date);
-        CREATE INDEX IF NOT EXISTS idx_insights_aud_date
-            ON insights_daily (as_of_date, audience, category);
-        CREATE INDEX IF NOT EXISTS idx_load_log_run
-            ON load_log (run_at);
     """)
     conn.commit()
+    _ensure_indexes(conn)
+
+
+# Hot-path indexes the dashboard filters on. Each is created only when its
+# table already exists, so a fresh or partial database never errors out.
+# Mirror these in scripts/optimize_db.py (the pipeline's always-on step).
+_HOT_INDEXES = (
+    ("fact_str_metrics", "CREATE INDEX IF NOT EXISTS idx_str_src_grain_date "
+                         "ON fact_str_metrics (source, grain, as_of_date)"),
+    ("fact_str_metrics", "CREATE INDEX IF NOT EXISTS idx_str_metric "
+                         "ON fact_str_metrics (metric_name)"),
+    ("kpi_daily_summary", "CREATE INDEX IF NOT EXISTS idx_kpi_daily_date "
+                          "ON kpi_daily_summary (as_of_date)"),
+    ("insights_daily", "CREATE INDEX IF NOT EXISTS idx_insights_aud_date "
+                       "ON insights_daily (as_of_date, audience, category)"),
+    ("load_log", "CREATE INDEX IF NOT EXISTS idx_load_log_run "
+                 "ON load_log (run_at)"),
+)
+
+
+def _ensure_indexes(conn: sqlite3.Connection) -> None:
+    """Create hot-path indexes for whatever tables exist. Never raises —
+    a missing table (fresh deploy) is skipped, not fatal."""
+    try:
+        existing = {
+            r[0] for r in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        for table, ddl in _HOT_INDEXES:
+            if table in existing:
+                try:
+                    conn.execute(ddl)
+                except Exception as _e:
+                    _logger.debug("index create failed (%s): %s", table, _e)
+        conn.commit()
+    except Exception as _e:
+        _logger.debug("ensure_indexes skipped: %s", _e)
 
 
 @st.cache_resource
