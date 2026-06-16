@@ -4411,11 +4411,49 @@ def _init_db(conn: sqlite3.Connection) -> None:
         );
     """)
     conn.commit()
+    _ensure_indexes(conn)
+
+
+# Hot-path indexes the dashboard filters on. Each is created only when its
+# table already exists, so a fresh or partial database never errors out.
+# Mirror these in scripts/optimize_db.py (the pipeline's always-on step).
+_HOT_INDEXES = (
+    ("fact_str_metrics", "CREATE INDEX IF NOT EXISTS idx_str_src_grain_date "
+                         "ON fact_str_metrics (source, grain, as_of_date)"),
+    ("fact_str_metrics", "CREATE INDEX IF NOT EXISTS idx_str_metric "
+                         "ON fact_str_metrics (metric_name)"),
+    ("kpi_daily_summary", "CREATE INDEX IF NOT EXISTS idx_kpi_daily_date "
+                          "ON kpi_daily_summary (as_of_date)"),
+    ("insights_daily", "CREATE INDEX IF NOT EXISTS idx_insights_aud_date "
+                       "ON insights_daily (as_of_date, audience, category)"),
+    ("load_log", "CREATE INDEX IF NOT EXISTS idx_load_log_run "
+                 "ON load_log (run_at)"),
+)
+
+
+def _ensure_indexes(conn: sqlite3.Connection) -> None:
+    """Create hot-path indexes for whatever tables exist. Never raises —
+    a missing table (fresh deploy) is skipped, not fatal."""
+    try:
+        existing = {
+            r[0] for r in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table'"
+            ).fetchall()
+        }
+        for table, ddl in _HOT_INDEXES:
+            if table in existing:
+                try:
+                    conn.execute(ddl)
+                except Exception as _e:
+                    _logger.debug("index create failed (%s): %s", table, _e)
+        conn.commit()
+    except Exception as _e:
+        _logger.debug("ensure_indexes skipped: %s", _e)
 
 
 @st.cache_resource
-def get_connection() -> sqlite3.Connection:
-    """Return a persistent SQLite connection.
+def _open_connection() -> sqlite3.Connection:
+    """Build the persistent SQLite connection (cached for the whole session).
 
     Creates the database file and schema automatically if it does not exist
     (e.g. on Streamlit Cloud where *.sqlite is excluded from git).
@@ -4424,8 +4462,49 @@ def get_connection() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=10)
     conn.row_factory = sqlite3.Row
+    _apply_read_pragmas(conn)
     _init_db(conn)
     return conn
+
+
+def get_connection() -> sqlite3.Connection:
+    """Return the shared, read-tuned SQLite connection.
+
+    Self-healing: if the cached connection was closed (a loader must never call
+    .close() on it, but if one ever does, or Streamlit recycles it), detect the
+    closed handle and rebuild it instead of crashing every query with
+    "Cannot operate on a closed database."
+    """
+    conn = _open_connection()
+    try:
+        conn.execute("SELECT 1")
+    except sqlite3.ProgrammingError:
+        # Connection was closed — drop the cached one and build a fresh handle.
+        _open_connection.clear()
+        conn = _open_connection()
+    return conn
+
+
+# ── Performance PRAGMAs ────────────────────────────────────────────────────────
+# Applied to every dashboard connection so reads are fast on every page load.
+# The dashboard never writes — these are tuned for fast, concurrent reads.
+_READ_PRAGMAS = (
+    "PRAGMA journal_mode=WAL;",        # concurrent readers, never blocked by a writer
+    "PRAGMA synchronous=NORMAL;",      # safe with WAL, far less fsync overhead
+    "PRAGMA temp_store=MEMORY;",       # sorts / temp B-trees in RAM, not on disk
+    "PRAGMA cache_size=-16000;",       # 16 MB page cache (negative = KiB)
+    "PRAGMA mmap_size=134217728;",     # 128 MB memory-mapped I/O for hot reads
+    "PRAGMA busy_timeout=10000;",      # wait up to 10s rather than erroring on a lock
+)
+
+
+def _apply_read_pragmas(conn: sqlite3.Connection) -> None:
+    """Tune a connection for fast reads. Never raises — pragmas are best-effort."""
+    for pragma in _READ_PRAGMAS:
+        try:
+            conn.execute(pragma)
+        except Exception as _e:
+            _logger.debug("PRAGMA failed (%s): %s", pragma, _e)
 
 # ─── Data loaders ────────────────────────────────────────────────────────────
 # TTL guide: real-time KPIs = 300s, social/campaign = 1800s, historical = 3600s
@@ -4947,8 +5026,7 @@ def load_datafy_clusters() -> pd.DataFrame:
 @st.cache_data(ttl=1800)
 def load_stvr_summary():
     try:
-        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
-            return pd.read_sql_query("SELECT * FROM stvr_market_summary ORDER BY month", conn)
+        return pd.read_sql_query("SELECT * FROM stvr_market_summary ORDER BY month", get_connection())
     except Exception:
         _logger.debug("stvr_market_summary unavailable")
         return pd.DataFrame()
@@ -4956,8 +5034,7 @@ def load_stvr_summary():
 @st.cache_data(ttl=1800)
 def load_bts_routes():
     try:
-        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
-            return pd.read_sql_query("SELECT * FROM bts_route_passengers ORDER BY year, quarter, passengers DESC", conn)
+        return pd.read_sql_query("SELECT * FROM bts_route_passengers ORDER BY year, quarter, passengers DESC", get_connection())
     except Exception:
         _logger.debug("bts_route_passengers unavailable")
         return pd.DataFrame()
@@ -4965,8 +5042,7 @@ def load_bts_routes():
 @st.cache_data(ttl=3600)
 def load_socal_gas():
     try:
-        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
-            return pd.read_sql_query("SELECT * FROM socal_gas_prices ORDER BY period", conn)
+        return pd.read_sql_query("SELECT * FROM socal_gas_prices ORDER BY period", get_connection())
     except Exception:
         _logger.debug("socal_gas_prices unavailable")
         return pd.DataFrame()
@@ -4974,8 +5050,7 @@ def load_socal_gas():
 @st.cache_data(ttl=300)
 def load_weather_forecast():
     try:
-        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
-            return pd.read_sql_query("SELECT * FROM weather_forecast ORDER BY period_number", conn)
+        return pd.read_sql_query("SELECT * FROM weather_forecast ORDER BY period_number", get_connection())
     except Exception:
         _logger.debug("weather_forecast unavailable")
         return pd.DataFrame()
@@ -5242,7 +5317,9 @@ def load_str_compset(grain: str = "weekly") -> pd.DataFrame:
            ORDER BY as_of_date, market, segment""",
         conn, params=(grain,),
     )
-    conn.close()
+    # Never close: get_connection() is a shared @st.cache_resource connection
+    # reused across every rerun. Closing it breaks all later queries with
+    # "Cannot operate on a closed database."
     if df.empty:
         return pd.DataFrame()
     df["as_of_date"] = pd.to_datetime(df["as_of_date"])
@@ -5260,7 +5337,7 @@ def load_str_holiday_calendar() -> pd.DataFrame:
            ORDER BY as_of_date, year_label, holiday_name""",
         conn,
     )
-    conn.close()
+    # Never close the shared cache_resource connection (see load_str_compset).
     if not df.empty:
         df["as_of_date"] = pd.to_datetime(df["as_of_date"])
     return df
@@ -5278,7 +5355,7 @@ def load_str_property_roster() -> pd.DataFrame:
            ORDER BY market, rooms DESC""",
         conn,
     )
-    conn.close()
+    # Never close the shared cache_resource connection (see load_str_compset).
     return df
 
 
@@ -6588,14 +6665,13 @@ def render_comp_set_radar(df_str):
     """Dana Point vs comp set radar chart across 6 metrics."""
     import plotly.express as px
     try:
-        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
-            df_group = pd.read_sql_query("""
-                SELECT market, metric_name, AVG(metric_value) as avg_val
-                FROM fact_str_metrics
-                WHERE grain='daily' AND as_of_date >= date('now','-90 days')
-                  AND metric_name IN ('occ','adr','revpar')
-                GROUP BY market, metric_name
-            """, conn)
+        df_group = pd.read_sql_query("""
+            SELECT market, metric_name, AVG(metric_value) as avg_val
+            FROM fact_str_metrics
+            WHERE grain='daily' AND as_of_date >= date('now','-90 days')
+              AND metric_name IN ('occ','adr','revpar')
+            GROUP BY market, metric_name
+        """, get_connection())
     except Exception:
         return
 
@@ -6798,26 +6874,26 @@ def render_booking_pace(df_kpi):
 def render_content_funnel():
     """Social engagement → sessions → attributed trips funnel."""
     try:
-        with sqlite3.connect(DB_PATH + "?mode=ro", uri=True, timeout=10) as conn:
-            eng_df = pd.read_sql_query("""
-                SELECT COALESCE(SUM(likes + comments), 0) as total_eng
-                FROM later_ig_posts
-                WHERE date >= date('now','-30 days')
-            """, conn)
-            engagements = int(eng_df['total_eng'].iloc[0]) if not eng_df.empty else 0
+        conn = get_connection()
+        eng_df = pd.read_sql_query("""
+            SELECT COALESCE(SUM(likes + comments), 0) as total_eng
+            FROM later_ig_posts
+            WHERE date >= date('now','-30 days')
+        """, conn)
+        engagements = int(eng_df['total_eng'].iloc[0]) if not eng_df.empty else 0
 
-            sess_df = pd.read_sql_query("""
-                SELECT COALESCE(SUM(sessions), 0) as total_sessions
-                FROM datafy_social_traffic_sources
-                WHERE channel LIKE '%social%' OR channel LIKE '%Social%'
-            """, conn)
-            sessions = int(sess_df['total_sessions'].iloc[0]) if not sess_df.empty else 0
+        sess_df = pd.read_sql_query("""
+            SELECT COALESCE(SUM(sessions), 0) as total_sessions
+            FROM datafy_social_traffic_sources
+            WHERE channel LIKE '%social%' OR channel LIKE '%Social%'
+        """, conn)
+        sessions = int(sess_df['total_sessions'].iloc[0]) if not sess_df.empty else 0
 
-            trips_df = pd.read_sql_query("""
-                SELECT COALESCE(SUM(attributable_trips), 0) as total_trips
-                FROM datafy_attribution_website_kpis
-            """, conn)
-            trips = int(trips_df['total_trips'].iloc[0]) if not trips_df.empty else 0
+        trips_df = pd.read_sql_query("""
+            SELECT COALESCE(SUM(attributable_trips), 0) as total_trips
+            FROM datafy_attribution_website_kpis
+        """, conn)
+        trips = int(trips_df['total_trips'].iloc[0]) if not trips_df.empty else 0
     except Exception:
         return
 
@@ -7262,15 +7338,12 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
     # Group KPIs for ticker
     _grp_tbid_str = "—"; _grp_uplift_str = "—"; _grp_risk_str = "—"
     try:
-        import sqlite3 as _sq3
-        _gconn = _sq3.connect(DB_PATH, timeout=5)
-        _gconn.row_factory = _sq3.Row
+        _gconn = get_connection()
         _grow = _gconn.execute(
             "SELECT estimated_group_tbid_rev_low, estimated_group_tbid_rev_high, "
             "tbid_uplift_per_5pp_shift, compression_days_annual "
             "FROM group_intelligence ORDER BY benchmark_date DESC LIMIT 1"
         ).fetchone()
-        _gconn.close()
         if _grow:
             _tlow = float(_grow["estimated_group_tbid_rev_low"] or 0)
             _thigh = float(_grow["estimated_group_tbid_rev_high"] or 0)
@@ -8292,13 +8365,12 @@ with st.sidebar:
     _vca_rows = len(df_vca_forecast) + len(df_vca_lodging) + len(df_vca_airport) + len(df_vca_intl)
     if _vca_rows == 0:
         try:
-            _vca_conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+            _vca_conn = get_connection()
             _vca_rows = sum(
                 _vca_conn.execute(f"SELECT COUNT(*) FROM {_t}").fetchone()[0]
                 for _t in ["visit_ca_travel_forecast","visit_ca_lodging_forecast",
                            "visit_ca_airport_traffic","visit_ca_intl_arrivals"]
             )
-            _vca_conn.close()
         except Exception:
             pass
     _vca_dot  = "🟢" if _vca_rows > 0 else "⚫"
@@ -8314,7 +8386,7 @@ with st.sidebar:
     # Fallback: query DB directly if cached DFs are empty (same guard as Visit CA)
     if _later_total == 0:
         try:
-            _l_conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+            _l_conn = get_connection()
             _later_total = sum(
                 _l_conn.execute(f"SELECT COUNT(*) FROM {_lt}").fetchone()[0]
                 for _lt in ["later_ig_profile_growth","later_ig_posts","later_ig_reels",
@@ -8335,7 +8407,6 @@ with st.sidebar:
                     "SELECT followers FROM later_tk_profile_growth ORDER BY data_date DESC LIMIT 1"
                 ).fetchone()
                 _tk_followers = int(_row[0]) if _row and _row[0] else 0
-            _l_conn.close()
         except Exception:
             pass
     _later_dot = "🟢" if _later_total > 0 else "⚫"

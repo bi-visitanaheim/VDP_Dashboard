@@ -46,6 +46,7 @@ Pipeline steps:
   28. fetch_whale_watching.py      — Whale watching charter activity index → whale_watching_activity (skip-safe)
   29. fetch_godly_design.py       — Godly.website design inspiration → data/design/godly_inspiration.json (skip-safe, no DB writes)
   30. fetch_nws_weather.py        — NWS weather.gov forecast + observations → weather_forecast, weather_hourly, weather_observations (skip-safe, no key)
+  30b. optimize_db.py             — ALWAYS-ON: ensure hot-path indexes, ANALYZE, WAL checkpoint (skip-safe)
   31. build_table_relationships.py — ALWAYS LAST: rebuild ALL table relationships → table_relationships (skip-safe)
 
 # NOTE: All skip-safe steps use try/except and log WARN rather than raising — this prevents
@@ -72,7 +73,28 @@ import json
 import os
 import subprocess
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+
+# ---------------------------------------------------------------------------
+# Parallelism
+# ---------------------------------------------------------------------------
+# These steps are network-bound and write to their own independent tables, so
+# they are safe to run concurrently. Core STR/KPI/insight steps and anything
+# that READS other freshly-written tables (demand signals, strategy progress,
+# relationships, audits) stay sequential. Contiguous runs of these names are
+# executed together in a small thread pool — the rest run in strict order.
+PARALLEL_SAFE = {
+    "fetch_fred", "fetch_trends", "fetch_weather", "fetch_bls", "fetch_eia_gas",
+    "fetch_tsa", "fetch_noaa_marine", "fetch_census_acs", "fetch_ticketmaster",
+    "fetch_wiki_pageviews", "fetch_noaa_tides", "fetch_airnow_aqi",
+    "fetch_surf_conditions", "fetch_ca_state_parks", "fetch_airbnb_market",
+    "fetch_beach_water_quality", "fetch_whale_watching", "fetch_godly_design",
+    "fetch_nws_weather", "fetch_bts_routes", "fetch_inside_airbnb", "fetch_socal_gas",
+}
+# Cap workers so concurrent SQLite writers don't thrash the WAL lock.
+MAX_PARALLEL_WORKERS = int(os.environ.get("PIPELINE_MAX_WORKERS", "5"))
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -161,6 +183,10 @@ STEPS = [
     ("fetch_inside_airbnb",   os.path.join(BASE_DIR, "fetch_inside_airbnb.py"),   False),
     # SoCal gas prices — LA Basin weekly retail price (drive-market demand signal)
     ("fetch_socal_gas",       os.path.join(BASE_DIR, "fetch_socal_gas.py"),       False),
+    # ALWAYS-ON PERFORMANCE STEP — runs after every refresh so the database stays
+    # fast: ensures hot-path indexes, refreshes ANALYZE stats, checkpoints the WAL.
+    # Keep this just before build_relationships so the planner has fresh stats.
+    ("optimize_db",         os.path.join(BASE_DIR, "optimize_db.py"),             False),
     # ALWAYS LAST — rebuilds all table relationships after every pipeline run
     # Add new relationship entries to build_table_relationships.py when adding new data sources
     ("build_relationships", os.path.join(BASE_DIR, "build_table_relationships.py"), False),
@@ -177,18 +203,25 @@ def _now() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
+_LOG_LOCK = threading.Lock()
+
+
 def log(step: str, status: str, message: str) -> None:
-    """Append one human-readable line to pipeline.log and one JSON line to pipeline.jsonl."""
+    """Append one human-readable line to pipeline.log and one JSON line to pipeline.jsonl.
+
+    Thread-safe: parallel steps share this writer, so a lock keeps log lines intact.
+    """
     ts = _now()
     line = f"{ts} | {step:<22} | {status:<4} | {message}"
-    print(line)
-    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-    with open(LOG_PATH, "a") as fh:
-        fh.write(line + "\n")
-    # Machine-readable JSON Lines format for dashboards and alerting
     record = {"ts": ts, "step": step, "status": status.strip(), "message": message}
-    with open(LOG_JSON_PATH, "a") as fh:
-        fh.write(json.dumps(record) + "\n")
+    with _LOG_LOCK:
+        print(line)
+        os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
+        with open(LOG_PATH, "a") as fh:
+            fh.write(line + "\n")
+        # Machine-readable JSON Lines format for dashboards and alerting
+        with open(LOG_JSON_PATH, "a") as fh:
+            fh.write(json.dumps(record) + "\n")
 
 
 # ---------------------------------------------------------------------------
@@ -236,10 +269,40 @@ def run_step(step_name: str, script_path: str) -> bool:
 # Entry point
 # ---------------------------------------------------------------------------
 
+def _run_parallel_batch(batch: list) -> None:
+    """Run a list of (step_name, script_path) concurrently. All are skip-safe."""
+    if not batch:
+        return
+    if len(batch) == 1:
+        run_step(*batch[0])
+        return
+    names = ", ".join(n for n, _ in batch)
+    workers = min(MAX_PARALLEL_WORKERS, len(batch))
+    log("pipeline", "OK  ", f"parallel batch ({len(batch)} steps, {workers} workers): {names}")
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(run_step, name, path): name for name, path in batch}
+        for fut in futures:
+            try:
+                fut.result()
+            except Exception as exc:  # run_step already logs; this is a safety net
+                log("pipeline", "WARN", f"parallel step '{futures[fut]}' raised: {exc}")
+
+
 def main() -> None:
     log("pipeline", "OK  ", "=== pipeline start ===")
 
+    parallel_batch: list = []   # contiguous run of parallel-safe steps awaiting flush
+
     for step_name, script_path, fail_fast in STEPS:
+        if step_name in PARALLEL_SAFE and not fail_fast:
+            parallel_batch.append((step_name, script_path))
+            continue
+
+        # Hit a sequential step — flush any accumulated parallel batch first
+        # so ordering relative to dependent steps is preserved.
+        _run_parallel_batch(parallel_batch)
+        parallel_batch = []
+
         success = run_step(step_name, script_path)
         if not success:
             if fail_fast:
@@ -248,6 +311,9 @@ def main() -> None:
             else:
                 log("pipeline", "WARN",
                     f"step '{step_name}' failed — non-critical, continuing")
+
+    # Flush any trailing parallel-safe steps
+    _run_parallel_batch(parallel_batch)
 
     log("pipeline", "OK  ", "=== pipeline complete ===")
 
