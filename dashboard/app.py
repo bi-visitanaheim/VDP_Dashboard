@@ -4452,8 +4452,8 @@ def _ensure_indexes(conn: sqlite3.Connection) -> None:
 
 
 @st.cache_resource
-def get_connection() -> sqlite3.Connection:
-    """Return a persistent SQLite connection.
+def _open_connection() -> sqlite3.Connection:
+    """Build the persistent SQLite connection (cached for the whole session).
 
     Creates the database file and schema automatically if it does not exist
     (e.g. on Streamlit Cloud where *.sqlite is excluded from git).
@@ -4464,6 +4464,24 @@ def get_connection() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     _apply_read_pragmas(conn)
     _init_db(conn)
+    return conn
+
+
+def get_connection() -> sqlite3.Connection:
+    """Return the shared, read-tuned SQLite connection.
+
+    Self-healing: if the cached connection was closed (a loader must never call
+    .close() on it, but if one ever does, or Streamlit recycles it), detect the
+    closed handle and rebuild it instead of crashing every query with
+    "Cannot operate on a closed database."
+    """
+    conn = _open_connection()
+    try:
+        conn.execute("SELECT 1")
+    except sqlite3.ProgrammingError:
+        # Connection was closed — drop the cached one and build a fresh handle.
+        _open_connection.clear()
+        conn = _open_connection()
     return conn
 
 
@@ -5299,7 +5317,9 @@ def load_str_compset(grain: str = "weekly") -> pd.DataFrame:
            ORDER BY as_of_date, market, segment""",
         conn, params=(grain,),
     )
-    conn.close()
+    # Never close: get_connection() is a shared @st.cache_resource connection
+    # reused across every rerun. Closing it breaks all later queries with
+    # "Cannot operate on a closed database."
     if df.empty:
         return pd.DataFrame()
     df["as_of_date"] = pd.to_datetime(df["as_of_date"])
@@ -5317,7 +5337,7 @@ def load_str_holiday_calendar() -> pd.DataFrame:
            ORDER BY as_of_date, year_label, holiday_name""",
         conn,
     )
-    conn.close()
+    # Never close the shared cache_resource connection (see load_str_compset).
     if not df.empty:
         df["as_of_date"] = pd.to_datetime(df["as_of_date"])
     return df
@@ -5335,7 +5355,7 @@ def load_str_property_roster() -> pd.DataFrame:
            ORDER BY market, rooms DESC""",
         conn,
     )
-    conn.close()
+    # Never close the shared cache_resource connection (see load_str_compset).
     return df
 
 
