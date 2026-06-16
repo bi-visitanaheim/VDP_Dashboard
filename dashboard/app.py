@@ -166,21 +166,6 @@ def _render_login_page():
         text-align: center; font-size: 13px; color: rgba(255,255,255,0.55);
         margin-bottom: 28px;
     }
-    .login-divider {
-        display: flex; align-items: center; gap: 10px;
-        margin: 18px 0;
-    }
-    .login-divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.12); }
-    .login-divider-text { font-size: 11px; color: rgba(255,255,255,0.40); white-space: nowrap; }
-    .oauth-btn {
-        display: flex; align-items: center; justify-content: center; gap: 10px;
-        width: 100%; padding: 11px 18px; border-radius: 8px; margin-bottom: 10px;
-        font-size: 14px; font-weight: 600; cursor: pointer; border: none;
-        transition: opacity 0.2s;
-    }
-    .oauth-btn:hover { opacity: 0.88; }
-    .btn-google { background: #FFFFFF; color: #1F2937; }
-    .btn-microsoft { background: #2F2F2F; color: #FFFFFF; }
     .login-footer {
         text-align: center; font-size: 11px; color: rgba(255,255,255,0.30);
         margin-top: 24px; line-height: 1.6;
@@ -199,46 +184,7 @@ def _render_login_page():
     # Center the form
     _, _lc, _ = st.columns([1, 2, 1])
     with _lc:
-        st.markdown("**Sign in to Dana Point PULSE**")
-
-        # OAuth buttons (shown but redirect requires server-side OAuth setup)
-        _google_cfg  = os.getenv("GOOGLE_CLIENT_ID", "")
-        _ms_cfg      = os.getenv("MS_CLIENT_ID", "")
-
-        if _google_cfg:
-            if st.button("🔵  Continue with Google", use_container_width=True,
-                         help="Sign in using your Google account"):
-                # Google OAuth redirect — requires GOOGLE_CLIENT_ID in .env
-                _oauth_url = (
-                    "https://accounts.google.com/o/oauth2/auth"
-                    f"?client_id={_google_cfg}"
-                    "&redirect_uri=" + os.getenv("OAUTH_REDIRECT_URI", "http://localhost:8501")
-                    + "&response_type=code&scope=openid%20email%20profile"
-                )
-                st.markdown(f'<meta http-equiv="refresh" content="0;url={_oauth_url}">',
-                            unsafe_allow_html=True)
-        else:
-            st.button("🔵  Continue with Google", disabled=True, use_container_width=True,
-                      help="Google OAuth: set GOOGLE_CLIENT_ID in .env to enable")
-
-        if _ms_cfg:
-            if st.button("🟦  Continue with Microsoft", use_container_width=True,
-                         help="Sign in using your Microsoft account"):
-                _ms_url = (
-                    f"https://login.microsoftonline.com/{os.getenv('MS_TENANT_ID','common')}"
-                    f"/oauth2/v2.0/authorize?client_id={_ms_cfg}"
-                    "&response_type=code&scope=openid%20email%20profile"
-                    "&redirect_uri=" + os.getenv("OAUTH_REDIRECT_URI", "http://localhost:8501")
-                )
-                st.markdown(f'<meta http-equiv="refresh" content="0;url={_ms_url}">',
-                            unsafe_allow_html=True)
-        else:
-            st.button("🟦  Continue with Microsoft", disabled=True, use_container_width=True,
-                      help="Microsoft OAuth: set MS_CLIENT_ID + MS_TENANT_ID in .env to enable")
-
-        st.markdown('<div class="login-divider"><div class="login-divider-line"></div>'
-                    '<div class="login-divider-text">or sign in with password</div>'
-                    '<div class="login-divider-line"></div></div>', unsafe_allow_html=True)
+        st.markdown("**Access Dana Point PULSE**")
 
         _username = st.text_input("Username", placeholder="your username",
                                   key="login_user", label_visibility="collapsed")
@@ -4013,145 +3959,197 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Branded loading splash — auto-dismisses via CSS after 3s, no JS loop ─────
-# NOTE: uses CSS animation-fill-mode:forwards + pointer-events:none after delay
-# so it never blocks content even if the div gets recreated on rerender.
-st.markdown("""
+# ─── Dana Point wake screen — full-bleed photo, auto-dismisses after 4s ──────
+# Uses CSS animation-fill-mode:forwards + pointer-events:none so it never blocks
+# content even if the div gets recreated on a fast rerender.
+_VDP_AERIAL = (
+    "https://assets.simpleviewinc.com/simpleview/image/upload/"
+    "c_fill,g_xy_center,h_700,q_60,w_1600,x_5873,y_3133/v1/clients/danapointca/"
+    "Seth_Willingham_Dana_Point_1_56019588-2c56-4092-a6a5-5fc4c32b1b9a.jpg"
+)
+st.markdown(f"""
 <style>
-  @keyframes splash-fade-out {
-    0%   { opacity: 1; pointer-events: auto; }
-    80%  { opacity: 1; pointer-events: none; }
-    100% { opacity: 0; pointer-events: none; visibility: hidden; }
-  }
-  @keyframes splash-float {
-    0%, 100% { transform: translateY(0) scale(1); }
-    50% { transform: translateY(-12px) scale(1.08); }
-  }
-  @keyframes splash-glow {
-    0%, 100% { filter: drop-shadow(0 0 12px rgba(0,212,200,0.4)); }
-    50% { filter: drop-shadow(0 0 24px rgba(0,212,200,0.8)); }
-  }
-  @keyframes splash-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  @keyframes splash-shimmer {
-    0% { background-position: -1000px 0; }
-    100% { background-position: 1000px 0; }
-  }
-  @keyframes splash-orbit {
-    0% { transform: rotate(0deg) translateX(60px) rotate(0deg); }
-    100% { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
-  }
-  #pulse-splash {
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #0B1E38 0%, #1A3756 30%, #1E3D5E 60%, #16385E 100%);
-    backdrop-filter: blur(10px);
-    animation: splash-fade-out 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 3s forwards;
-  }
-  .splash-container {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .splash-orbits {
-    position: absolute;
-    width: 140px;
-    height: 140px;
-    border-radius: 50%;
-    pointer-events: none;
-  }
-  .splash-orbit {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    border-top-color: rgba(0,212,200,0.3);
-    border-right-color: rgba(0,212,200,0.15);
-    animation: splash-orbit 3s linear infinite;
-  }
-  .splash-orbit:nth-child(2) {
-    animation: splash-orbit 4.5s linear infinite reverse;
-    border-top-color: rgba(56,189,248,0.25);
-    border-right-color: rgba(56,189,248,0.10);
-  }
-  .splash-wave {
-    font-size: 64px;
-    margin-bottom: 24px;
-    animation: splash-float 2s cubic-bezier(0.4, 0, 0.2, 1) infinite, splash-glow 2s ease-in-out infinite;
-    filter: drop-shadow(0 4px 20px rgba(0,212,200,0.5));
-    position: relative;
-    z-index: 10;
-  }
-  .splash-title {
-    font-family: 'Syne', 'Outfit', system-ui, sans-serif;
-    font-size: 42px; font-weight: 900;
-    color: #FFFFFF !important; letter-spacing: -0.04em; margin-bottom: 8px;
-    position: relative; z-index: 10;
-    -webkit-text-fill-color: #FFFFFF !important;
-    text-shadow: 0 2px 24px rgba(0,0,0,0.40);
-  }
-  .splash-title span {
-    color: #22D3EE !important;
-    -webkit-text-fill-color: #22D3EE !important;
-    text-shadow: 0 0 28px rgba(34,211,238,0.55);
-  }
-  .splash-sub {
-    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
-    font-size: 14px; color: rgba(255,255,255,0.88) !important;
-    -webkit-text-fill-color: rgba(255,255,255,0.88) !important;
-    letter-spacing: 0.06em; margin-bottom: 48px;
-    position: relative; z-index: 10; font-weight: 500;
-    text-transform: uppercase;
-  }
-  .splash-progress {
-    width: 160px;
-    height: 3px;
-    background: rgba(0,212,200,0.15);
-    border-radius: 2px;
-    margin-bottom: 32px;
+  @keyframes splash-fade-out {{
+    0%   {{ opacity: 1; pointer-events: auto; }}
+    88%  {{ opacity: 1; pointer-events: none; }}
+    100% {{ opacity: 0; pointer-events: none; visibility: hidden; }}
+  }}
+  @keyframes splash-float {{
+    0%, 100% {{ transform: translateY(0) rotate(-2deg); }}
+    50% {{ transform: translateY(-11px) rotate(2deg); }}
+  }}
+  @keyframes splash-glow {{
+    0%, 100% {{ filter: drop-shadow(0 0 16px rgba(0,212,200,0.50)); }}
+    50%       {{ filter: drop-shadow(0 0 28px rgba(0,212,200,0.85)); }}
+  }}
+  #pulse-splash {{
+    position: fixed; inset: 0; z-index: 99999;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background:
+      linear-gradient(160deg, rgba(8,16,32,0.82) 0%, rgba(10,22,42,0.72) 50%, rgba(8,18,36,0.78) 100%),
+      url('{_VDP_AERIAL}') center 35% / cover no-repeat;
+    animation: splash-fade-out 0.75s cubic-bezier(0.25,0.46,0.45,0.94) 4.0s forwards;
     overflow: hidden;
+  }}
+
+  /* Ambient glow orbs */
+  .splash-orb {{
+    position: absolute; border-radius: 50%; pointer-events: none;
+    filter: blur(72px);
+  }}
+  .splash-orb-1 {{
+    width: 480px; height: 480px; top: -120px; right: -100px;
+    background: radial-gradient(circle, rgba(0,212,200,0.18) 0%, transparent 65%);
+    animation: splash-orb-pulse 5s ease-in-out infinite;
+  }}
+  .splash-orb-2 {{
+    width: 320px; height: 320px; bottom: -80px; left: -80px;
+    background: radial-gradient(circle, rgba(56,189,248,0.14) 0%, transparent 65%);
+    animation: splash-orb-pulse 4s ease-in-out 1.5s infinite;
+  }}
+  .splash-orb-3 {{
+    width: 200px; height: 200px; bottom: 20%; right: 15%;
+    background: radial-gradient(circle, rgba(167,139,250,0.10) 0%, transparent 65%);
+    animation: splash-orb-pulse 6s ease-in-out 0.8s infinite;
+  }}
+
+  /* Horizontal scan line */
+  .splash-scan {{
+    position: absolute; top: 0; bottom: 0; width: 140px;
+    background: linear-gradient(90deg, transparent, rgba(0,212,200,0.07), transparent);
+    animation: splash-scan-anim 2.8s linear 0.2s forwards;
+    pointer-events: none;
+  }}
+
+  /* Teal accent line at top */
+  .splash-topline {{
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #00D4C8 30%, #38BDF8 50%, #00D4C8 70%, transparent 100%);
+    animation: splash-line-in 1.0s cubic-bezier(0.37,0,0.22,1) 0.1s both;
+    transform-origin: left;
+  }}
+
+  /* Main content block */
+  .splash-content {{
+    display: flex; flex-direction: column; align-items: center;
+    animation: splash-rise 0.9s cubic-bezier(0.22,1,0.36,1) 0.15s both;
+    position: relative; z-index: 10;
+  }}
+
+  /* Eyebrow — location label */
+  .splash-eyebrow {{
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.30em;
+    color: rgba(0,212,200,0.85); text-transform: uppercase;
+    margin-bottom: 20px;
+  }}
+
+  /* Wave emoji */
+  .splash-wave {{
+    font-size: 62px; margin-bottom: 18px;
+    animation: splash-float 2.2s cubic-bezier(0.4,0,0.2,1) infinite,
+               splash-glow 2.2s ease-in-out infinite;
     position: relative;
-    z-index: 10;
-  }
-  .splash-progress-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #0891B2, #00D4C8, #0891B2);
-    background-size: 200% 100%;
-    border-radius: 2px;
-    width: 100%;
-    animation: splash-shimmer 2s ease-in-out infinite;
-  }
-  .splash-status {
-    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
-    font-size: 12px; color: rgba(255,255,255,0.75) !important;
-    -webkit-text-fill-color: rgba(255,255,255,0.75) !important;
-    letter-spacing: 0.12em; text-transform: uppercase;
-    position: relative; z-index: 10; font-weight: 700;
-  }
+  }}
+
+  /* Title */
+  .splash-title {{
+    font-family: 'Syne', 'Outfit', system-ui, sans-serif;
+    font-size: 44px; font-weight: 900; letter-spacing: -0.04em;
+    color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 32px rgba(0,0,0,0.50);
+  }}
+  .splash-title span {{
+    background: linear-gradient(110deg, #00D4C8 0%, #38BDF8 40%, #6EE7FF 75%, #00D4C8 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent !important;
+    animation: splash-shimmer 3s linear infinite;
+  }}
+
+  /* Subtitle */
+  .splash-sub {{
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.22em;
+    color: rgba(200,224,242,0.65) !important;
+    -webkit-text-fill-color: rgba(200,224,242,0.65) !important;
+    text-transform: uppercase; margin-bottom: 48px;
+  }}
+
+  /* Progress bar that fills over ~3.8s */
+  .splash-bar-track {{
+    width: 220px; height: 2px;
+    background: rgba(255,255,255,0.10); border-radius: 2px;
+    overflow: hidden; margin-bottom: 14px;
+  }}
+  .splash-bar-fill {{
+    height: 100%; width: 0%; border-radius: 2px;
+    background: linear-gradient(90deg, #00D4C8, #38BDF8, #00D4C8);
+    box-shadow: 0 0 10px rgba(0,212,200,0.70);
+    animation: splash-bar-grow 3.8s cubic-bezier(0.25,0.46,0.45,0.94) 0.2s forwards;
+  }}
+
+  /* Status text */
+  .splash-status {{
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(200,224,242,0.42) !important;
+    -webkit-text-fill-color: rgba(200,224,242,0.42) !important;
+  }}
+
+  /* Footer */
+  .splash-footer {{
+    position: absolute; bottom: 26px;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 11px; color: rgba(255,255,255,0.20);
+    letter-spacing: 0.06em; z-index: 10;
+  }}
+
+  /* ── Keyframes ── */
+  @keyframes splash-orb-pulse {{
+    0%,100% {{ opacity: 0.7; transform: scale(1); }}
+    50%      {{ opacity: 1.0; transform: scale(1.15); }}
+  }}
+  @keyframes splash-scan-anim {{
+    from {{ left: -150px; }} to {{ left: 110%; }}
+  }}
+  @keyframes splash-line-in {{
+    from {{ transform: scaleX(0); }} to {{ transform: scaleX(1); }}
+  }}
+  @keyframes splash-rise {{
+    from {{ opacity: 0; transform: translateY(20px); }}
+    to   {{ opacity: 1; transform: translateY(0); }}
+  }}
+  @keyframes splash-shimmer {{
+    0%   {{ background-position: 0% center; }}
+    100% {{ background-position: 200% center; }}
+  }}
+  @keyframes splash-bar-grow {{
+    0%   {{ width: 0%; }}
+    15%  {{ width: 18%; }}
+    40%  {{ width: 52%; }}
+    70%  {{ width: 78%; }}
+    90%  {{ width: 93%; }}
+    100% {{ width: 98%; }}
+  }}
 </style>
 <div id="pulse-splash">
-  <div class="splash-orbits">
-    <div class="splash-orbit"></div>
-    <div class="splash-orbit"></div>
-  </div>
-  <div class="splash-container">
+  <div class="splash-orb splash-orb-1"></div>
+  <div class="splash-orb splash-orb-2"></div>
+  <div class="splash-orb splash-orb-3"></div>
+  <div class="splash-scan"></div>
+  <div class="splash-topline"></div>
+  <div class="splash-content">
+    <div class="splash-eyebrow">Visit Dana Point &nbsp;·&nbsp; California</div>
     <div class="splash-wave">🌊</div>
     <div class="splash-title">Dana Point <span>PULSE</span></div>
     <div class="splash-sub">Destination Intelligence Platform</div>
-    <div class="splash-progress">
-      <div class="splash-progress-bar"></div>
-    </div>
-    <div class="splash-status">Loading Intelligence</div>
+    <div class="splash-bar-track"><div class="splash-bar-fill"></div></div>
+    <div class="splash-status">Syncing destination intelligence</div>
   </div>
+  <div class="splash-footer">GloCon Solutions LLC &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; Authorized Access Only</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -4203,7 +4201,7 @@ _st_components.html("""
       '.block-container{padding-top:0!important;margin-top:0!important}' +
       '.hero-banner{margin-top:0!important}' +
       '[data-testid="stApp"],[data-testid="stAppViewContainer"],[data-testid="stBottom"],' +
-      'body,.main,.stApp{background:#0B1E38!important}';
+      'body,.main,.stApp{background:#0E1B2A!important}';
     doc.head.appendChild(s);
   }
   // (b) Force inline styles — beats React inline style overrides
