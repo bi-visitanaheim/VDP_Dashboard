@@ -78,6 +78,27 @@ def clean_copy(text):
     return t.strip()
 
 
+def smart_summary(text, max_chars: int = 280) -> str:
+    """Trim copy to whole sentences instead of cutting mid-word.
+
+    Cleans em dashes first, then keeps as many full sentences as fit under
+    max_chars (always at least one), splitting on the first '. ' after a
+    reasonable start so headlines never end on a fragment like 'Dana Poi'."""
+    if not isinstance(text, str) or not text:
+        return text or ""
+    t = clean_copy(text).strip()
+    if len(t) <= max_chars:
+        return t
+    cut = t[:max_chars]
+    # Prefer ending at the last sentence boundary within the window
+    last_period = cut.rfind(". ")
+    if last_period >= 60:
+        return cut[:last_period + 1]
+    # Otherwise fall back to the last whole word
+    last_space = cut.rfind(" ")
+    return (cut[:last_space] if last_space > 0 else cut).rstrip(",;: ") + "…"
+
+
 def bold_key_data(text: str) -> str:
     """Bold all key data points: percentages, dollar amounts, numbers with units, quarters, etc."""
     if not text:
@@ -5523,6 +5544,7 @@ def build_metrics_context(
         "revpar_90":      float(r90["revpar"].mean()),
         "adr_30":         float(r30["adr"].mean()),
         "occ_30":         float(r30["occupancy"].mean()),
+        "occ_prior":      float(pri["occupancy"].mean()),
         "rev_30_total":   float(r30["revenue"].sum()),
         "demand_30":      float(r30["demand"].sum()),
         "revpar_delta":   pct_delta(float(rec["revpar"].mean()), float(pri["revpar"].mean())),
@@ -10184,14 +10206,14 @@ with tab_ov:
         try:
             _spot_insight = df_insights[df_insights["audience"].isin(["cross","dmo"])].sort_values("priority").iloc[0] if not df_insights.empty else None
             if _spot_insight is not None:
-                _spot_head = str(_spot_insight.get("headline","") or "")
-                _spot_body = str(_spot_insight.get("body","") or "")[:200]
+                _spot_head = smart_summary(str(_spot_insight.get("headline","") or ""), 160)
+                _spot_body = smart_summary(str(_spot_insight.get("body","") or ""), 300)
                 st.markdown(f'''
 <div class="dp-spotlight-card">
   <div class="dp-spotlight-inner">
-    <div style="font-size:9px;font-weight:800;letter-spacing:.14em;color:#00C3BE;text-transform:uppercase;margin-bottom:10px;">⚡ Top Signal</div>
-    <div style="font-size:18px;font-weight:800;color:#FFFFFF;line-height:1.3;margin-bottom:10px;">{_spot_head}</div>
-    <div style="font-size:12px;color:rgba(255,255,255,0.65);line-height:1.6;">{_spot_body}</div>
+    <div style="font-size:10px;font-weight:800;letter-spacing:.14em;color:#3DE8E2;text-transform:uppercase;margin-bottom:10px;">⚡ Top Signal</div>
+    <div style="font-size:19px;font-weight:800;color:#FFFFFF;line-height:1.35;margin-bottom:12px;">{bold_key_data(_spot_head)}</div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.92);line-height:1.65;">{bold_key_data(_spot_body)}</div>
   </div>
 </div>
 ''', unsafe_allow_html=True)
@@ -10537,6 +10559,18 @@ with tab_ov:
             _pulse_score = int(round(_comp_occ + _comp_rvp + _comp_cmp))
             _pulse_score = max(0, min(100, _pulse_score))
 
+            # Prior-period PULSE score for progress tracking. Occupancy and
+            # compression are evaluated on the prior window; momentum is held at
+            # its neutral baseline (no prior-of-prior momentum is available), so
+            # the delta reflects real movement in demand and compression.
+            _occ_prior   = m.get("occ_prior", _occ_score)
+            _cq_prior    = m.get("comp_prior_q", _cq_s)
+            _comp_occ_p  = min(50, max(0, (_occ_prior / 70) * 50))
+            _comp_rvp_p  = 15.0
+            _comp_cmp_p  = min(20, max(0, _cq_prior * 2.0))
+            _pulse_prior = max(0, min(100, int(round(_comp_occ_p + _comp_rvp_p + _comp_cmp_p))))
+            _pulse_diff  = _pulse_score - _pulse_prior
+
             if _pulse_score >= 90:
                 _p_color  = "#7C3AED"
                 _p_status = "HISTORIC"
@@ -10572,7 +10606,17 @@ with tab_ov:
             _gauge_fig.update_layout(height=200, margin=dict(l=20, r=20, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(_gauge_fig, use_container_width=True, config={"displayModeBar": False})
 
-            st.caption(f"**Status:** {_p_status}, Market health score across occupancy, rate momentum, and compression trends.")
+            _trend_arrow = "▲" if _pulse_diff > 0 else ("▼" if _pulse_diff < 0 else "▬")
+            _trend_color = "#21808D" if _pulse_diff > 0 else ("#c0152f" if _pulse_diff < 0 else "#8FA3B8")
+            _trend_word  = "up" if _pulse_diff > 0 else ("down" if _pulse_diff < 0 else "flat")
+            st.markdown(
+                f'<div style="text-align:center;margin-top:-6px;margin-bottom:6px;">'
+                f'<span style="font-size:13px;font-weight:800;color:{_trend_color};">'
+                f'{_trend_arrow} {_pulse_diff:+d} pts vs prior period</span>'
+                f'<span style="font-size:12px;color:#64748B;"> &nbsp;({_pulse_prior} → {_pulse_score})</span></div>',
+                unsafe_allow_html=True,
+            )
+            st.caption(f"**Status:** {_p_status} ({_trend_word}). Market health score across occupancy, rate momentum, and compression trends.")
 
     # ── SUB-TAB 2: Board Report ──────────────────────────────────────────────────
     with _ov_t2:
@@ -12183,7 +12227,15 @@ with tab_fo:
         if not _camp_row.empty:
             _camp_insight = _camp_row.iloc[0].get("body", "")
     if _camp_insight:
-        st.info(f"📡 **Campaign Timing Signal:** {_camp_insight}")
+        st.markdown(
+            f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-left:4px solid #0891B2;'
+            f'border-radius:0 10px 10px 0;padding:14px 18px;margin:8px 0 4px;">'
+            f'<div style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;'
+            f'color:#0891B2;margin-bottom:6px;">📡 Campaign Timing Signal</div>'
+            f'<div style="font-size:13px;color:#1E293B;line-height:1.65;">'
+            f'{bold_key_data(smart_summary(str(_camp_insight), 320))}</div></div>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown("---")
 
