@@ -5430,7 +5430,7 @@ def get_table_counts() -> dict:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
             counts[t] = row[0] if row else 0
         except Exception:
-            counts[t] = ", "
+            counts[t] = "n/a"
 
     for t in [
         "fact_str_metrics",
@@ -5479,7 +5479,7 @@ def get_table_counts() -> dict:
             row = conn.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()
             counts[t] = row[0] if row else 0
         except Exception:
-            counts[t] = ", "
+            counts[t] = "n/a"
 
     # Per-grain breakdowns (used by sidebar status and Data Source Health cards)
 
@@ -5495,7 +5495,7 @@ def get_table_counts() -> dict:
             ).fetchone()
             counts[key] = row[0] if row else 0
         except Exception:
-            counts[key] = ", "
+            counts[key] = "n/a"
     return counts
 
 @st.cache_data(ttl=60)   # short TTL so progress updates show quickly
@@ -8362,7 +8362,7 @@ with st.sidebar:
         str_monthly_rows = len(df_monthly)
 
     _run_at  = df_log.iloc[0]["run_at"] if not df_log.empty else None
-    last_log = str(_run_at)[:10] if pd.notna(_run_at) else ", "
+    last_log = str(_run_at)[:10] if pd.notna(_run_at) else "n/a"
 
     _d_dot   = "🟢" if str_daily_rows   > 0 else "⚫"
     _m_dot   = "🟢" if str_monthly_rows > 0 else "⚫"
@@ -18587,8 +18587,8 @@ with tab_dl:
             "load_log":                  "Load Log",
         }
         for _key, _label in _TABLE_LABELS.items():
-            _val = counts.get(_key, ", ")
-            st.metric(_label, f"{_val:,}" if isinstance(_val, int) else _val)
+            _val = counts.get(_key, "n/a")
+            st.metric(_label, f"{_val:,}" if isinstance(_val, int) else "n/a")
 
     st.markdown(sec_div("🟢 Data Source Health"), unsafe_allow_html=True)
 
@@ -18960,7 +18960,7 @@ with tab_dl:
             "fred_economic_indicators":            "FRED economic indicators (CPI, income, consumer sentiment, housing)",
         }
         _brain_rows = [
-            {"Table": t, "Description": d, "Row Count": counts.get(t, ", ")}
+            {"Table": t, "Description": d, "Row Count": (f"{counts[t]:,}" if isinstance(counts.get(t), int) else "n/a")}
             for t, d in _brain_tables.items()
         ]
         _brain_df = pd.DataFrame(_brain_rows)
