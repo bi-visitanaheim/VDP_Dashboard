@@ -1,5 +1,5 @@
 """
-VDP Analytics — Interactive Visual Components
+VDP Analytics, Interactive Visual Components
 Narrative boxes, blob loaders, shader wallpapers, iridescent data cards,
 fun facts sprite, monthly highlights, topic animations.
 """
@@ -159,7 +159,7 @@ def render_kpi_blob_loaders(height: int = 560) -> None:
       background: linear-gradient(135deg, rgba(0,212,200,0.04) 0%, rgba(5,103,200,0.04) 100%);
       border-radius: 8px;
     }}
-    /* base — no animation shorthand here to avoid override conflicts */
+    /* base, no animation shorthand here to avoid override conflicts */
     .blob {{
       width: 64px;
       height: 64px;
@@ -193,7 +193,7 @@ def render_kpi_blob_loaders(height: int = 560) -> None:
       66%  {{ border-radius: 70% 30% 40% 60% / 40% 60% 50% 50%; transform: translateY(4px); }}
       100% {{ border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: translateY(0px); }}
     }}
-    /* each variant: full animation shorthand — name, duration only needed */
+    /* each variant: full animation shorthand, name, duration only needed */
     .blob1  {{ background:#00D4C8; border-radius:60% 40% 30% 70%/60% 30% 70% 40%; animation-name:blob-breathe; animation-duration:3.8s; }}
     .blob2  {{ background:#0567C8; border-radius:40% 60% 70% 30%/70% 60% 40% 30%; animation-name:blob-morph;   animation-duration:5.2s; }}
     .blob3  {{ background:#21808D; border-radius:50% 50% 40% 60%/60% 40% 50% 50%; animation-name:blob-pulse;   animation-duration:2.9s; }}
@@ -390,7 +390,7 @@ document.querySelectorAll('.mono-card').forEach(card => {{
 
 def render_fun_facts_sprite(facts: list, height: int = 480) -> None:
     """
-    Canvas sprite animation — circles of various sizes orbit with fun facts.
+    Canvas sprite animation, circles of various sizes orbit with fun facts.
     facts: list of {"text": str, "value": str} dicts from real DB data.
     Monochromatic VDP palette, Helvetica-style font.
     """
@@ -516,7 +516,7 @@ def render_monthly_highlights(insights: list, height: int = 260) -> None:
             "<div style='padding:24px;text-align:center;color:#5A7A95;"
             "font-size:13px;border:1px dashed rgba(0,212,200,0.2);"
             "border-radius:12px;margin:8px 0;'>"
-            "◈ No insights available — run the pipeline to generate forward-looking analysis."
+            "◈ No insights available, run the pipeline to generate forward-looking analysis."
             "</div>",
             unsafe_allow_html=True,
         )

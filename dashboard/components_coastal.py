@@ -79,13 +79,13 @@ def load_whale_watching() -> pd.DataFrame:
 
 def render_beach_intelligence(df_beach: pd.DataFrame, df_kpi: pd.DataFrame):
     """Render Beach Water Quality Intelligence panel."""
-    st.markdown(sec_div("🌊 Beach Water Quality Grades — Visitor Health & Experience Signal"), unsafe_allow_html=True)
+    st.markdown(sec_div("🌊 Beach Water Quality Grades, Visitor Health & Experience Signal"), unsafe_allow_html=True)
 
     if df_beach.empty:
         st.markdown(
             '<div class="empty-card"><div class="empty-icon">🌊</div>'
             '<div class="empty-title">Beach Water Quality Data Not Loaded</div>'
-            '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> to fetch beach grades from Heal the Bay.</div>'
+            '<div class="empty-body">Beach water quality grades will appear once the data has been loaded.</div>'
             '</div>',
             unsafe_allow_html=True,
         )
@@ -155,20 +155,20 @@ def render_beach_intelligence(df_beach: pd.DataFrame, df_kpi: pd.DataFrame):
         "Post-rain bacterial exceedances at Doheny (main beach) and Capo (Arroyo runoff) show "
         "strongest correlation with weekend occupancy softening 1-2 days after advisory issued. "
         "Salt Creek (limited runoff) and Baby Beach (harbor-protected) show fewer advisories. "
-        "**Action:** Monitor Heal the Bay forecast on Tuesday-Wednesday before weekends — "
+        "**Action:** Monitor Heal the Bay forecast on Tuesday-Wednesday before weekends, "
         "high rain + creek flow = probable advisory → pre-emptive marketing to fly-in origin markets."
     )
     st.markdown(f'<div class="dp-callout">{advisory_impact}</div>', unsafe_allow_html=True)
 
 def render_whale_watching(df_whale: pd.DataFrame, df_kpi: pd.DataFrame):
     """Render Whale Watching Seasonality and Demand Impact."""
-    st.markdown(sec_div("🐋 Whale Watching Season Index — Shoulder-Season Demand Driver"), unsafe_allow_html=True)
+    st.markdown(sec_div("🐋 Whale Watching Season Index, Shoulder-Season Demand Driver"), unsafe_allow_html=True)
 
     if df_whale.empty:
         st.markdown(
             '<div class="empty-card"><div class="empty-icon">🐋</div>'
             '<div class="empty-title">Whale Watching Data Not Loaded</div>'
-            '<div class="empty-body">Run <code>python scripts/run_pipeline.py</code> to populate whale watching activity data.</div>'
+            '<div class="empty-body">Whale watching activity will appear once the data has been loaded.</div>'
             '</div>',
             unsafe_allow_html=True,
         )
@@ -193,7 +193,7 @@ def render_whale_watching(df_whale: pd.DataFrame, df_kpi: pd.DataFrame):
         st.metric("Est. Annual Passengers", f"{total_passengers/1e6:.1f}M")
 
     with col3:
-        peak_species = df_whale.loc[df_whale["whale_watching_index"].idxmax(), "species"] if not df_whale.empty else "—"
+        peak_species = df_whale.loc[df_whale["whale_watching_index"].idxmax(), "species"] if not df_whale.empty else ", "
         st.metric("Peak Species Now", peak_species)
 
     with col4:
@@ -273,7 +273,7 @@ def render_whale_watching(df_whale: pd.DataFrame, df_kpi: pd.DataFrame):
 
 def render_revenue_opportunities(df_kpi: pd.DataFrame, df_beach: pd.DataFrame, df_whale: pd.DataFrame):
     """Render Revenue Opportunity Calculator backed by data."""
-    st.markdown(sec_div("💰 Revenue Opportunities — Data-Backed Projections"), unsafe_allow_html=True)
+    st.markdown(sec_div("💰 Revenue Opportunities, Data-Backed Projections"), unsafe_allow_html=True)
 
     opportunities = [
         {

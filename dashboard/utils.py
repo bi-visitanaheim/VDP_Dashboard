@@ -1,6 +1,6 @@
 """
-VDP Dashboard Utilities — Consolidated helpers for KPI formatting, SQL queries, and logging.
-GloCon Solutions LLC — Dana Point PULSE
+VDP Dashboard Utilities, Consolidated helpers for KPI formatting, SQL queries, and logging.
+GloCon Solutions LLC, Dana Point PULSE
 """
 
 import logging
@@ -270,13 +270,13 @@ def format_insight_card(icon: str, title: str, main_value: str, subtitle: str = 
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# INFOGRAPHIC STAT BAND  — OCFEC-inspired, but sleeker
+# INFOGRAPHIC STAT BAND, OCFEC-inspired, but sleeker
 # A color-coded band that pulls the MAIN IDEAS out of a plain paragraph into
 # scannable "key points" + optional stat chips, with a gradient icon tile and an
 # optional status pill. Use in place of dense explanatory text boxes.
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Named accent palette — each entry: (solid, tint_bg, deep_text)
+# Named accent palette, each entry: (solid, tint_bg, deep_text)
 STAT_BAND_PALETTE = {
     "teal":   ("#0891B2", "#ECFEFF", "#075E6B"),
     "blue":   ("#2563EB", "#EFF6FF", "#1E40AF"),
@@ -292,7 +292,7 @@ def _stat_band_colors(accent: str) -> tuple:
     """Resolve an accent name or hex into (solid, tint_bg, deep_text)."""
     if accent in STAT_BAND_PALETTE:
         return STAT_BAND_PALETTE[accent]
-    # Custom hex — derive a very light tint and a dark text shade
+    # Custom hex, derive a very light tint and a dark text shade
     hex_clr = accent.lstrip("#")
     if len(hex_clr) == 6:
         r, g, b = (int(hex_clr[i:i + 2], 16) for i in (0, 2, 4))
@@ -313,7 +313,7 @@ def format_stat_band(
     status=None,
 ) -> str:
     """
-    Sleek infographic stat band — OCFEC-style category band, modernized.
+    Sleek infographic stat band, OCFEC-style category band, modernized.
 
     Args:
         icon:    emoji/glyph shown in a gradient tile on the left
@@ -347,7 +347,7 @@ def format_stat_band(
             f'padding:4px 11px;border-radius:20px;white-space:nowrap;">{s_txt}</span>'
         )
 
-    # Key points — each with an accent marker; main ideas, not a wall of text
+    # Key points, each with an accent marker; main ideas, not a wall of text
     points_html = ""
     if points:
         items = "".join(
@@ -362,7 +362,7 @@ def format_stat_band(
             f'<ul style="list-style:none;padding:0;margin:12px 0 0 0;">{items}</ul>'
         )
 
-    # Stat chips — the hard numbers, OCFEC-style values, as mini cards
+    # Stat chips, the hard numbers, OCFEC-style values, as mini cards
     stats_html = ""
     if stats:
         chips = []
@@ -430,7 +430,7 @@ def format_stat_band(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# OCFEC-style benchmark band — value-vs-benchmark bars grouped by category
+# OCFEC-style benchmark band, value-vs-benchmark bars grouped by category
 # ──────────────────────────────────────────────────────────────────────────────
 def format_benchmark_band(category: str, icon: str, color: str, rows, *,
                           benchmark_label: str = "BENCHMARK") -> str:
@@ -487,7 +487,7 @@ def format_benchmark_band(category: str, icon: str, color: str, rows, *,
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Auto chart analysis — derive an infographic stat-band from a labeled series
+# Auto chart analysis, derive an infographic stat-band from a labeled series
 # ──────────────────────────────────────────────────────────────────────────────
 def _fmt_val(v, unit: str = "") -> str:
     """Compact value formatter honoring a unit hint ($, %, or count)."""
@@ -545,7 +545,7 @@ def auto_distribution_analysis(labels, values, *, title: str, noun: str = "share
         f"<strong>{top_l}</strong> leads at {_fmt_val(top_v, unit)} "
         f"({top_share:.0f}% of total) {noun}.",
         f"The top 3 ({top3_names}) account for <strong>{top3_share:.0f}%</strong> "
-        f"of all {n} tracked entries — "
+        f"of all {n} tracked entries, "
         + ("a concentrated mix." if top3_share >= 60 else "a relatively even spread."),
     ]
     if n > 3:

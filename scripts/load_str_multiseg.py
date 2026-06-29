@@ -65,11 +65,37 @@ def ensure_table(conn: sqlite3.Connection) -> None:
                 ON CONFLICT REPLACE
         )
     """)
-    # Legacy column rename: property → market (no-op if already correct)
-    try:
-        conn.execute("ALTER TABLE fact_str_group_metrics ADD COLUMN data_period TEXT NOT NULL DEFAULT 'current'")
-    except Exception:
-        pass
+    # Legacy schema migration: older builds created this table with a
+    # `property TEXT NOT NULL` column that the multiseg loader never fills,
+    # so every INSERT failed with a NOT NULL constraint error and the table
+    # stayed empty (Segment Mix showed no data). The data is market+segment
+    # level — there is no per-property grain here — so we drop the obsolete
+    # column by rebuilding the table to the canonical schema. Safe because the
+    # table holds no per-property rows; the loader fully repopulates it below.
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(fact_str_group_metrics)").fetchall()]
+    if "property" in cols:
+        conn.execute("DROP TABLE fact_str_group_metrics")
+        conn.execute("""
+            CREATE TABLE fact_str_group_metrics (
+                source       TEXT NOT NULL,
+                grain        TEXT NOT NULL,
+                as_of_date   TEXT NOT NULL,
+                market       TEXT NOT NULL,
+                segment      TEXT NOT NULL,
+                metric_name  TEXT NOT NULL,
+                metric_value REAL,
+                unit         TEXT NOT NULL,
+                data_period  TEXT NOT NULL DEFAULT 'current',
+                UNIQUE(source, grain, as_of_date, market, segment, metric_name, data_period)
+                    ON CONFLICT REPLACE
+            )
+        """)
+    else:
+        # Forward-compatible no-op for DBs already on the canonical schema.
+        try:
+            conn.execute("ALTER TABLE fact_str_group_metrics ADD COLUMN data_period TEXT NOT NULL DEFAULT 'current'")
+        except Exception:
+            pass
     conn.commit()
 
 

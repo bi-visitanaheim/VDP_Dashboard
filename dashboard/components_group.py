@@ -1,11 +1,11 @@
 """
-components_group.py — Group & Traveler Intelligence tab for Dana Point PULSE.
+components_group.py, Group & Traveler Intelligence tab for Dana Point PULSE.
 
 Renders the dedicated 👥 Group & Travel tab with 4 sub-tabs:
-  1. Group Strategy    — TBID opportunity, displacement heatmap, executive brief
-  2. Traveler Types    — radar chart, booking windows, LOS benchmarks
-  3. National Context  — $319B funnel, segment donut, recovery rates
-  4. AI Analyst        — pre-loaded group travel prompts
+  1. Group Strategy  , TBID opportunity, displacement heatmap, executive brief
+  2. Traveler Types  , radar chart, booking windows, LOS benchmarks
+  3. National Context, $319B funnel, segment donut, recovery rates
+  4. AI Analyst      , pre-loaded group travel prompts
 """
 
 from __future__ import annotations
@@ -32,12 +32,12 @@ GROUP_SHARE_HIGH    = 0.32
 GROUP_ADR_DISCOUNT  = 0.18   # group negotiated rate ~18% below blended ADR
 SMERF_BOOKING_WINDOW_LOW  = 8   # weeks
 SMERF_BOOKING_WINDOW_HIGH = 48
-CACHE_TTL_GROUP     = 1800   # 30 min — semi-live group data
-CACHE_TTL_NATIONAL  = 3600   # 1 hr  — historical benchmarks
+CACHE_TTL_GROUP     = 1800   # 30 min, semi-live group data
+CACHE_TTL_NATIONAL  = 3600   # 1 hr, historical benchmarks
 
-# Light theme — these charts render on the app's WHITE page background.
+# Light theme, these charts render on the app's WHITE page background.
 # (Text must be dark to be legible; transparent plot bg lets the page show.)
-_DARK_BG   = "rgba(0,0,0,0)"          # transparent — inherits white page
+_DARK_BG   = "rgba(0,0,0,0)"          # transparent, inherits white page
 _GRID_CLR  = "rgba(15,23,42,0.07)"    # subtle dark grid on white
 _FONT_CLR  = "#334155"                # slate-700 body text
 _LABEL_CLR = "#64748B"                # slate-500 axis labels
@@ -91,7 +91,7 @@ def _dark_fig(height: int = 320) -> go.Figure:
 
 def _metric_box(label: str, value: str, note: str = "", color: str = "#0891B2",
                 action: str = "") -> str:
-    """Light-theme stat card — white bg, dark text, accent top-border."""
+    """Light-theme stat card, white bg, dark text, accent top-border."""
     action_html = (
         f'<div style="margin-top:8px;padding:6px 10px;background:{color}12;'
         f'border-radius:5px;font-size:10.5px;color:#334155;line-height:1.5;">'
@@ -113,7 +113,7 @@ def _metric_box(label: str, value: str, note: str = "", color: str = "#0891B2",
 
 def _action_card(icon: str, headline: str, body: str, action: str,
                  accent: str = "#0891B2") -> str:
-    """Light-theme action card — white bg, dark text, accent left bar + CTA."""
+    """Light-theme action card, white bg, dark text, accent left bar + CTA."""
     return (
         f'<div style="background:linear-gradient(180deg,{accent}08 0%,#FFFFFF 60%);'
         f'border:1px solid #E2E8F0;border-left:4px solid {accent};'
@@ -453,7 +453,7 @@ def _chart_tbid_bar(g: dict) -> go.Figure:
         annotation_position="right",
     )
     fig.update_layout(
-        title=dict(text="TBID Revenue Opportunity — Group Business", font=dict(size=13, color="#0F172A")),
+        title=dict(text="TBID Revenue Opportunity, Group Business", font=dict(size=13, color="#0F172A")),
         yaxis_title="$M / Year",
         yaxis_tickprefix="$",
         yaxis_ticksuffix="M",
@@ -542,7 +542,7 @@ def _chart_occ_heatmap(df_monthly: pd.DataFrame) -> go.Figure:
         )
     fig.update_layout(
         title=dict(
-            text="Monthly Occupancy — Group Safety Calendar  🟢 Safe  🟡 Monitor  🔴 Displace",
+            text="Monthly Occupancy, Group Safety Calendar  🟢 Safe  🟡 Monitor  🔴 Displace",
             font=dict(size=12.5, color="#0F172A"),
         ),
         yaxis=dict(title="Avg Occupancy %", range=[0, 105], gridcolor="rgba(148,163,184,0.12)"),
@@ -557,7 +557,7 @@ def _chart_occ_heatmap(df_monthly: pd.DataFrame) -> go.Figure:
         margin=dict(l=14, r=90, t=52, b=50, autoexpand=True),
         barmode="group",
     )
-    # Remove ADR text labels to avoid overlap — hover shows them instead
+    # Remove ADR text labels to avoid overlap, hover shows them instead
     if adrs:
         fig.update_traces(texttemplate=None, selector=dict(type="scatter"))
     return fig
@@ -590,7 +590,7 @@ def _chart_segment_donut(df_segs: pd.DataFrame) -> go.Figure:
         rotation=20,
     ))
     fig.update_layout(
-        title=dict(text="U.S. Group Travel — $319B National Segments", font=dict(size=13, color="#0F172A")),
+        title=dict(text="U.S. Group Travel, $319B National Segments", font=dict(size=13, color="#0F172A")),
         annotations=[dict(
             text="<b>$319B</b><br><span style='font-size:9px;color:#94A3B8'>National<br>Group Travel</span>",
             x=0.5, y=0.5, font_size=16, showarrow=False,
@@ -648,7 +648,7 @@ def _chart_revenue_funnel(g: dict) -> go.Figure:
             font=dict(size=9.5, color="#94A3B8"),
         )
     fig.update_layout(
-        title=dict(text="Group Revenue Funnel — National → Dana Point TBID", font=dict(size=13, color="#0F172A")),
+        title=dict(text="Group Revenue Funnel, National → Dana Point TBID", font=dict(size=13, color="#0F172A")),
         funnelmode="stack",
         margin=dict(l=14, r=200, t=52, b=14),
     )
@@ -702,7 +702,7 @@ def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
         ))
 
     fig.update_layout(
-        title=dict(text="Traveler Type Profile — 5-Dimension Comparison", font=dict(size=13, color="#0F172A")),
+        title=dict(text="Traveler Type Profile, 5-Dimension Comparison", font=dict(size=13, color="#0F172A")),
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
             radialaxis=dict(
@@ -725,7 +725,7 @@ def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
 
 
 def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
-    """ADR vs Occupancy bubble per property — size = RevPAR, color = chain scale."""
+    """ADR vs Occupancy bubble per property, size = RevPAR, color = chain scale."""
     if df.empty:
         return _dark_fig()
 
@@ -781,7 +781,7 @@ def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
                        showarrow=False, font=dict(size=9, color="#64748B"), xanchor="left")
     fig.update_layout(
         title=dict(
-            text="Competitive Set — ADR vs Occupancy  ·  bubble size = RevPAR",
+            text="Competitive Set, ADR vs Occupancy  ·  bubble size = RevPAR",
             font=dict(size=12.5, color="#0F172A"),
         ),
         xaxis=dict(title="Occupancy %", ticksuffix="%", gridcolor=_GRID_CLR),
@@ -798,7 +798,7 @@ def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
 
 
 def _chart_tbid_chain_waterfall(df_chain: pd.DataFrame, g: dict) -> go.Figure:
-    """TBID contribution waterfall by chain scale — ranked bars with inside labels."""
+    """TBID contribution waterfall by chain scale, ranked bars with inside labels."""
     if df_chain.empty:
         return _dark_fig()
 
@@ -860,7 +860,7 @@ def _chart_tbid_chain_waterfall(df_chain: pd.DataFrame, g: dict) -> go.Figure:
         annotation_position="right",
     )
     fig.update_layout(
-        title=dict(text="TBID Waterfall by Chain Scale — rooms × ADR × 28% group share × 1.25%",
+        title=dict(text="TBID Waterfall by Chain Scale, rooms × ADR × 28% group share × 1.25%",
                    font=dict(size=12, color="#0F172A")),
         yaxis=dict(title="Est. TBID $M/yr", tickprefix="$", ticksuffix="M",
                    gridcolor="rgba(148,163,184,0.12)"),
@@ -924,7 +924,7 @@ def _chart_supply_pipeline(df: pd.DataFrame) -> go.Figure:
             font=dict(size=9, color="#94A3B8"),
         )
     fig.update_layout(
-        title=dict(text="Supply Pipeline — Upcoming Dana Point Hotel Openings",
+        title=dict(text="Supply Pipeline, Upcoming Dana Point Hotel Openings",
                    font=dict(size=12.5, color="#0F172A")),
         xaxis=dict(title="New Rooms", gridcolor="rgba(148,163,184,0.12)"),
         showlegend=False,
@@ -934,7 +934,7 @@ def _chart_supply_pipeline(df: pd.DataFrame) -> go.Figure:
 
 
 def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go.Figure:
-    """Grouped bar: website vs media attributed group trips and impact — dual axis."""
+    """Grouped bar: website vs media attributed group trips and impact, dual axis."""
     if web_df.empty and med_df.empty:
         return _dark_fig()
 
@@ -984,7 +984,7 @@ def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go
         yref="y2",
     )
     fig.update_layout(
-        title=dict(text="Group Attribution — Website vs Media Channels",
+        title=dict(text="Group Attribution, Website vs Media Channels",
                    font=dict(size=12.5, color="#0F172A")),
         barmode="group",
         yaxis=dict(title="Attributed Trips", color="#38BDF8", gridcolor="rgba(148,163,184,0.12)"),
@@ -998,7 +998,7 @@ def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go
 
 
 def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> go.Figure:
-    """Dual-axis line: CoStar monthly occ vs Datafy group attribution — area fill + markers."""
+    """Dual-axis line: CoStar monthly occ vs Datafy group attribution, area fill + markers."""
     fig = _dark_fig(height=360)
 
     if not df_costar.empty and "as_of_date" in df_costar.columns:
@@ -1018,8 +1018,8 @@ def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> 
         ))
         # Threshold bands
         for lvl, clr, lbl in [
-            (OCC_GROUP_RISK_MIN, "#EF4444", "80% — displace risk"),
-            (OCC_GROUP_WARN_MIN, "#F59E0B", "70% — monitor"),
+            (OCC_GROUP_RISK_MIN, "#EF4444", "80%, displace risk"),
+            (OCC_GROUP_WARN_MIN, "#F59E0B", "70%, monitor"),
         ]:
             fig.add_hline(y=lvl, line_dash="dot", line_color=clr, line_width=1,
                           annotation_text=f"  {lbl}", annotation_font_size=9,
@@ -1054,7 +1054,7 @@ def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> 
 
 
 def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> None:
-    """Heatmap table: traveler types × quarters — Safe/Caution/Risk by occ threshold."""
+    """Heatmap table: traveler types × quarters, Safe/Caution/Risk by occ threshold."""
     if df_types.empty or comp.empty:
         st.info("Traveler type or compression data not loaded.")
         return
@@ -1131,7 +1131,7 @@ def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> No
     st.markdown(f"""
     <div style="margin-top:14px;margin-bottom:6px;color:#0891B2;font-size:10px;
                 font-weight:800;text-transform:uppercase;letter-spacing:.08em;">
-      SHOULDER SEASON ALIGNMENT MATRIX — Traveler Types × Quarters
+      SHOULDER SEASON ALIGNMENT MATRIX, Traveler Types × Quarters
     </div>
     <div style="overflow-x:auto;">
     <table style="width:100%;border-collapse:collapse;background:#FFFFFF;
@@ -1158,7 +1158,7 @@ def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> No
 # ── STR Group Segment Visualizations ──────────────────────────────────────────
 
 def _chart_group_vs_transient_trends(df_group: pd.DataFrame) -> go.Figure:
-    """Line chart: Group vs Transient Occ/ADR/RevPAR trends over time — one metric per sub-chart."""
+    """Line chart: Group vs Transient Occ/ADR/RevPAR trends over time, one metric per sub-chart."""
     if df_group.empty:
         fig = _dark_fig()
         fig.add_annotation(text="No group segment data available", showarrow=False)
@@ -1173,7 +1173,7 @@ def _chart_group_vs_transient_trends(df_group: pd.DataFrame) -> go.Figure:
     df_pivot["as_of_date"] = pd.to_datetime(df_pivot["as_of_date"])
     df_pivot = df_pivot.sort_values("as_of_date")
 
-    # Show only ADR to keep chart readable — most actionable single metric
+    # Show only ADR to keep chart readable, most actionable single metric
     fig = _dark_fig(height=360)
 
     _SEG_CFG = [
@@ -1276,7 +1276,7 @@ def _chart_segment_mix_donut(df_group: pd.DataFrame) -> go.Figure:
         hovertemplate="<b>%{label}</b><br>Occupancy sum: %{value:.1f}%<br>Share: %{percent}<extra></extra>",
     ))
     fig.update_layout(
-        title_text="Segment Demand Mix — Latest Week",
+        title_text="Segment Demand Mix, Latest Week",
         title_font=dict(size=13, color=_TITLE_CLR),
         showlegend=False,
         margin=dict(l=30, r=30, t=56, b=30, autoexpand=True),
@@ -1343,7 +1343,7 @@ def _chart_group_adr_premium(df_group: pd.DataFrame) -> go.Figure:
 
 
 def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
-    """Horizontal bar: Group occupancy by property — latest week, sorted descending."""
+    """Horizontal bar: Group occupancy by property, latest week, sorted descending."""
     if df_group.empty:
         fig = _dark_fig(height=360)
         fig.add_annotation(text="No group segment data available", showarrow=False)
@@ -1386,7 +1386,7 @@ def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
         hovertemplate="<b>%{y}</b><br>Group Occ: %{x:.1f}%<extra></extra>",
     ))
     fig.update_layout(
-        title_text=f"Group Occupancy by Property — {pd.Timestamp(latest).strftime('%b %d, %Y')}",
+        title_text=f"Group Occupancy by Property, {pd.Timestamp(latest).strftime('%b %d, %Y')}",
         title_font=dict(size=13, color=_TITLE_CLR),
         showlegend=False,
         margin=dict(l=14, r=60, t=56, b=36, autoexpand=True),
@@ -1451,7 +1451,7 @@ def _chart_property_group_performance(df_group: pd.DataFrame) -> go.Figure:
 
 
 def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
-    """Heatmap: Property × Segment Occupancy — latest date."""
+    """Heatmap: Property × Segment Occupancy, latest date."""
     if df_group.empty:
         fig = _dark_fig(height=420)
         fig.add_annotation(text="No group segment data available", showarrow=False)
@@ -1497,7 +1497,7 @@ def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
         hovertemplate="<b>%{y}</b><br>%{x}: %{z:.1f}%<extra></extra>",
     ))
     fig.update_layout(
-        title_text=f"Segment Occupancy Heatmap — {pd.Timestamp(latest).strftime('%b %d, %Y')}",
+        title_text=f"Segment Occupancy Heatmap, {pd.Timestamp(latest).strftime('%b %d, %Y')}",
         title_font=dict(size=13, color=_TITLE_CLR),
         showlegend=False,
         margin=dict(l=14, r=80, t=56, b=40, autoexpand=True),
@@ -1540,7 +1540,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
                 border:1px solid #BAE6FD;border-radius:12px;padding:20px 24px;
                 margin-bottom:18px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
       <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
-                  letter-spacing:.1em;margin-bottom:10px;">EXECUTIVE BRIEF — GROUP BUSINESS CASE</div>
+                  letter-spacing:.1em;margin-bottom:10px;">EXECUTIVE BRIEF, GROUP BUSINESS CASE</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:14px;">
         <div style="text-align:center;">
           <div style="color:#0F172A;font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;letter-spacing:-0.02em;">${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M</div>
@@ -1563,7 +1563,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
                     letter-spacing:.05em;margin-bottom:4px;">TOP RECOMMENDATION</div>
         <div style="color:#334155;font-size:12px;line-height:1.6;">
           {risk_action}. Group ADR is estimated at <strong style="color:#0F172A;">${group_adr:.0f}</strong> vs.
-          <strong style="color:#0F172A;">${market_adr:.0f}</strong> blended market ADR — a
+          <strong style="color:#0F172A;">${market_adr:.0f}</strong> blended market ADR, a
           <strong style="color:#0F172A;">${adr_gap:.0f}/room/night gap</strong>. Shoulder-season group bookings
           maximize TBID without displacing peak transient revenue.
         </div>
@@ -1651,7 +1651,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
         st.markdown("""
         <div style="margin-top:6px;margin-bottom:4px;color:#0891B2;font-size:10px;
                     font-weight:800;text-transform:uppercase;letter-spacing:.06em;">
-        SOCIAL AUDIENCE — GROUP OUTREACH CHANNEL
+        SOCIAL AUDIENCE, GROUP OUTREACH CHANNEL
         </div>
         """, unsafe_allow_html=True)
         cols = st.columns(4)
@@ -1671,7 +1671,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
         st.markdown("""
         <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.06em;margin-bottom:10px;">
-        A. COMPETITIVE SET POSITIONING — How Dana Point Properties Index Against the Set
+        A. COMPETITIVE SET POSITIONING, How Dana Point Properties Index Against the Set
         </div>
         """, unsafe_allow_html=True)
 
@@ -1699,7 +1699,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
     st.markdown("""
     <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                 letter-spacing:.06em;margin:14px 0 10px;">
-    B. TBID WATERFALL BY CHAIN SCALE — rooms × ADR × 28% group share × 1.25% TBID rate
+    B. TBID WATERFALL BY CHAIN SCALE, rooms × ADR × 28% group share × 1.25% TBID rate
     </div>
     """, unsafe_allow_html=True)
     if not df_chain.empty:
@@ -1725,7 +1725,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
         st.markdown("""
         <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.06em;margin:14px 0 10px;">
-        C. SUPPLY PIPELINE TIMELINE — Upcoming Hotel Openings
+        C. SUPPLY PIPELINE TIMELINE, Upcoming Hotel Openings
         </div>
         """, unsafe_allow_html=True)
         st.plotly_chart(_chart_supply_pipeline(df_pipeline), use_container_width=True,
@@ -1750,7 +1750,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
         st.markdown("""
         <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.06em;margin:14px 0 10px;">
-        D. ATTRIBUTION CHANNEL CONTRIBUTION — Website vs Media Group Trips & Impact
+        D. ATTRIBUTION CHANNEL CONTRIBUTION, Website vs Media Group Trips & Impact
         </div>
         """, unsafe_allow_html=True)
         col_attr, col_gap = st.columns([3, 1])
@@ -1790,7 +1790,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
         st.markdown("""
         <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.06em;margin:14px 0 10px;">
-        E. STR GROUP-SEGMENT ANALYTICS — Live Demand Trends
+        E. STR GROUP-SEGMENT ANALYTICS, Live Demand Trends
         </div>
         """, unsafe_allow_html=True)
 
@@ -1832,12 +1832,11 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
         <div style="background:rgba(8,145,178,0.04);border:1px dashed rgba(8,145,178,0.30);
                     border-radius:8px;padding:14px 18px;margin:14px 0;">
           <div style="color:#38BDF8;font-weight:700;font-size:11.5px;margin-bottom:6px;">
-            🔜 STR GROUP-SEGMENT DATA — READY TO LOAD
+            🔜 STR GROUP-SEGMENT DATA, READY TO LOAD
           </div>
           <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
             STR group-segment exports have been configured for live ingestion. Visualizations will
-            appear here automatically once data is downloaded via <code>python scripts/fetch_str_dropbox.py</code>
-            and loaded via <code>python scripts/load_str_multiseg.py</code>.<br>
+            appear here automatically once the latest group-segment data has been loaded.
             Run the pipeline to populate live <strong>group demand rooms</strong>, <strong>group ADR actuals</strong>,
             and <strong>segment composition</strong> analyses.
           </div>
@@ -1861,7 +1860,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
             "city":     "Present to City Council for infrastructure/policy decision",
             "visitor":  "Surface on visitdanapoint.com for trip-planning guidance",
             "resident": "Share via Dana Point community newsletter/social",
-            "cross":    "Escalate to senior leadership — non-obvious signal",
+            "cross":    "Escalate to senior leadership, non-obvious signal",
         }
         for _aud in _AUD_ORDER:
             _aud_rows = insights[insights["audience"] == _aud] if "audience" in insights.columns else pd.DataFrame()
@@ -1870,7 +1869,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
             _albl, _aclr = _AUD_LABELS.get(_aud, ("Insight", "#64748B"))
             st.markdown(f"""
             <div style="color:{_aclr};font-size:10px;font-weight:700;text-transform:uppercase;
-                        letter-spacing:.06em;margin:14px 0 8px;">{_albl} — ACTIONABLE INTELLIGENCE</div>
+                        letter-spacing:.06em;margin:14px 0 8px;">{_albl}, ACTIONABLE INTELLIGENCE</div>
             """, unsafe_allow_html=True)
             for _, row in _aud_rows.iterrows():
                 pri    = int(row.get("priority") or 5)
@@ -1893,7 +1892,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
         <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.30);
                     border-radius:8px;padding:12px 16px;margin-top:12px;">
           <div style="color:#10B981;font-weight:700;font-size:11px;margin-bottom:4px;">
-            ✅ STR GROUP-SEGMENT DATA — LIVE
+            ✅ STR GROUP-SEGMENT DATA, LIVE
           </div>
           <div style="color:#94A3B8;font-size:10.5px;">
             {len(df_group)} segment records loaded · {df_group["as_of_date"].max().strftime("%b %d, %Y")} latest update ·
@@ -1906,12 +1905,12 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
         <div style="background:rgba(245,158,11,0.06);border:1px dashed rgba(245,158,11,0.35);
                     border-radius:8px;padding:14px 18px;margin-top:12px;">
           <div style="color:#FCD34D;font-weight:700;font-size:11.5px;margin-bottom:6px;">
-            ⏳ STR GROUP-SEGMENT DATA — WAITING FOR DATA
+            ⏳ STR GROUP-SEGMENT DATA, WAITING FOR DATA
           </div>
           <div style="color:#94A3B8;font-size:11px;line-height:1.7;">
             STR group-segment exports are configured for auto-ingestion.
             Visualizations will populate automatically once data is fetched and loaded.<br>
-            To load data now: Run <code>python scripts/run_pipeline.py</code>
+            This panel populates automatically once group-segment data is available.
           </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1919,7 +1918,7 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
 
 def _render_traveler_types(df_types: pd.DataFrame) -> None:
     if df_types.empty:
-        st.info("Traveler type data not loaded. Run `python scripts/run_pipeline.py`.")
+        st.info("Traveler type data will appear once it has been loaded.")
         return
 
     st.markdown("""
@@ -1929,7 +1928,7 @@ def _render_traveler_types(df_types: pd.DataFrame) -> None:
                   letter-spacing:.08em;margin-bottom:6px;">WHY THIS MATTERS</div>
       <div style="color:#334155;font-size:12.5px;line-height:1.7;">
         Not all travelers are equal. Business travelers generate <strong style="color:#0F172A;">highest revenue</strong>
-        but represent only 20% of volume — they fund 60% of hotel revenue nationally.
+        but represent only 20% of volume, they fund 60% of hotel revenue nationally.
         SMERF groups (shoulder-season buyers) are the <em>lowest displacement risk</em> because
         they book 8–48 weeks out into periods when transient demand is soft.
         Knowing which type Dana Point over- or under-indexes tells us where to invest marketing dollars.
@@ -1950,7 +1949,7 @@ def _render_traveler_types(df_types: pd.DataFrame) -> None:
 
     st.markdown("""
     <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
-                letter-spacing:.06em;margin-bottom:10px;">TRAVELER TYPE PROFILES — SORTED BY REVENUE CONTRIBUTION</div>
+                letter-spacing:.06em;margin-bottom:10px;">TRAVELER TYPE PROFILES, SORTED BY REVENUE CONTRIBUTION</div>
     """, unsafe_allow_html=True)
 
     for _, row in df_sorted.iterrows():
@@ -1972,9 +1971,9 @@ def _render_traveler_types(df_types: pd.DataFrame) -> None:
         except Exception:
             bkw_h_int = 4
         if bkw_h_int >= 8:
-            group_tip = f"✅ Book {bkw_l}–{bkw_h} wks out — ideal for group sales outreach"
+            group_tip = f"✅ Book {bkw_l}–{bkw_h} wks out, ideal for group sales outreach"
         else:
-            group_tip = f"⚡ Short booking window ({bkw_l}–{bkw_h} wks) — last-minute fill strategy"
+            group_tip = f"⚡ Short booking window ({bkw_l}–{bkw_h} wks), last-minute fill strategy"
 
         st.markdown(f"""
         <div style="background:linear-gradient(180deg,{rc}08 0%,#FFFFFF 60%);
@@ -2021,7 +2020,7 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
                 border:1px solid #BAE6FD;border-radius:12px;padding:18px 22px;
                 margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,0.06);">
       <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
-                  letter-spacing:.1em;margin-bottom:10px;">U.S. GROUP TRAVEL — NATIONAL PICTURE</div>
+                  letter-spacing:.1em;margin-bottom:10px;">U.S. GROUP TRAVEL, NATIONAL PICTURE</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px;">
         <div style="text-align:center;">
           <div style="color:#0F172A;font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;">${total_group}B</div>
@@ -2041,7 +2040,7 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
         </div>
       </div>
       <div style="color:#334155;font-size:12px;line-height:1.7;">
-        Meetings &amp; events (<strong style="color:#0F172A;">$126B</strong>) are the largest group segment and at 82% recovery — still growing.
+        Meetings &amp; events (<strong style="color:#0F172A;">$126B</strong>) are the largest group segment and at 82% recovery, still growing.
         Live spectator sports (<strong style="color:#0F172A;">$102B</strong>) and participatory sports (<strong style="color:#0F172A;">$52B</strong>) are segments where
         Dana Point can directly compete via surf events (Doheny), sailing regattas,
         and ocean-sports tourism. Leisure group travel (<strong style="color:#0F172A;">$39B</strong>) is fully recovered.
@@ -2069,7 +2068,7 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
                         border-radius:10px;padding:16px 20px;margin-top:14px;
                         box-shadow:0 1px 3px rgba(15,23,42,0.06);">
               <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
-                          letter-spacing:.08em;margin-bottom:10px;">BUSINESS TRAVEL — HOTEL IMPACT</div>
+                          letter-spacing:.08em;margin-bottom:10px;">BUSINESS TRAVEL, HOTEL IMPACT</div>
               <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
                 <div style="text-align:center;">
                   <div style="color:#0F172A;font-family:'Outfit',sans-serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;">${biz_sp:.0f}B</div>
@@ -2116,7 +2115,7 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
          "board retreats, incentive travel, and high-end association events.",
          "Launch group sales mission targeting corporate meeting planners in LA, San Diego, Phoenix"),
         ("👥", "SMERF Groups ($39B leisure group)", "#F5B940",
-         "Social, Military, Educational, Religious, Fraternal — primary shoulder-season buyer. "
+         "Social, Military, Educational, Religious, Fraternal, primary shoulder-season buyer. "
          "Books 8–48 weeks out into Q1/Q4 when displacement risk is lowest.",
          "Create SMERF rate program for Jan–Mar and Oct–Dec with dedicated group blocks"),
     ]
@@ -2146,7 +2145,7 @@ def _render_national_context(df_segs: pd.DataFrame, df_biz: pd.DataFrame,
         st.markdown("""
         <div style="color:#0891B2;font-size:10px;font-weight:800;text-transform:uppercase;
                     letter-spacing:.08em;margin:18px 0 10px;">
-        F. SHOULDER SEASON ALIGNMENT MATRIX — Traveler Types × Quarters
+        F. SHOULDER SEASON ALIGNMENT MATRIX, Traveler Types × Quarters
         </div>
         """, unsafe_allow_html=True)
         _render_shoulder_alignment(df_types, comp)
@@ -2270,7 +2269,7 @@ def render_group_tab(ai_keys: dict | None = None, selected_model: str = "claude"
 
     # Data quality notice
     if not g:
-        st.warning("Group intelligence data not loaded. Run `python scripts/run_pipeline.py`.")
+        st.warning("Group intelligence data will appear once it has been loaded.")
         return
 
     st.info(
