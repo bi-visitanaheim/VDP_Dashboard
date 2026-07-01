@@ -17144,6 +17144,15 @@ with tab_cs:
         st.markdown("### 🏆 VDP vs. South OC Market, Leadership Scorecard")
         st.caption("How Dana Point properties perform vs. the South Orange County submarket · Source: STR 30-day actuals vs. CoStar snapshot · Built by GloCon Solutions LLC")
 
+        # VDP portfolio KPIs (RevPAR/ADR/Occupancy with raw_value) for the
+        # scorecard. Previously `kpis` was referenced but never defined, so the
+        # scorecard always failed with a NameError and showed "unavailable".
+        try:
+            kpis = compute_overview_kpis(df_sel)
+        except Exception as _kpi_err:
+            _logger.debug(f"Scorecard KPI compute failed: {_kpi_err}")
+            kpis = []
+
         try:
             if not df_cs_snap.empty and kpis:
                 _snap = df_cs_snap.iloc[0]
