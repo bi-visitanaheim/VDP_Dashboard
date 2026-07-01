@@ -5545,6 +5545,8 @@ def build_metrics_context(
         "adr_30":         float(r30["adr"].mean()),
         "occ_30":         float(r30["occupancy"].mean()),
         "occ_prior":      float(pri["occupancy"].mean()),
+        "window_start":   r30["as_of_date"].min().strftime("%b %d"),
+        "window_end":     r30["as_of_date"].max().strftime("%b %d, %Y"),
         "rev_30_total":   float(r30["revenue"].sum()),
         "demand_30":      float(r30["demand"].sum()),
         "revpar_delta":   pct_delta(float(rec["revpar"].mean()), float(pri["revpar"].mean())),
@@ -10140,6 +10142,9 @@ with tab_ov:
 
         _today        = datetime.now().strftime("%A, %B %d, %Y")
         _report_month = datetime.now().strftime("%B %Y").upper()
+        # Actual 30-day window range, appended to the KPI labels below.
+        _ov_win = (f"{m['window_start']} – {m['window_end']}"
+                   if m and m.get("window_start") and m.get("window_end") else "30-day")
 
         # Determine status badge from YOY RevPAR
         if _ov_rvp_y >= 50:
@@ -10165,7 +10170,7 @@ with tab_ov:
   <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px;justify-content:flex-start;">
     <div>
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.10em;
-        color:#94A3B8;margin-bottom:4px;">Occupancy (30d)</div>
+        color:#94A3B8;margin-bottom:4px;">Occupancy · {_ov_win}</div>
       <div style="font-family:'Outfit',sans-serif;font-size:52px;font-weight:900;
         letter-spacing:-0.04em;color:#0F172A;line-height:1;">
         {_ov_occ:.1f}<span style="font-size:28px;font-weight:700;color:#64748B;">%</span>
@@ -10177,7 +10182,7 @@ with tab_ov:
     <div style="width:1px;height:70px;background:#E2E8F0;flex-shrink:0;"></div>
     <div>
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.10em;
-        color:#94A3B8;margin-bottom:4px;">ADR (30d)</div>
+        color:#94A3B8;margin-bottom:4px;">ADR · {_ov_win}</div>
       <div style="font-family:'Outfit',sans-serif;font-size:52px;font-weight:900;
         letter-spacing:-0.04em;color:#0F172A;line-height:1;">
         <span style="font-size:28px;font-weight:700;color:#64748B;">$</span>{_ov_adr:,.0f}
@@ -10189,7 +10194,7 @@ with tab_ov:
     <div style="width:1px;height:70px;background:#E2E8F0;flex-shrink:0;"></div>
     <div>
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.10em;
-        color:#94A3B8;margin-bottom:4px;">RevPAR (30d)</div>
+        color:#94A3B8;margin-bottom:4px;">RevPAR · {_ov_win}</div>
       <div style="font-family:'Outfit',sans-serif;font-size:52px;font-weight:900;
         letter-spacing:-0.04em;color:#0891B2;line-height:1;">
         <span style="font-size:28px;font-weight:700;color:#0891B2;">$</span>{_ov_rvp:,.0f}
@@ -10281,6 +10286,13 @@ with tab_ov:
 
         from utils import format_metric_delta
 
+        # Real date range for the 30-day window, shown in metric labels so the
+        # "(30d)" figures are anchored to an actual period.
+        _win = ""
+        if m and m.get("window_start") and m.get("window_end"):
+            _win = f"{m['window_start']} – {m['window_end']}"
+        _win_sfx = f" · {_win}" if _win else ""
+
         # Format deltas
         _rvp_delta_str, _rvp_delta_cls = format_metric_delta(_exec_rvp_d)
         _adr_delta_str, _adr_delta_cls = format_metric_delta(_exec_adr_d)
@@ -10340,7 +10352,7 @@ with tab_ov:
                     unsafe_allow_html=True,
                 )
 
-        _render_hero_metric(_h_row1_1, "💰", "RevPAR (30d)", f"${_exec_rvp:.0f}", _rvp_delta_str, _rvp_delta_cls, "#38BDF8")
+        _render_hero_metric(_h_row1_1, "💰", f"RevPAR{_win_sfx}", f"${_exec_rvp:.0f}", _rvp_delta_str, _rvp_delta_cls, "#38BDF8")
         # RevPAR sparkline chart
         with _h_row1_1:
             if not df_sel.empty and len(df_sel) > 1:
@@ -10353,7 +10365,7 @@ with tab_ov:
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(_fig_rvp, use_container_width=True, config={'displayModeBar': False})
 
-        _render_hero_metric(_h_row1_2, "🏨", "ADR (30d)", f"${_exec_adr:.0f}", _adr_delta_str, _adr_delta_cls, "#818CF8")
+        _render_hero_metric(_h_row1_2, "🏨", f"ADR{_win_sfx}", f"${_exec_adr:.0f}", _adr_delta_str, _adr_delta_cls, "#818CF8")
         # ADR bar chart
         with _h_row1_2:
             if not df_sel.empty and len(df_sel) > 1:
@@ -10365,7 +10377,7 @@ with tab_ov:
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
                     st.plotly_chart(_fig_adr, use_container_width=True, config={'displayModeBar': False})
 
-        _render_hero_metric(_h_row2_1, "📊", "Occupancy (30d)", f"{_exec_occ:.1f}%", _occ_delta_str, _occ_delta_cls, "#34D399")
+        _render_hero_metric(_h_row2_1, "📊", f"Occupancy{_win_sfx}", f"{_exec_occ:.1f}%", _occ_delta_str, _occ_delta_cls, "#34D399")
         # Occupancy area chart
         with _h_row2_1:
             if not df_sel.empty and len(df_sel) > 1:

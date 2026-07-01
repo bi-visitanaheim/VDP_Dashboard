@@ -1558,13 +1558,14 @@ def _render_group_strategy(g: dict, df_monthly: pd.DataFrame,
           <div style="color:#94A3B8;font-size:9.5px;">each 5pp shift in group mix</div>
         </div>
       </div>
-      <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:6px;padding:10px 14px;">
-        <div style="color:#B45309;font-size:10px;font-weight:800;text-transform:uppercase;
-                    letter-spacing:.05em;margin-bottom:4px;">TOP RECOMMENDATION</div>
-        <div style="color:#334155;font-size:12px;line-height:1.6;">
-          {risk_action}. Group ADR is estimated at <strong style="color:#0F172A;">${group_adr:.0f}</strong> vs.
-          <strong style="color:#0F172A;">${market_adr:.0f}</strong> blended market ADR, a
-          <strong style="color:#0F172A;">${adr_gap:.0f}/room/night gap</strong>. Shoulder-season group bookings
+      <div style="background:#FFFBEB;border:1px solid #FCD34D;border-left:5px solid #D97706;
+                  border-radius:8px;padding:16px 20px;">
+        <div style="color:#B45309;font-size:13px;font-weight:800;text-transform:uppercase;
+                    letter-spacing:.06em;margin-bottom:8px;">⭐ TOP RECOMMENDATION</div>
+        <div style="color:#1E293B;font-size:15px;line-height:1.65;font-weight:500;">
+          {risk_action}. Group ADR is estimated at <strong style="color:#0F172A;font-weight:800;">${group_adr:.0f}</strong> vs.
+          <strong style="color:#0F172A;font-weight:800;">${market_adr:.0f}</strong> blended market ADR, a
+          <strong style="color:#0F172A;font-weight:800;">${adr_gap:.0f}/room/night gap</strong>. Shoulder-season group bookings
           maximize TBID without displacing peak transient revenue.
         </div>
       </div>
