@@ -9990,21 +9990,36 @@ if _requested_tab:
     except:
         pass
 
-tab_ov, tab_tr, tab_gt, tab_fo, tab_ev, tab_fm, tab_ei, tab_sp, tab_cs, tab_dl = st.tabs([
+# ── Consolidated 6-tab navigation ─────────────────────────────────────────────
+# The 10 original sections are grouped into 6 top-level tabs with consistent
+# sub-tabs so the app scans cleanly instead of presenting 10 peers at once.
+# The sub-tab DeltaGenerators reuse the SAME variable names the existing
+# `with tab_xx:` render blocks already use, so those blocks need no changes.
+tab_ov, tab_hotels, tab_visitors, tab_fo, tab_cs, tab_dl = st.tabs([
     "🏠 Today's Overview",
-    "🏨 Hotel Trends",
-    "🏨 Group Lodging",
+    "🏨 Hotel Performance",
+    "👥 Visitors & Events",
     "🔮 What's Next",
-    "👥 Our Visitors",
-    "🗺️ Where They're From",
-    "🎉 Event Impact",
-    "🏗️ New Competition",
     "📈 Market Intel",
     "🗄️ Data & Downloads",
 ])
 
+with tab_hotels:
+    tab_tr, tab_gt, tab_sp = st.tabs([
+        "🏨 Hotel Trends",
+        "🛎️ Group Lodging",
+        "🏗️ New Competition",
+    ])
+
+with tab_visitors:
+    tab_ev, tab_fm, tab_ei = st.tabs([
+        "👥 Our Visitors",
+        "🗺️ Where They're From",
+        "🎉 Event Impact",
+    ])
+
 # If a tab was requested, inject JavaScript to auto-click it
-if _requested_tab_idx is not None and 0 <= _requested_tab_idx < 10:
+if _requested_tab_idx is not None and 0 <= _requested_tab_idx < 6:
     st.markdown(f"""
     <script>
     window.addEventListener('load', function() {{
