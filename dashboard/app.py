@@ -2074,10 +2074,12 @@ st.markdown("""
   @media (max-width: 480px) {
     .block-container { padding-left: 1rem !important; padding-right: 1rem !important; }
   }
-  [data-testid="stPlotlyChart"] { margin-bottom: 4px !important; width: 100% !important; }
+  /* Vertical rhythm: every chart gets guaranteed breathing room so plots
+     never crowd the cards/headings around them (site-wide spacing fix). */
+  [data-testid="stPlotlyChart"] { margin: 6px 0 26px !important; width: 100% !important; }
   [data-testid="stPlotlyChart"] > div { width: 100% !important; }
   [data-testid="stPlotlyChart"] iframe { width: 100% !important; min-width: 100% !important; }
-  div[data-testid="stHorizontalBlock"] { gap: 10px !important; }
+  div[data-testid="stHorizontalBlock"] { gap: 16px !important; }
 
   /* ── Streamlit Native Metric Styling ─────────────────────────────────── */
   [data-testid="stMetricValue"] {
@@ -6943,15 +6945,18 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
     """
     _font  = "Syne, DM Sans, Inter, system-ui, sans-serif"
     _title = "Syne, Outfit, DM Sans, system-ui, sans-serif"
+    # Categorical colorway validated for the white page surface (lightness band,
+    # chroma, CVD adjacent-pair separation, and >=3:1 contrast all pass).
+    # Same hue roles as the previous palette, snapped to darker steps.
     _colorway = [
         "#0891B2",  # Pacific teal (primary)
-        "#F5B940",  # coastal gold
-        "#10B981",  # wave green
-        "#A78BFA",  # purple
-        "#FB923C",  # sunset orange
-        "#EF4444",  # coral red
-        "#38BDF8",  # sky blue
-        "#6EE7B7",  # seafoam
+        "#D97706",  # coastal amber
+        "#059669",  # wave green
+        "#7C3AED",  # violet
+        "#EA580C",  # sunset orange
+        "#DC2626",  # coral red
+        "#0369A1",  # ocean blue
+        "#DB2777",  # rose
     ]
     fig.update_layout(
         plot_bgcolor  = "rgba(0,0,0,0)",
@@ -6988,37 +6993,40 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
         ),
         dragmode = "zoom",
     )
+    # Recessive but VISIBLE grid/axes for the white page. (The previous values
+    # were white-on-white — rgba(255,255,255,…) on a light surface — so charts
+    # rendered with no axis line or gridlines at all.)
     fig.update_xaxes(
         showgrid    = False,
         zeroline    = False,
-        tickfont    = dict(size=12, family=_font, color="#94A3B8"),
-        linecolor   = "rgba(255,255,255,0.10)",
+        tickfont    = dict(size=12, family=_font, color="#64748B"),
+        linecolor   = "rgba(15,23,42,0.14)",
         linewidth   = 1,
         showline    = True,
         ticks       = "outside",
         ticklen     = 3,
-        tickcolor   = "rgba(255,255,255,0.08)",
+        tickcolor   = "rgba(15,23,42,0.12)",
         automargin  = True,
         tickangle   = -30,
     )
     fig.update_yaxes(
-        gridcolor   = "rgba(255,255,255,0.04)",   # Linear-standard ultra-thin
+        gridcolor   = "rgba(15,23,42,0.07)",
         gridwidth   = 1,
         griddash    = "dot",
         zeroline    = False,
-        tickfont    = dict(size=12, family="'JetBrains Mono', " + _font, color="#94A3B8"),
+        tickfont    = dict(size=12, family="'JetBrains Mono', " + _font, color="#64748B"),
         showline    = False,
         ticks       = "",
         automargin  = True,
     )
-    # ── Vibrant fill palette with stronger gradients ──────────────────────
+    # ── Area fills derived from the validated colorway (low-alpha) ────────
     _fill_palette = [
-        "rgba(0,212,200,0.16)",   "rgba(245,185,64,0.14)",
-        "rgba(16,185,129,0.14)",  "rgba(167,139,250,0.13)",
-        "rgba(251,146,60,0.14)",  "rgba(56,189,248,0.14)",
+        "rgba(8,145,178,0.14)",  "rgba(217,119,6,0.12)",
+        "rgba(5,150,105,0.12)",  "rgba(124,58,237,0.11)",
+        "rgba(234,88,12,0.12)",  "rgba(3,105,161,0.12)",
     ]
     _line_palette = [
-        "#0891B2", "#F5B940", "#10B981", "#A78BFA", "#FB923C", "#38BDF8",
+        "#0891B2", "#D97706", "#059669", "#7C3AED", "#EA580C", "#0369A1",
     ]
     _fill_idx = 0
     for trace in fig.data:
@@ -7064,12 +7072,21 @@ def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
                     trace.marker.opacity = 0.88
             except Exception:
                 pass
-    # ── Title styling (white text on dark bg) ─────────────────────────────
-    if fig.layout.title and fig.layout.title.text:
+    # ── Title band separated from the legend band ─────────────────────────
+    # The title and the horizontal legend (y=1.02) previously shared the same
+    # 64px top margin, which made chart headers collide with legend rows. When
+    # a title is present, pin it to the very top and widen the top margin so
+    # title (top) and legend (just above the plot) each get their own band.
+    _has_title  = bool(fig.layout.title and fig.layout.title.text)
+    _has_legend = sum(1 for t in fig.data if getattr(t, "showlegend", True) is not False) >= 2
+    if _has_title:
         fig.update_layout(
             title_font = dict(family=_title, size=14, color="#334155"),
             title_x    = 0,
-            title_pad  = dict(l=4, t=4),
+            title_y    = 0.99,
+            title_yanchor = "top",
+            title_pad  = dict(l=4, t=2),
+            margin     = dict(t=96 if _has_legend else 72),
         )
     return fig
 
