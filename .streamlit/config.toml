@@ -1,9 +1,19 @@
 [theme]
-base = "dark"
-primaryColor = "#00D4C8"
-backgroundColor = "#1A3756"
-secondaryBackgroundColor = "#1E3D5E"
-textColor = "#F4FAFF"
+# The dashboard renders on a WHITE page. This block used to declare base="dark"
+# with textColor="#F4FAFF", left over from the pre-redesign dark build. The app's
+# own CSS forced the surfaces light but never overrode Streamlit's generated text
+# color, so every element the custom CSS did not explicitly recolor (tab labels,
+# widget labels, captions) inherited near-white text on white. Inactive tab
+# labels measured 1.05:1 contrast against the tab bar, effectively invisible.
+#
+# These values match tokens the app already uses: textColor is chart_theme
+# INK_BODY, primaryColor is the validated palette primary, and
+# secondaryBackgroundColor is the existing tab-bar surface.
+base = "light"
+primaryColor = "#0891B2"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F1F5F9"
+textColor = "#334155"
 font = "sans serif"
 
 [server]

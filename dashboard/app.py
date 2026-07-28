@@ -47,6 +47,14 @@ from utils import (
     combine_social_followers, safe_execute_with_logging, format_metric_delta,
     format_stat_band, format_benchmark_band, auto_distribution_analysis,
 )
+# The chart theme is shared with components_group and components_coastal so every
+# chart in the app draws from one validated palette and one type scale.
+from chart_theme import (
+    style_fig,
+    CATEGORICAL as CHART_CATEGORICAL,
+    STATUS as CHART_STATUS,
+    INK_BODY, INK_MUTED, INK_PRIMARY,
+)
 from components_coastal import render_coastal_intelligence
 from components_group import render_group_tab
 
@@ -1762,15 +1770,17 @@ st.markdown("""
     background: transparent !important;
     border: none !important;
   }
+  /* Active and hover labels use the darker teal step (#0E7490, 5.36:1 on white).
+     The brand teal #0891B2 only reaches 3.68:1, under the 4.5:1 floor for text. */
   [data-testid="stTabs"] [data-baseweb="tab"]:hover {
     background: rgba(8,145,178,0.08) !important;
-    color: #0891B2 !important;
-    -webkit-text-fill-color: #0891B2 !important;
+    color: #0E7490 !important;
+    -webkit-text-fill-color: #0E7490 !important;
   }
   [data-testid="stTabs"] [aria-selected="true"] {
     background: #FFFFFF !important;
-    color: #0891B2 !important;
-    -webkit-text-fill-color: #0891B2 !important;
+    color: #0E7490 !important;
+    -webkit-text-fill-color: #0E7490 !important;
     font-weight: 700 !important;
     border: none !important;
     box-shadow: 0 1px 4px rgba(15,23,42,0.12), 0 0 0 1px rgba(8,145,178,0.18) !important;
@@ -6685,7 +6695,7 @@ def render_occ_heatmap(df_kpi):
         xaxis=dict(showgrid=False, tickangle=-45, tickfont=dict(size=9)),
         yaxis=dict(showgrid=False, categoryorder='array', categoryarray=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'])
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(style_fig(fig), use_container_width=True)
 
 
 def render_comp_set_radar(df_str):
@@ -6737,7 +6747,7 @@ def render_comp_set_radar(df_str):
         height=420,
         legend=dict(font=dict(size=10))
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(style_fig(fig), use_container_width=True)
     st.caption("Values normalized to 100 = best performer in set. Source: STR.")
 
 
@@ -6768,7 +6778,7 @@ def render_adr_gas_scatter(df_kpi, df_gas):
         color_discrete_sequence=['#1a3a5c'])
     fig.update_traces(textposition='top center', textfont_size=8)
     fig.update_layout(height=380)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(style_fig(fig), use_container_width=True)
 
     corr = merged['adr'].corr(merged['price_per_gallon'])
     direction = "positive" if corr > 0 else "negative"
@@ -6820,7 +6830,7 @@ def render_dma_bubble_map(df_dma):
         scope='usa',
         title='Visitor Origin Markets, Bubble Size: Visitor Days Share, Color: Avg Spend/Trip')
     fig.update_layout(height=420, geo=dict(showland=True, landcolor='#f0f0f0', showlakes=False))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(style_fig(fig), use_container_width=True)
 
 
 def render_feeder_sankey(df_dma, df_spending):
@@ -6855,7 +6865,7 @@ def render_feeder_sankey(df_dma, df_spending):
         link=dict(source=sources, target=targets, value=values, color='rgba(33,150,243,0.3)')
     ))
     fig.update_layout(title='Visitor Journey: Origin Market → Transport Mode → Spend Category', height=380)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(style_fig(fig), use_container_width=True)
     st.caption("Spend splits estimated from Datafy category data. Drive vs. fly classification based on distance from Dana Point.")
 
 
@@ -6895,7 +6905,7 @@ def render_booking_pace(df_kpi):
         yaxis=dict(range=[30, 105]),
         height=360, legend=dict(orientation='h', y=1.02)
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(style_fig(fig), use_container_width=True)
 
 
 def render_content_funnel():
@@ -6934,162 +6944,10 @@ def render_content_funnel():
         marker=dict(color=['#1a3a5c', '#2196F3', '#4CAF50'])
     ))
     fig.update_layout(title='Content-to-Visit Attribution Funnel (30-Day)', height=320)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(style_fig(fig), use_container_width=True)
 
 
 # ─── End Wave 3 Chart Functions ───────────────────────────────────────────────
-
-def style_fig(fig: go.Figure, height: int = 360) -> go.Figure:
-    """Deep Ocean dark chart theme, Dana Point PULSE v9.
-    Full dark mode: transparent bg, vibrant ocean-teal palette, premium grid.
-    """
-    _font  = "Syne, DM Sans, Inter, system-ui, sans-serif"
-    _title = "Syne, Outfit, DM Sans, system-ui, sans-serif"
-    # Categorical colorway validated for the white page surface (lightness band,
-    # chroma, CVD adjacent-pair separation, and >=3:1 contrast all pass).
-    # Same hue roles as the previous palette, snapped to darker steps.
-    _colorway = [
-        "#0891B2",  # Pacific teal (primary)
-        "#D97706",  # coastal amber
-        "#059669",  # wave green
-        "#7C3AED",  # violet
-        "#EA580C",  # sunset orange
-        "#DC2626",  # coral red
-        "#0369A1",  # ocean blue
-        "#DB2777",  # rose
-    ]
-    fig.update_layout(
-        plot_bgcolor  = "rgba(0,0,0,0)",
-        paper_bgcolor = "rgba(0,0,0,0)",
-        font    = dict(family=_font, size=12.5, color="#334155"),
-        height  = height,
-        autosize = True,
-        margin  = dict(l=14, r=20, t=64, b=36, autoexpand=True),
-        transition = {"duration": 500, "easing": "cubic-in-out"},
-        legend = dict(
-            orientation = "h",
-            yanchor = "bottom", y = 1.02,
-            xanchor = "left",   x = 0,
-            font    = dict(size=11, family=_font, color="#64748B"),
-            bgcolor = "rgba(255,255,255,0.80)",
-            bordercolor = "rgba(100,116,139,0.20)",
-            borderwidth = 1,
-            itemsizing  = "constant",
-            tracegroupgap = 4,
-        ),
-        uniformtext = dict(minsize=9, mode="hide"),
-        hoverlabel = dict(
-            bgcolor     = "rgba(20,50,80,0.96)",
-            bordercolor = "rgba(0,212,200,0.60)",
-            font        = dict(size=13, family=_font, color="#EFF6FF"),
-            namelength  = -1,
-            align       = "left",
-        ),
-        colorway = _colorway,
-        modebar = dict(
-            bgcolor     = "rgba(0,0,0,0)",
-            color       = "#5A7A95",
-            activecolor = "#0891B2",
-        ),
-        dragmode = "zoom",
-    )
-    # Recessive but VISIBLE grid/axes for the white page. (The previous values
-    # were white-on-white — rgba(255,255,255,…) on a light surface — so charts
-    # rendered with no axis line or gridlines at all.)
-    fig.update_xaxes(
-        showgrid    = False,
-        zeroline    = False,
-        tickfont    = dict(size=12, family=_font, color="#64748B"),
-        linecolor   = "rgba(15,23,42,0.14)",
-        linewidth   = 1,
-        showline    = True,
-        ticks       = "outside",
-        ticklen     = 3,
-        tickcolor   = "rgba(15,23,42,0.12)",
-        automargin  = True,
-        tickangle   = -30,
-    )
-    fig.update_yaxes(
-        gridcolor   = "rgba(15,23,42,0.07)",
-        gridwidth   = 1,
-        griddash    = "dot",
-        zeroline    = False,
-        tickfont    = dict(size=12, family="'JetBrains Mono', " + _font, color="#64748B"),
-        showline    = False,
-        ticks       = "",
-        automargin  = True,
-    )
-    # ── Area fills derived from the validated colorway (low-alpha) ────────
-    _fill_palette = [
-        "rgba(8,145,178,0.14)",  "rgba(217,119,6,0.12)",
-        "rgba(5,150,105,0.12)",  "rgba(124,58,237,0.11)",
-        "rgba(234,88,12,0.12)",  "rgba(3,105,161,0.12)",
-    ]
-    _line_palette = [
-        "#0891B2", "#D97706", "#059669", "#7C3AED", "#EA580C", "#0369A1",
-    ]
-    _fill_idx = 0
-    for trace in fig.data:
-        ttype = type(trace).__name__
-        if ttype in ("Scatter", "Scattergl"):
-            mode = str(getattr(trace, "mode", "") or "")
-            if "lines" in mode and getattr(trace, "fill", None) in (None, "none"):
-                trace.fill = "tozeroy"
-                _c = (getattr(trace.line, "color", None) or _colorway[0])
-                if "rgb(" in str(_c):
-                    # Convert existing rgb to rgba with stronger opacity
-                    trace.fillcolor = _c.replace("rgb(", "rgba(").replace(")", ",0.13)")
-                else:
-                    trace.fillcolor = _fill_palette[_fill_idx % len(_fill_palette)]
-                    # Ensure line color matches fill color
-                    if not getattr(trace.line, "color", None):
-                        try: trace.line.color = _line_palette[_fill_idx % len(_line_palette)]
-                        except Exception: pass
-                    _fill_idx += 1
-            # Smooth spline for organic painted feel
-            if hasattr(trace, "line") and trace.line is not None:
-                if not getattr(trace.line, "shape", None):
-                    try:
-                        trace.line.shape = "spline"
-                        trace.line.smoothing = 0.8
-                    except Exception:
-                        pass
-                try:
-                    if (getattr(trace.line, "width", None) is None or
-                            getattr(trace.line, "width", 2) < 2):
-                        trace.line.width = 2.5
-                except Exception:
-                    pass
-        elif ttype == "Bar":
-            try:
-                if not getattr(trace.marker, "cornerradius", None):
-                    trace.marker.cornerradius = 5
-            except Exception:
-                pass
-            # Add subtle opacity variation for bar depth
-            try:
-                if getattr(trace.marker, "opacity", None) is None:
-                    trace.marker.opacity = 0.88
-            except Exception:
-                pass
-    # ── Title band separated from the legend band ─────────────────────────
-    # The title and the horizontal legend (y=1.02) previously shared the same
-    # 64px top margin, which made chart headers collide with legend rows. When
-    # a title is present, pin it to the very top and widen the top margin so
-    # title (top) and legend (just above the plot) each get their own band.
-    _has_title  = bool(fig.layout.title and fig.layout.title.text)
-    _has_legend = sum(1 for t in fig.data if getattr(t, "showlegend", True) is not False) >= 2
-    if _has_title:
-        fig.update_layout(
-            title_font = dict(family=_title, size=14, color="#334155"),
-            title_x    = 0,
-            title_y    = 0.99,
-            title_yanchor = "top",
-            title_pad  = dict(l=4, t=2),
-            margin     = dict(t=96 if _has_legend else 72),
-        )
-    return fig
-
 
 def sec_div(title: str) -> str:
     """Returns HTML for a section divider with centered pill label."""
@@ -8140,6 +7998,232 @@ PLOTLY_CONFIG = {
     "responsive": True,
     "scrollZoom": False,
 }
+
+
+# ─── Visitor Conditions Outlook (NWS weather.gov) ─────────────────────────────
+# weather_forecast / weather_hourly / weather_observations are written by
+# fetch_nws_weather.py on every pipeline run. They had a loader but no chart, so
+# the freshest forward-looking data in the brain was invisible in the UI.
+
+BEACH_DAY_IDEAL_TEMP_F = 75.0   # peak of the comfort curve for a coastal beach day
+BEACH_DAY_TEMP_SPREAD  = 18.0   # degrees away from ideal that zeroes the temp term
+
+
+def _beach_day_score(temp_f: float, wind_mph: float, precip_pct: float) -> float:
+    """Score a day's beach quality 0-100 from temperature, wind, and rain chance.
+
+    Weighted 50% temperature comfort, 30% dry conditions, 20% calm wind. The
+    curve peaks at BEACH_DAY_IDEAL_TEMP_F and falls off in both directions, so a
+    95F inland-heat day scores below a 75F one rather than topping the scale.
+    """
+    if temp_f is None or pd.isna(temp_f):
+        return float("nan")
+    _temp_term = max(0.0, 1.0 - abs(float(temp_f) - BEACH_DAY_IDEAL_TEMP_F) / BEACH_DAY_TEMP_SPREAD)
+    _rain_term = 1.0 - (float(precip_pct or 0) / 100.0)
+    _wind_term = max(0.0, 1.0 - (float(wind_mph or 0) / 25.0))
+    return round(100.0 * (0.50 * _temp_term + 0.30 * _rain_term + 0.20 * _wind_term), 1)
+
+
+@st.cache_data(ttl=1800)
+def load_weather_hourly() -> pd.DataFrame:
+    return _sql("SELECT * FROM weather_hourly ORDER BY start_time", "load_weather_hourly")
+
+
+@st.cache_data(ttl=1800)
+def load_weather_observations() -> pd.DataFrame:
+    return _sql(
+        "SELECT * FROM weather_observations WHERE temp_f IS NOT NULL ORDER BY obs_time DESC LIMIT 720",
+        "load_weather_observations",
+    )
+
+
+def _latest_forecast_run(df: pd.DataFrame) -> pd.DataFrame:
+    """Keep only the most recent fetch.
+
+    weather_forecast accumulates one row per period per pipeline run, and
+    period_number restarts at 1 each time, so charting the raw table interleaves
+    runs from different days into nonsense.
+    """
+    if df.empty or "fetched_at" not in df.columns:
+        return df
+    return df[df["fetched_at"] == df["fetched_at"].max()].copy()
+
+
+def render_conditions_outlook() -> None:
+    """Seven-day beach-day outlook plus the 48-hour rain window."""
+    df_fc = _latest_forecast_run(load_weather_forecast())
+    df_hr = load_weather_hourly()
+
+    if df_fc.empty and df_hr.empty:
+        st.caption("Weather outlook unavailable. Run the pipeline to refresh NWS data.")
+        return
+
+    # ── Current observed conditions band ──────────────────────────────────
+    df_obs = load_weather_observations()
+    if not df_obs.empty:
+        _latest = df_obs.iloc[0]
+        _obs_cols = st.columns(3)
+        for _col, _label, _val in (
+            (_obs_cols[0], "Observed Now", f"{_latest['temp_f']:.0f}°F"),
+            (_obs_cols[1], "Humidity",
+             f"{_latest['relative_humidity']:.0f}%" if pd.notna(_latest.get("relative_humidity")) else "n/a"),
+            (_obs_cols[2], "Wind",
+             f"{_latest['wind_speed_mph']:.0f} mph" if pd.notna(_latest.get("wind_speed_mph")) else "n/a"),
+        ):
+            with _col:
+                st.markdown(
+                    f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;'
+                    f'border-top:3px solid {CHART_CATEGORICAL[0]};border-radius:9px;'
+                    f'padding:12px 14px;text-align:center;">'
+                    f'<div style="color:{CHART_CATEGORICAL[0]};font-size:9.5px;font-weight:700;'
+                    f'text-transform:uppercase;letter-spacing:.08em;">{_label}</div>'
+                    f'<div style="color:{INK_PRIMARY};font-size:22px;font-weight:900;'
+                    f'line-height:1.2;">{_val}</div></div>',
+                    unsafe_allow_html=True,
+                )
+
+    _c1, _c2 = st.columns(2)
+
+    # ── Chart 1: seven-day beach-day score (magnitude over time → bars) ────
+    with _c1:
+        _days = df_fc[df_fc["is_daytime"] == 1].copy() if "is_daytime" in df_fc.columns else df_fc.copy()
+        if not _days.empty:
+            _days["day"] = pd.to_datetime(_days["start_time"], errors="coerce", utc=True)
+            _days = _days.dropna(subset=["day"]).sort_values("day")
+            _days["score"] = [
+                _beach_day_score(t, w, 0) for t, w in zip(_days["temp_f"], _days["wind_speed"])
+            ]
+            _days = _days.dropna(subset=["score"])
+
+            if not _days.empty:
+                fig_bd = go.Figure(go.Bar(
+                    x=_days["day"].dt.strftime("%a %-d"),
+                    y=_days["score"],
+                    marker_color=CHART_CATEGORICAL[0],
+                    text=[f"{s:.0f}" for s in _days["score"]],
+                    textposition="outside",
+                    textfont=dict(color=INK_BODY, size=11),
+                    customdata=list(zip(_days["temp_f"], _days["wind_speed"], _days["short_forecast"])),
+                    hovertemplate=("<b>%{x}</b><br>Beach day score %{y:.0f}/100<br>"
+                                   "%{customdata[0]:.0f}°F · %{customdata[1]:.0f} mph<br>"
+                                   "%{customdata[2]}<extra></extra>"),
+                    showlegend=False,
+                ))
+                fig_bd.update_layout(
+                    title="Beach Day Score, Next 7 Days",
+                    yaxis=dict(range=[0, 112], title="Score (0-100)"),
+                )
+                st.plotly_chart(style_fig(fig_bd, height=320), use_container_width=True,
+                                config=PLOTLY_CONFIG, key="wx_beach_day")
+                _best = _days.loc[_days["score"].idxmax()]
+                st.caption(
+                    f"Best window: {_best['day'].strftime('%A')}, {_best['temp_f']:.0f}°F and "
+                    f"{_best['short_forecast'].lower()}. Score weights comfort 50%, dry 30%, calm wind 20%."
+                )
+
+    # ── Chart 2: 48-hour rain chance (own axis, never stacked on temperature) ──
+    with _c2:
+        if not df_hr.empty:
+            _hr = df_hr.copy()
+            _hr["ts"] = pd.to_datetime(_hr["start_time"], errors="coerce", utc=True)
+            _hr = _hr.dropna(subset=["ts"]).sort_values("ts").tail(48)
+            if not _hr.empty:
+                fig_rain = go.Figure(go.Scatter(
+                    x=_hr["ts"], y=_hr["precip_chance"],
+                    mode="lines", name="Chance of rain",
+                    line=dict(color=CHART_CATEGORICAL[5], width=2.5),
+                    fill="tozeroy", fillcolor="rgba(3,105,161,0.12)",
+                    hovertemplate="%{x|%a %-I %p}<br>%{y:.0f}% chance of rain<extra></extra>",
+                    showlegend=False,
+                ))
+                fig_rain.update_layout(
+                    title="Chance of Rain, Next 48 Hours",
+                    yaxis=dict(range=[0, 100], title="Percent"),
+                )
+                st.plotly_chart(style_fig(fig_rain, height=320), use_container_width=True,
+                                config=PLOTLY_CONFIG, key="wx_rain_48h")
+                _peak = _hr["precip_chance"].max()
+                st.caption(
+                    "No measurable rain chance in the 48-hour window."
+                    if pd.isna(_peak) or _peak < 5 else
+                    f"Peak rain chance {_peak:.0f}%. Rain drives same-week softness in walk-in demand "
+                    "and precedes beach advisories 24 to 72 hours out."
+                )
+
+
+# ─── Brain Map, table_relationships as a picture ──────────────────────────────
+
+def render_brain_map() -> None:
+    """Visualize the relationship graph, which is otherwise only a 344-row table.
+
+    A full node-link diagram of 118 tables and 340+ edges is unreadable, so this
+    answers the two questions the map is actually consulted for: which tables are
+    hubs, and what kinds of links hold the brain together.
+    """
+    try:
+        df_rel = pd.read_sql_query(
+            "SELECT table_a, table_b, relationship_type FROM table_relationships",
+            get_connection(),
+        )
+    except Exception as _bm_e:
+        _logger.debug("brain map query failed: %s", _bm_e)
+        return
+
+    if df_rel.empty:
+        st.caption("Run the pipeline to populate table_relationships.")
+        return
+
+    _c1, _c2 = st.columns([3, 2])
+
+    # ── Most-connected tables (identity + magnitude → horizontal bars) ─────
+    with _c1:
+        _deg = (pd.concat([df_rel["table_a"], df_rel["table_b"]])
+                  .value_counts()
+                  .head(12)
+                  .sort_values())
+        fig_hub = go.Figure(go.Bar(
+            x=_deg.values, y=_deg.index, orientation="h",
+            marker_color=CHART_CATEGORICAL[0],
+            text=_deg.values, textposition="outside",
+            textfont=dict(color=INK_BODY, size=11),
+            hovertemplate="<b>%{y}</b><br>%{x} connections<extra></extra>",
+            showlegend=False,
+        ))
+        fig_hub.update_layout(
+            title="Most Connected Tables in the Brain",
+            xaxis=dict(title="Connections", range=[0, float(_deg.max()) * 1.18]),
+        )
+        # Table names are identifiers, so keep them horizontal and readable
+        # rather than inheriting the theme's angled category ticks.
+        fig_hub.update_yaxes(tickangle=0, tickfont=dict(size=11))
+        st.plotly_chart(style_fig(fig_hub, height=420), use_container_width=True,
+                        config=PLOTLY_CONFIG, key="brain_hub")
+
+    # ── Relationship type mix ─────────────────────────────────────────────
+    with _c2:
+        _types = df_rel["relationship_type"].value_counts().sort_values()
+        fig_ty = go.Figure(go.Bar(
+            x=_types.values, y=_types.index, orientation="h",
+            marker_color=CHART_CATEGORICAL[2],
+            text=_types.values, textposition="outside",
+            textfont=dict(color=INK_BODY, size=11),
+            hovertemplate="<b>%{y}</b><br>%{x} relationships<extra></extra>",
+            showlegend=False,
+        ))
+        fig_ty.update_layout(
+            title="How Tables Relate",
+            xaxis=dict(title="Relationships", range=[0, float(_types.max()) * 1.20]),
+        )
+        fig_ty.update_yaxes(tickangle=0, tickfont=dict(size=11))
+        st.plotly_chart(style_fig(fig_ty, height=420), use_container_width=True,
+                        config=PLOTLY_CONFIG, key="brain_types")
+
+    _n_tables = len(set(df_rel["table_a"]) | set(df_rel["table_b"]))
+    st.caption(
+        f"{len(df_rel):,} documented relationships across {_n_tables} tables. "
+        "Every cross-dataset insight travels one of these edges."
+    )
+
 
 # ─── Scroll-reveal IntersectionObserver + hero entry animation ────────────────
 st.markdown("""
@@ -10395,7 +10479,7 @@ with tab_ov:
                     _fig_rvp.update_layout(height=100, margin=dict(l=5, r=5, t=5, b=5), showlegend=False,
                         xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                    st.plotly_chart(_fig_rvp, use_container_width=True, config={'displayModeBar': False})
+                    st.plotly_chart(style_fig(_fig_rvp), use_container_width=True, config={'displayModeBar': False})
 
         _render_hero_metric(_h_row1_2, "🏨", f"ADR{_win_sfx}", f"${_exec_adr:.0f}", _adr_delta_str, _adr_delta_cls, "#818CF8")
         # ADR bar chart
@@ -10407,7 +10491,7 @@ with tab_ov:
                     _fig_adr.update_layout(height=100, margin=dict(l=5, r=5, t=5, b=5), showlegend=False,
                         xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                    st.plotly_chart(_fig_adr, use_container_width=True, config={'displayModeBar': False})
+                    st.plotly_chart(style_fig(_fig_adr), use_container_width=True, config={'displayModeBar': False})
 
         _render_hero_metric(_h_row2_1, "📊", f"Occupancy{_win_sfx}", f"{_exec_occ:.1f}%", _occ_delta_str, _occ_delta_cls, "#34D399")
         # Occupancy area chart
@@ -10420,7 +10504,7 @@ with tab_ov:
                     _fig_occ.update_layout(height=100, margin=dict(l=5, r=5, t=5, b=5), showlegend=False,
                         xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                    st.plotly_chart(_fig_occ, use_container_width=True, config={'displayModeBar': False})
+                    st.plotly_chart(style_fig(_fig_occ), use_container_width=True, config={'displayModeBar': False})
 
         _tbid_ytd_str = f"${_exec_tbid_ytd/1e6:.2f}M" if _exec_tbid_ytd >= 1e6 else f"${_exec_tbid_ytd:,.0f}"
         _tbid_yoy_str, _tbid_yoy_cls = format_metric_delta(_exec_tbid_yoy)
@@ -10436,7 +10520,7 @@ with tab_ov:
                     _fig_tbid.update_layout(height=100, margin=dict(l=5, r=5, t=5, b=5), showlegend=False,
                         xaxis=dict(showgrid=False, showticklabels=False), yaxis=dict(showgrid=False, showticklabels=False),
                         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
-                    st.plotly_chart(_fig_tbid, use_container_width=True, config={'displayModeBar': False})
+                    st.plotly_chart(style_fig(_fig_tbid), use_container_width=True, config={'displayModeBar': False})
 
     except Exception as e:
         _logger.debug(f"Failed to render hero metrics: {str(e)}")
@@ -10648,7 +10732,7 @@ with tab_ov:
                 number={"font": {"size": 32, "color": _p_color}, "suffix": ""},
             ))
             _gauge_fig.update_layout(height=200, margin=dict(l=20, r=20, t=10, b=0), paper_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(_gauge_fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(style_fig(_gauge_fig), use_container_width=True, config={"displayModeBar": False})
 
             _trend_arrow = "▲" if _pulse_diff > 0 else ("▼" if _pulse_diff < 0 else "▬")
             _trend_color = "#21808D" if _pulse_diff > 0 else ("#c0152f" if _pulse_diff < 0 else "#8FA3B8")
@@ -11414,7 +11498,7 @@ with tab_tr:
                 '</div>',
                 unsafe_allow_html=True,
             )
-            st.plotly_chart(_painted_fig, use_container_width=True, config=PLOTLY_CONFIG)
+            st.plotly_chart(style_fig(_painted_fig), use_container_width=True, config=PLOTLY_CONFIG)
 
         st.markdown("---")
 
@@ -12661,7 +12745,7 @@ with tab_fo:
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(family="DM Sans", color="#4A5568")
             )
-            st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
+            st.plotly_chart(style_fig(fig_trend), use_container_width=True, config=PLOTLY_CONFIG)
         else:
             st.info("Google Trends data not available.")
 
@@ -12691,7 +12775,7 @@ with tab_fo:
                         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                         font=dict(family="DM Sans", color="#4A5568")
                     )
-                    st.plotly_chart(fig_wx, use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig_wx), use_container_width=True, config=PLOTLY_CONFIG)
                 else:
                     st.info("Weather temperature data column not found.")
             else:
@@ -12736,7 +12820,7 @@ with tab_fo:
                         plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                         font=dict(family="DM Sans", color="#4A5568")
                     )
-                    st.plotly_chart(fig_bls, use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig_bls), use_container_width=True, config=PLOTLY_CONFIG)
                 else:
                     st.info("BLS data value column not found.")
             else:
@@ -12773,7 +12857,7 @@ with tab_fo:
                     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(family="DM Sans", color="#4A5568")
                 )
-                st.plotly_chart(fig_comp, use_container_width=True, config=PLOTLY_CONFIG)
+                st.plotly_chart(style_fig(fig_comp), use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.info("Occupancy data not available for compression calendar.")
         else:
@@ -13715,7 +13799,7 @@ with tab_ev:
                     yaxis_title="Avg. Visitor Spend ($)", xaxis_title=None,
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                 )
-                st.plotly_chart(fig_zrt, use_container_width=True, config=PLOTLY_CONFIG)
+                st.plotly_chart(style_fig(fig_zrt), use_container_width=True, config=PLOTLY_CONFIG)
 
             if not df_zrt_overnight.empty:
                 st.markdown("#### Monthly Overnight Visitor % Trend (Zartico Historical)")
@@ -13729,7 +13813,7 @@ with tab_ev:
                     height=240, margin=dict(l=0, r=0, t=20, b=20),
                     yaxis_title="Overnight %", yaxis_ticksuffix="%",
                 )
-                st.plotly_chart(fig_ov, use_container_width=True, config=PLOTLY_CONFIG)
+                st.plotly_chart(style_fig(fig_ov), use_container_width=True, config=PLOTLY_CONFIG)
 
             if not df_zrt_markets.empty:
                 st.markdown("#### Top Visitor Origin Markets (Zartico Q1 2025)")
@@ -13745,7 +13829,7 @@ with tab_ev:
                     height=320, margin=dict(l=0, r=0, t=20, b=20),
                     xaxis_title="% of Visitors", yaxis=dict(autorange="reversed"),
                 )
-                st.plotly_chart(fig_mkt, use_container_width=True, config=PLOTLY_CONFIG)
+                st.plotly_chart(style_fig(fig_mkt), use_container_width=True, config=PLOTLY_CONFIG)
 
             if not df_zrt_events.empty:
                 st.markdown("#### Event Impact Analysis (Zartico Historical)")
@@ -16507,7 +16591,7 @@ with tab_cs:
                     legend=dict(font=dict(size=11)),
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 )
-                st.plotly_chart(fig_ch2, use_container_width=True, config=PLOTLY_CONFIG)
+                st.plotly_chart(style_fig(fig_ch2), use_container_width=True, config=PLOTLY_CONFIG)
 
             # Chain scale data table
             _chain_display = chain_2024[["chain_scale","num_properties","supply_rooms",
@@ -17065,7 +17149,7 @@ with tab_cs:
                         height=420, margin=dict(l=10, r=10, t=40, b=10),
                         font=dict(family="Syne, sans-serif", size=11),
                     )
-                    st.plotly_chart(fig_lodge, use_container_width=True, config=PLOTLY_CONFIG)
+                    st.plotly_chart(style_fig(fig_lodge), use_container_width=True, config=PLOTLY_CONFIG)
 
             # ── Row 3: CA travel volume forecast trend ─────────────────────────────
             if not df_vca_forecast.empty and "year" in df_vca_forecast.columns:
@@ -17099,7 +17183,7 @@ with tab_cs:
                             height=300, margin=dict(l=10, r=10, t=20, b=10),
                             font=dict(family="Syne, sans-serif", size=11),
                         )
-                        st.plotly_chart(fig_fcast, use_container_width=True, config=PLOTLY_CONFIG)
+                        st.plotly_chart(style_fig(fig_fcast), use_container_width=True, config=PLOTLY_CONFIG)
 
                 with _col_vca2:
                     st.markdown("#### JWA / SNA Airport Traffic (2025)")
@@ -17136,7 +17220,7 @@ with tab_cs:
                                 height=300, margin=dict(l=10, r=10, t=20, b=10),
                                 font=dict(family="Syne, sans-serif", size=11),
                             )
-                            st.plotly_chart(fig_air, use_container_width=True, config=PLOTLY_CONFIG)
+                            st.plotly_chart(style_fig(fig_air), use_container_width=True, config=PLOTLY_CONFIG)
                         else:
                             st.info("Airport traffic data loaded, no monthly breakdown available.")
                     else:
@@ -17218,7 +17302,7 @@ with tab_cs:
                     legend=dict(orientation="h", yanchor="bottom", y=1.02),
                     yaxis=dict(showticklabels=False),
                 )
-                st.plotly_chart(_sc_fig, use_container_width=True,
+                st.plotly_chart(style_fig(_sc_fig), use_container_width=True,
                                 config=PLOTLY_CONFIG, key="cs_leadership_scorecard")
             else:
                 st.info("Load STR and CoStar data to populate the Leadership Scorecard.")
@@ -17233,6 +17317,28 @@ with tab_cs:
             render_comp_set_radar(None)
         except Exception as _csr_e:
             _logger.debug("Comp set radar error: %s", _csr_e)
+
+        # ── Visitor Conditions Outlook ────────────────────────────────────────────
+        st.markdown(sec_div("🌤 Visitor Conditions Outlook"), unsafe_allow_html=True)
+        st.markdown(_sh("🌤", "Visitor Conditions Outlook", "teal", "NWS · weather.gov"),
+                    unsafe_allow_html=True)
+        st.markdown(
+            sec_intel(
+                "Visitor Conditions Outlook",
+                "the seven-day beach day score and the 48-hour rain window for Dana Point",
+                "Beach quality is the product visitors actually buy here, and it moves short-lead "
+                "demand faster than any macro indicator. Clear 75F weekends support rate holds, "
+                "while a wet forecast shows up in walk-in demand the same week.",
+                "Rain leads beach advisories by 24 to 72 hours, so a wet outlook is an early warning "
+                "for both water quality grades and soft midweek occupancy.",
+                "Refreshed from NWS weather.gov on every pipeline run, no API key required",
+            ),
+            unsafe_allow_html=True,
+        )
+        try:
+            render_conditions_outlook()
+        except Exception as _wx_e:
+            _logger.debug("Conditions outlook error: %s", _wx_e)
 
         # ── ADR vs Gas Price Correlation ──────────────────────────────────────────
         st.markdown(sec_div("⛽ ADR vs. SoCal Gas Price Correlation"), unsafe_allow_html=True)
@@ -18374,7 +18480,7 @@ with tab_cs:
                     )
                     fig_grp.update_xaxes(showgrid=False, color="#94A3B8")
                     fig_grp.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)", color="#94A3B8")
-                    st.plotly_chart(fig_grp, use_container_width=True)
+                    st.plotly_chart(style_fig(fig_grp), use_container_width=True)
 
                 # Group displacement risk callout
                 if g_compression >= 30:
@@ -18476,7 +18582,7 @@ with tab_cs:
                         )
                         fig_ust.update_xaxes(showgrid=False, color="#94A3B8")
                         fig_ust.update_yaxes(showgrid=True, gridcolor="rgba(148,163,184,0.15)", color="#94A3B8")
-                        st.plotly_chart(fig_ust, use_container_width=True)
+                        st.plotly_chart(style_fig(fig_ust), use_container_width=True)
 
                     # Business travel stat callout
                     if not df_ust_biz.empty:
@@ -18924,6 +19030,13 @@ with tab_dl:
     render_share_bar("Data Vault", df=df_log, file_name="data_vault", key="dl_db")
 
     # ── Brain Architecture, Table Relationships ────────────────────────────
+    # The chart view answers "which tables are hubs" at a glance; the full table
+    # below it stays for lookup and export.
+    try:
+        render_brain_map()
+    except Exception as _bm_e:
+        _logger.debug("Brain map render error: %s", _bm_e)
+
     with st.expander("🗺 Brain Architecture, Table Relationships", expanded=False):
         st.markdown(
             '<div style="font-family:\'Syne\',sans-serif;font-size:1rem;'

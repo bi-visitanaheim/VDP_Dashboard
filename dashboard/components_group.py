@@ -18,6 +18,16 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from chart_theme import (
+    style_fig,
+    CATEGORICAL as _COLORWAY,
+    STATUS as _STATUS,
+    INK_BODY as _FONT_CLR,
+    INK_MUTED as _LABEL_CLR,
+    INK_PRIMARY as _TITLE_CLR,
+    GRID as _GRID_CLR,
+)
+
 # ── DB path ──────────────────────────────────────────────────────────────────
 _DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "analytics.sqlite")
 
@@ -38,55 +48,31 @@ CACHE_TTL_NATIONAL  = 3600   # 1 hr, historical benchmarks
 # Light theme, these charts render on the app's WHITE page background.
 # (Text must be dark to be legible; transparent plot bg lets the page show.)
 _DARK_BG   = "rgba(0,0,0,0)"          # transparent, inherits white page
-_GRID_CLR  = "rgba(15,23,42,0.07)"    # subtle dark grid on white
-_FONT_CLR  = "#334155"                # slate-700 body text
-_LABEL_CLR = "#64748B"                # slate-500 axis labels
-_TITLE_CLR = "#0F172A"                # near-black chart titles
 
-_COLORWAY = [
-    "#0891B2",  # teal
-    "#F5B940",  # gold
-    "#10B981",  # green
-    "#A78BFA",  # purple
-    "#FB923C",  # orange
-    "#EF4444",  # red
-    "#38BDF8",  # sky
-    "#6EE7B7",  # seafoam
-]
+# Color, ink, and grid tokens now come from chart_theme (see imports above).
+# This module previously defined its own eight-color palette, and six of those
+# eight fell below 3:1 contrast against the white page (gold at 1.72:1, seafoam
+# at 1.48:1), which is why these charts read as washed out next to the rest of
+# the app. The shared palette is contrast- and CVD-validated.
 
 
 # ── Small utilities ───────────────────────────────────────────────────────────
 
 def _dark_fig(height: int = 320) -> go.Figure:
-    """Base figure tuned for the app's LIGHT page (dark text, subtle grid)."""
-    fig = go.Figure()
-    fig.update_layout(
-        plot_bgcolor  = _DARK_BG,
-        paper_bgcolor = _DARK_BG,
-        font          = dict(color=_FONT_CLR, size=11.5, family="'Outfit',sans-serif"),
-        height        = height,
-        # t=64 gives the horizontal legend at y=1.04 enough room above the plot area
-        margin        = dict(l=14, r=20, t=64, b=36, autoexpand=True),
-        colorway      = _COLORWAY,
-        legend        = dict(
-            orientation="h", yanchor="bottom", y=1.02,
-            xanchor="left", x=0,
-            font=dict(size=10.5, color=_FONT_CLR),
-            bgcolor="rgba(255,255,255,0.85)",
-            bordercolor="#E2E8F0", borderwidth=1,
-            tracegroupgap=4,
-        ),
-        hoverlabel    = dict(
-            bgcolor="rgba(15,23,42,0.96)",
-            bordercolor="rgba(8,145,178,0.55)",
-            font=dict(size=13, color="#F8FAFC"),
-        ),
-    )
-    fig.update_xaxes(showgrid=False, color=_LABEL_CLR, title_font=dict(color=_FONT_CLR),
-                     automargin=True)
-    fig.update_yaxes(showgrid=True, gridcolor=_GRID_CLR, color=_LABEL_CLR,
-                     title_font=dict(color=_FONT_CLR), automargin=True)
-    return fig
+    """Base figure carrying the shared PULSE theme.
+
+    Name kept for the ~15 existing call sites; the figure is tuned for the
+    app's LIGHT page (dark text, subtle grid), not a dark one.
+    """
+    return style_fig(go.Figure(), height=height)
+
+
+def _themed(fig: go.Figure) -> go.Figure:
+    """Apply the shared theme on the way out of a chart builder.
+
+    Height is left to style_fig, which keeps whatever height the builder set.
+    """
+    return style_fig(fig)
 
 
 def _metric_box(label: str, value: str, note: str = "", color: str = "#0891B2",
@@ -461,7 +447,7 @@ def _chart_tbid_bar(g: dict) -> go.Figure:
         showlegend=False,
         margin=dict(l=14, r=80, t=52, b=14),
     )
-    return fig
+    return _themed(fig)
 
 
 def _chart_occ_heatmap(df_monthly: pd.DataFrame) -> go.Figure:
@@ -560,7 +546,7 @@ def _chart_occ_heatmap(df_monthly: pd.DataFrame) -> go.Figure:
     # Remove ADR text labels to avoid overlap, hover shows them instead
     if adrs:
         fig.update_traces(texttemplate=None, selector=dict(type="scatter"))
-    return fig
+    return _themed(fig)
 
 
 def _chart_segment_donut(df_segs: pd.DataFrame) -> go.Figure:
@@ -600,7 +586,7 @@ def _chart_segment_donut(df_segs: pd.DataFrame) -> go.Figure:
         legend=dict(orientation="v", x=1.02, y=0.5, font=dict(size=10)),
         margin=dict(l=10, r=150, t=52, b=10),
     )
-    return fig
+    return _themed(fig)
 
 
 def _chart_revenue_funnel(g: dict) -> go.Figure:
@@ -652,7 +638,7 @@ def _chart_revenue_funnel(g: dict) -> go.Figure:
         funnelmode="stack",
         margin=dict(l=14, r=200, t=52, b=14),
     )
-    return fig
+    return _themed(fig)
 
 
 def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
@@ -721,7 +707,7 @@ def _chart_traveler_radar(df_types: pd.DataFrame) -> go.Figure:
                     font=dict(size=11)),
         margin=dict(l=40, r=40, t=52, b=60),
     )
-    return fig
+    return _themed(fig)
 
 
 def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
@@ -794,7 +780,7 @@ def _chart_competitive_scatter(df: pd.DataFrame) -> go.Figure:
         ),
         margin=dict(l=14, r=14, t=52, b=70, autoexpand=True),
     )
-    return fig
+    return _themed(fig)
 
 
 def _chart_tbid_chain_waterfall(df_chain: pd.DataFrame, g: dict) -> go.Figure:
@@ -867,7 +853,7 @@ def _chart_tbid_chain_waterfall(df_chain: pd.DataFrame, g: dict) -> go.Figure:
         showlegend=False,
         margin=dict(l=14, r=80, t=52, b=14),
     )
-    return fig
+    return _themed(fig)
 
 
 def _chart_supply_pipeline(df: pd.DataFrame) -> go.Figure:
@@ -930,7 +916,7 @@ def _chart_supply_pipeline(df: pd.DataFrame) -> go.Figure:
         showlegend=False,
         margin=dict(l=260, r=160, t=52, b=14),
     )
-    return fig
+    return _themed(fig)
 
 
 def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go.Figure:
@@ -994,7 +980,7 @@ def _chart_attribution_channel(web_df: pd.DataFrame, med_df: pd.DataFrame) -> go
         legend=dict(orientation="h", yanchor="top", y=-0.14, xanchor="center", x=0.5, font=dict(size=10, color=_FONT_CLR), bgcolor="rgba(255,255,255,0.85)", bordercolor="#E2E8F0", borderwidth=1),
         margin=dict(l=14, r=90, t=52, b=60, autoexpand=True),
     )
-    return fig
+    return _themed(fig)
 
 
 def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> go.Figure:
@@ -1050,7 +1036,7 @@ def _chart_costar_occ_overlay(df_costar: pd.DataFrame, web_df: pd.DataFrame) -> 
         legend=dict(orientation="h", yanchor="top", y=-0.14, xanchor="center", x=0.5, font=dict(size=10, color=_FONT_CLR), bgcolor="rgba(255,255,255,0.85)", bordercolor="#E2E8F0", borderwidth=1),
         margin=dict(l=14, r=90, t=52, b=60, autoexpand=True),
     )
-    return fig
+    return _themed(fig)
 
 
 def _render_shoulder_alignment(df_types: pd.DataFrame, comp: pd.DataFrame) -> None:
@@ -1162,7 +1148,7 @@ def _chart_group_vs_transient_trends(df_group: pd.DataFrame) -> go.Figure:
     if df_group.empty:
         fig = _dark_fig()
         fig.add_annotation(text="No group segment data available", showarrow=False)
-        return fig
+        return _themed(fig)
 
     df_pivot = df_group.pivot_table(
         index="as_of_date",
@@ -1241,7 +1227,7 @@ def _chart_group_vs_transient_trends(df_group: pd.DataFrame) -> go.Figure:
     )
     fig.update_xaxes(tickangle=-30, tickfont=dict(size=10))
     fig.update_yaxes(title_text="ADR ($)")
-    return fig
+    return _themed(fig)
 
 
 def _chart_segment_mix_donut(df_group: pd.DataFrame) -> go.Figure:
@@ -1249,7 +1235,7 @@ def _chart_segment_mix_donut(df_group: pd.DataFrame) -> go.Figure:
     if df_group.empty:
         fig = _dark_fig(height=360)
         fig.add_annotation(text="No group segment data available", showarrow=False)
-        return fig
+        return _themed(fig)
 
     latest = df_group["as_of_date"].max()
     latest_df = df_group[df_group["as_of_date"] == latest]
@@ -1260,7 +1246,7 @@ def _chart_segment_mix_donut(df_group: pd.DataFrame) -> go.Figure:
     if seg_sum.empty:
         fig = _dark_fig(height=360)
         fig.add_annotation(text="No occupancy data for latest date", showarrow=False)
-        return fig
+        return _themed(fig)
 
     fig = _dark_fig(height=360)
     fig.add_trace(go.Pie(
@@ -1281,7 +1267,7 @@ def _chart_segment_mix_donut(df_group: pd.DataFrame) -> go.Figure:
         showlegend=False,
         margin=dict(l=30, r=30, t=56, b=30, autoexpand=True),
     )
-    return fig
+    return _themed(fig)
 
 
 def _chart_group_adr_premium(df_group: pd.DataFrame) -> go.Figure:
@@ -1289,7 +1275,7 @@ def _chart_group_adr_premium(df_group: pd.DataFrame) -> go.Figure:
     if df_group.empty:
         fig = _dark_fig(height=340)
         fig.add_annotation(text="No group segment data available", showarrow=False)
-        return fig
+        return _themed(fig)
 
     df_pivot = df_group.pivot_table(
         index="as_of_date",
@@ -1339,7 +1325,7 @@ def _chart_group_adr_premium(df_group: pd.DataFrame) -> go.Figure:
     )
     fig.update_xaxes(tickangle=-30, tickfont=dict(size=10))
     fig.update_yaxes(title_text=y_title)
-    return fig
+    return _themed(fig)
 
 
 def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
@@ -1347,7 +1333,7 @@ def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
     if df_group.empty:
         fig = _dark_fig(height=360)
         fig.add_annotation(text="No group segment data available", showarrow=False)
-        return fig
+        return _themed(fig)
 
     latest = df_group["as_of_date"].max()
     prop_group = (
@@ -1364,7 +1350,7 @@ def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
     if prop_group.empty:
         fig = _dark_fig(height=360)
         fig.add_annotation(text="No group occupancy data for latest date", showarrow=False)
-        return fig
+        return _themed(fig)
 
     # Shorten long names
     short_names = [n[:28] + "…" if len(n) > 28 else n for n in prop_group.index]
@@ -1393,7 +1379,7 @@ def _chart_group_event_correlation(df_group: pd.DataFrame) -> go.Figure:
     )
     fig.update_xaxes(title_text="Group Occupancy (%)", range=[0, prop_group.max() * 1.25])
     fig.update_yaxes(automargin=True, tickfont=dict(size=10))
-    return fig
+    return _themed(fig)
 
 
 def _chart_property_group_performance(df_group: pd.DataFrame) -> go.Figure:
@@ -1401,7 +1387,7 @@ def _chart_property_group_performance(df_group: pd.DataFrame) -> go.Figure:
     if df_group.empty:
         fig = _dark_fig(height=360)
         fig.add_annotation(text="No group segment data available", showarrow=False)
-        return fig
+        return _themed(fig)
 
     latest = df_group["as_of_date"].max()
     latest_df = df_group[df_group["as_of_date"] == latest]
@@ -1417,7 +1403,7 @@ def _chart_property_group_performance(df_group: pd.DataFrame) -> go.Figure:
     if not prop_data:
         fig = _dark_fig(height=360)
         fig.add_annotation(text="No property data available", showarrow=False)
-        return fig
+        return _themed(fig)
 
     prop_df = pd.DataFrame(prop_data).sort_values("group_pct", ascending=True).tail(10)
     short_names = [n[:28] + "…" if len(n) > 28 else n for n in prop_df["property"]]
@@ -1447,7 +1433,7 @@ def _chart_property_group_performance(df_group: pd.DataFrame) -> go.Figure:
     fig.update_xaxes(title_text="Group Demand Share (%)",
                      range=[0, prop_df["group_pct"].max() * 1.25])
     fig.update_yaxes(automargin=True, tickfont=dict(size=10))
-    return fig
+    return _themed(fig)
 
 
 def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
@@ -1455,7 +1441,7 @@ def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
     if df_group.empty:
         fig = _dark_fig(height=420)
         fig.add_annotation(text="No group segment data available", showarrow=False)
-        return fig
+        return _themed(fig)
 
     latest = df_group["as_of_date"].max()
     latest_df = df_group[
@@ -1469,7 +1455,7 @@ def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
     if heatmap_pivot.empty:
         fig = _dark_fig(height=420)
         fig.add_annotation(text="No occupancy heatmap data available", showarrow=False)
-        return fig
+        return _themed(fig)
 
     # Sort by group occupancy; shorten long names
     sort_col = "Grp." if "Grp." in heatmap_pivot.columns else heatmap_pivot.columns[0]
@@ -1504,7 +1490,7 @@ def _chart_segment_occupancy_heatmap(df_group: pd.DataFrame) -> go.Figure:
     )
     fig.update_xaxes(side="bottom", tickfont=dict(size=11), automargin=True)
     fig.update_yaxes(automargin=True, tickfont=dict(size=10))
-    return fig
+    return _themed(fig)
 
 
 # ── Sub-tab renderers ─────────────────────────────────────────────────────────

@@ -127,23 +127,33 @@ except Exception as e:
 # ─── 4. KPI sanity checks ─────────────────────────────────────────────────────
 print("\n── 4. KPI Sanity Checks ─────────────────────────────────")
 try:
+    # Sanity-check the most recent 90 days that actually HAVE data, not the last
+    # 90 calendar days. When STR is behind (no new export yet) the calendar window
+    # is empty, AVG() returns NULL, and every check below reported "out of range" —
+    # three false errors for what is really a staleness issue already flagged in
+    # section 2. Anchor the window to MAX(as_of_date) so the checks grade the data
+    # that exists, and report an empty table as its own distinct condition.
     row = c.execute(
-        "SELECT AVG(occ_pct), AVG(adr), AVG(revpar) FROM kpi_daily_summary "
-        "WHERE as_of_date >= date('now','-90 days')"
+        "SELECT AVG(occ_pct), AVG(adr), AVG(revpar), COUNT(*) FROM kpi_daily_summary "
+        "WHERE as_of_date >= date((SELECT MAX(as_of_date) FROM kpi_daily_summary), '-90 days')"
     ).fetchone()
     avg_occ, avg_adr, avg_rvp = (row[0] or 0), (row[1] or 0), (row[2] or 0)
-    if avg_occ < 20 or avg_occ > 100:
+    sample_n = row[3] or 0
+    if sample_n == 0:
+        flag("error", "kpi", "kpi_daily_summary is empty", "Run compute_kpis.py")
+    elif avg_occ < 20 or avg_occ > 100:
         flag("error", "kpi", f"Occupancy out of range: avg {avg_occ:.1f}%", "Check STR import format")
     else:
-        flag("ok", "kpi", f"Avg occupancy (90d): {avg_occ:.1f}%")
-    if avg_adr < 50 or avg_adr > 2000:
-        flag("error", "kpi", f"ADR out of range: avg ${avg_adr:.0f}", "Check STR import format")
-    else:
-        flag("ok", "kpi", f"Avg ADR (90d): ${avg_adr:.0f}")
-    if avg_rvp < 20 or avg_rvp > 1500:
-        flag("error", "kpi", f"RevPAR out of range: avg ${avg_rvp:.0f}", "Check STR import format")
-    else:
-        flag("ok", "kpi", f"Avg RevPAR (90d): ${avg_rvp:.0f}")
+        flag("ok", "kpi", f"Avg occupancy (last 90d of data): {avg_occ:.1f}%")
+    if sample_n:
+        if avg_adr < 50 or avg_adr > 2000:
+            flag("error", "kpi", f"ADR out of range: avg ${avg_adr:.0f}", "Check STR import format")
+        else:
+            flag("ok", "kpi", f"Avg ADR (last 90d of data): ${avg_adr:.0f}")
+        if avg_rvp < 20 or avg_rvp > 1500:
+            flag("error", "kpi", f"RevPAR out of range: avg ${avg_rvp:.0f}", "Check STR import format")
+        else:
+            flag("ok", "kpi", f"Avg RevPAR (last 90d of data): ${avg_rvp:.0f}")
 except Exception as e:
     flag("error", "kpi", f"KPI sanity check failed: {e}")
 
