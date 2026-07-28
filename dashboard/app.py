@@ -276,7 +276,7 @@ if _LOGIN_ENABLED and not st.session_state.get("authenticated", False):
 
 # ─── Brand palette ────────────────────────────────────────────────────────────
 TEAL       = "#21808D"
-TEAL_LIGHT = "#32B8C6"
+TEAL_LIGHT = "#0E7490"
 ORANGE     = "#E68161"
 RED        = "#C0152F"
 GREEN      = "#21808D"    # teal = positive to match brand
@@ -960,8 +960,8 @@ st.markdown("""
     margin: 6px 0 8px 0;
     text-align: center;
   }
-  .kpi-delta-pos     { color: #10B981; font-size: 12px; font-weight: 700; display:flex; align-items:center; justify-content:center; gap:4px; }
-  .kpi-delta-neg     { color: #EF4444; font-size: 12px; font-weight: 700; display:flex; align-items:center; justify-content:center; gap:4px; }
+  .kpi-delta-pos     { color: #15803D; font-size: 12px; font-weight: 700; display:flex; align-items:center; justify-content:center; gap:4px; }
+  .kpi-delta-neg     { color: #DC2626; font-size: 12px; font-weight: 700; display:flex; align-items:center; justify-content:center; gap:4px; }
   .kpi-delta-neutral { color: var(--dp-text-3); font-size: 12px; font-weight: 600; text-align: center; }
   .kpi-date {
     font-size: 10px; color: var(--dp-text-3);
@@ -2044,7 +2044,7 @@ st.markdown("""
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    color: #32B8C6 !important;
+    color: #0E7490 !important;
     font-size: 9px !important;
     font-weight: 700 !important;
     letter-spacing: .04em !important;
@@ -2059,7 +2059,7 @@ st.markdown("""
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    color: #32B8C6 !important;
+    color: #0E7490 !important;
     font-size: 9px !important;
     font-weight: 700 !important;
     letter-spacing: .04em !important;
@@ -2337,10 +2337,10 @@ st.markdown("""
     letter-spacing: .10em; padding: 3px 10px; border-radius: 20px;
     white-space: nowrap; flex-shrink: 0;
   }
-  .goal-badge-active   { background: rgba(16,185,129,0.12);  color: #10B981; border: 1px solid rgba(16,185,129,0.28); }
+  .goal-badge-active   { background: rgba(16,185,129,0.12);  color: #15803D; border: 1px solid rgba(16,185,129,0.28); }
   .goal-badge-achieved { background: rgba(0,212,200,0.12);   color: #0891B2; border: 1px solid rgba(0,212,200,0.35); }
   .goal-badge-paused   { background: rgba(245,158,11,0.12);  color: #F5B940; border: 1px solid rgba(245,158,11,0.28); }
-  .goal-badge-missed   { background: rgba(239,68,68,0.12);   color: #EF4444; border: 1px solid rgba(239,68,68,0.28); }
+  .goal-badge-missed   { background: rgba(239,68,68,0.12);   color: #DC2626; border: 1px solid rgba(239,68,68,0.28); }
   .goal-meta {
     font-size: 10.5px; color: var(--dp-text-3); margin-bottom: 10px;
     display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
@@ -2624,8 +2624,8 @@ st.markdown("""
     margin-top: 2px !important;
   }
   .pulse-ticker-neg {
-    color: #EF4444 !important;
-    -webkit-text-fill-color: #EF4444 !important;
+    color: #FB7185 !important;
+    -webkit-text-fill-color: #FB7185 !important;
     font-size: 13px !important;
     font-weight: 900 !important;
     letter-spacing: 0.05em !important;
@@ -2946,8 +2946,8 @@ st.markdown("""
     position: relative; z-index: 1; margin-left: 2px; box-shadow: 0 0 0 4px var(--dp-bg);
   }
   .tl-dot-high   { background:rgba(0,212,200,0.15);   color:#0891B2; border:2px solid #0891B2; }
-  .tl-dot-peak   { background:rgba(16,185,129,0.15);  color:#10B981; border:2px solid #10B981; }
-  .tl-dot-low    { background:rgba(239,68,68,0.12);   color:#EF4444; border:2px solid #EF4444; }
+  .tl-dot-peak   { background:rgba(16,185,129,0.15);  color:#15803D; border:2px solid #15803D; }
+  .tl-dot-low    { background:rgba(239,68,68,0.12);   color:#DC2626; border:2px solid #DC2626; }
   .tl-dot-event  { background:rgba(167,139,250,0.12); color:#A78BFA; border:2px solid #A78BFA; }
   .tl-dot-warn   { background:rgba(245,185,64,0.12);  color:#F5B940; border:2px solid #F5B940; }
   .tl-content {
@@ -3900,12 +3900,12 @@ st.markdown("""
   [data-testid="stMetricDelta"][data-direction="positive"],
   [data-testid="stMetricDelta"].positive {
     background: rgba(16,185,129,0.12) !important;
-    color: #10B981 !important;
+    color: #15803D !important;
   }
   [data-testid="stMetricDelta"][data-direction="negative"],
   [data-testid="stMetricDelta"].negative {
     background: rgba(239,68,68,0.12) !important;
-    color: #EF4444 !important;
+    color: #DC2626 !important;
   }
 
   /* ── Staggered slideUp on Streamlit native metrics (Linear style) ── */
@@ -9113,7 +9113,7 @@ Active destination goals with current progress vs. target. Updated automatically
   }}
   .nlm-header::before {{
     content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    background: linear-gradient(90deg, #21808D, #32B8C6, #E68161);
+    background: linear-gradient(90deg, #21808D, #0E7490, #E68161);
   }}
   .nlm-header .org {{
     font-size: 10pt; font-weight: 600; letter-spacing: .14em;
@@ -9179,7 +9179,7 @@ Active destination goals with current progress vs. target. Updated automatically
   }}
   .audio-box::before {{
     content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-    background: linear-gradient(90deg, #21808D, #32B8C6, #E68161);
+    background: linear-gradient(90deg, #21808D, #0E7490, #E68161);
   }}
   .audio-title {{
     font-size: 9pt; font-weight: 800; letter-spacing: .10em; text-transform: uppercase;
@@ -9190,8 +9190,8 @@ Active destination goals with current progress vs. target. Updated automatically
     font-size: 10.5pt; line-height: 1.65; opacity: .92;
     padding-left: 20px; position: relative;
   }}
-  .audio-pts li::before {{ content: '▸'; position: absolute; left: 0; color: #32B8C6; }}
-  .audio-pts li strong {{ color: #32B8C6; }}
+  .audio-pts li::before {{ content: '▸'; position: absolute; left: 0; color: #0E7490; }}
+  .audio-pts li strong {{ color: #0E7490; }}
 
   /* Pull stats */
   .pull-stat {{
@@ -9318,7 +9318,7 @@ Active destination goals with current progress vs. target. Updated automatically
   .nlm-footer {{
     margin-top: 30px; padding: 16px 0; border-top: 1px solid #e8eaed;
     display: flex; justify-content: space-between; align-items: flex-end;
-    font-size: 8.5pt; color: #9aa0a6;
+    font-size: 8.5pt; color: #64748B;
   }}
 
   /* Print */
@@ -9558,31 +9558,31 @@ Active destination goals with current progress vs. target. Updated automatically
         <span class="src-badge src-str">STR</span>
         <span style="color:#5f6368;font-weight:600">Smith Travel Research</span>
       </div>
-      <div style="color:#9aa0a6;font-size:8.5pt;line-height:1.5">Hotel performance data (occ, ADR, RevPAR) for VDP Select Portfolio, 12 properties, South Orange County. Daily/monthly exports.</div>
+      <div style="color:#64748B;font-size:8.5pt;line-height:1.5">Hotel performance data (occ, ADR, RevPAR) for VDP Select Portfolio, 12 properties, South Orange County. Daily/monthly exports.</div>
     </div>
     <div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span class="src-badge src-datafy">Datafy</span>
         <span style="color:#5f6368;font-weight:600">Visitor Economy Intelligence</span>
       </div>
-      <div style="color:#9aa0a6;font-size:8.5pt;line-height:1.5">Visitor trips, DMA feeder profiles, spending by category, media attribution and ROAS. Annual/seasonal report periods.</div>
+      <div style="color:#64748B;font-size:8.5pt;line-height:1.5">Visitor trips, DMA feeder profiles, spending by category, media attribution and ROAS. Annual/seasonal report periods.</div>
     </div>
     <div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span class="src-badge src-costar">CoStar</span>
         <span style="color:#5f6368;font-weight:600">CoStar Hospitality Analytics</span>
       </div>
-      <div style="color:#9aa0a6;font-size:8.5pt;line-height:1.5">Market-level benchmarks for Newport Beach/Dana Point submarket. Supply pipeline, chain scale, profitability.</div>
+      <div style="color:#64748B;font-size:8.5pt;line-height:1.5">Market-level benchmarks for Newport Beach/Dana Point submarket. Supply pipeline, chain scale, profitability.</div>
     </div>
     <div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span class="src-badge src-ai">AI</span>
         <span style="color:#5f6368;font-weight:600">Claude VDP Insights Engine</span>
       </div>
-      <div style="color:#9aa0a6;font-size:8.5pt;line-height:1.5">Forward-looking insights generated daily from all Layer 1 data. 4 audience tracks: DMO, City, Visitor, Resident.</div>
+      <div style="color:#64748B;font-size:8.5pt;line-height:1.5">Forward-looking insights generated daily from all Layer 1 data. 4 audience tracks: DMO, City, Visitor, Resident.</div>
     </div>
   </div>
-  <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e8eaed;font-size:8.5pt;color:#9aa0a6">
+  <div style="margin-top:12px;padding-top:12px;border-top:1px solid #e8eaed;font-size:8.5pt;color:#64748B">
     <strong>TBID Revenue</strong> estimated at blended 1.25% assessment rate (Tier 1: 1.0%, Tier 2: 1.5%). &nbsp;·&nbsp; Updated automatically with each data refresh
   </div>
 </div>
@@ -9801,9 +9801,9 @@ on pace for <strong>${tbid_ann:,.0f} annually</strong>.
   <div class="story">
     <div class="story-label">Market context (CoStar · Full Year 2024 · Latest Available)</div>
     {"<p>South OC market: <strong>Occ {:.1f}%</strong> · ADR <strong>${:.0f}</strong> · RevPAR <strong>${:.0f}</strong>.</p><p>VDP Portfolio Index vs. Market:</p>".format(mkt_occ, mkt_adr, mkt_rvp) if mkt_rvp > 0 else "<p>CoStar benchmark data available in the Market Intelligence tab.</p>"}
-    {"<div class='index-bar'><span style='width:80px;font-size:9pt;color:#94B3CC'>MPI (Occ)</span><div class='bar-wrap'><div class='bar-fill' style='width:min(100%,{:.0f}%);background:{};'></div></div><span style='font-weight:700;color:{};font-size:9.5pt'>{:.0f}</span></div>".format(min(mpi,100), _idx_clr(mpi), _idx_clr(mpi), mpi) if mkt_rvp > 0 else ""}
-    {"<div class='index-bar'><span style='width:80px;font-size:9pt;color:#94B3CC'>ARI (Rate)</span><div class='bar-wrap'><div class='bar-fill' style='width:min(100%,{:.0f}%);background:{};'></div></div><span style='font-weight:700;color:{};font-size:9.5pt'>{:.0f}</span></div>".format(min(ari,100), _idx_clr(ari), _idx_clr(ari), ari) if mkt_rvp > 0 else ""}
-    {"<div class='index-bar'><span style='width:80px;font-size:9pt;color:#94B3CC'>RGI (RevPAR)</span><div class='bar-wrap'><div class='bar-fill' style='width:min(100%,{:.0f}%);background:{};'></div></div><span style='font-weight:700;color:{};font-size:9.5pt'>{:.0f}</span></div>".format(min(rgi,100), _idx_clr(rgi), _idx_clr(rgi), rgi) if mkt_rvp > 0 else ""}
+    {"<div class='index-bar'><span style='width:80px;font-size:9pt;color:#64748B'>MPI (Occ)</span><div class='bar-wrap'><div class='bar-fill' style='width:min(100%,{:.0f}%);background:{};'></div></div><span style='font-weight:700;color:{};font-size:9.5pt'>{:.0f}</span></div>".format(min(mpi,100), _idx_clr(mpi), _idx_clr(mpi), mpi) if mkt_rvp > 0 else ""}
+    {"<div class='index-bar'><span style='width:80px;font-size:9pt;color:#64748B'>ARI (Rate)</span><div class='bar-wrap'><div class='bar-fill' style='width:min(100%,{:.0f}%);background:{};'></div></div><span style='font-weight:700;color:{};font-size:9.5pt'>{:.0f}</span></div>".format(min(ari,100), _idx_clr(ari), _idx_clr(ari), ari) if mkt_rvp > 0 else ""}
+    {"<div class='index-bar'><span style='width:80px;font-size:9pt;color:#64748B'>RGI (RevPAR)</span><div class='bar-wrap'><div class='bar-fill' style='width:min(100%,{:.0f}%);background:{};'></div></div><span style='font-weight:700;color:{};font-size:9.5pt'>{:.0f}</span></div>".format(min(rgi,100), _idx_clr(rgi), _idx_clr(rgi), rgi) if mkt_rvp > 0 else ""}
     <div class="action" style="margin-top:10px">→ {"Index above 100: portfolio outperforming market. Protect rate positioning." if rgi >= 100 else "Index below 100: portfolio underperforming market. Review rate strategy and channel mix."}</div>
   </div>
 </div>
@@ -9866,7 +9866,7 @@ on pace for <strong>${tbid_ann:,.0f} annually</strong>.
 <!-- DATA SOURCES & FOOTER -->
 <div class="section">
 <h2>Data Sources &amp; Methodology</h2>
-<p style="font-size:9.5pt;color:#94B3CC">
+<p style="font-size:9.5pt;color:#64748B">
 <strong>STR (Smith Travel Research)</strong>, hotel performance data (occupancy, ADR, RevPAR) for VDP Select Portfolio (12 properties, South Orange County, CA). Updated via monthly/daily export files.<br>
 <strong>Datafy</strong>, visitor economy intelligence (visitor trips, DMA profiles, spending, media attribution). Annual/seasonal report periods.<br>
 <strong>CoStar Hospitality Analytics</strong>, market-level benchmarks for Newport Beach/Dana Point submarket. Data as of {report_date}.<br>

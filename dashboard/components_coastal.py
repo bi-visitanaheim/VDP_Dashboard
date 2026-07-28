@@ -78,6 +78,94 @@ def load_whale_watching() -> pd.DataFrame:
         st.error(f"Could not load whale watching data: {e}")
         return pd.DataFrame()
 
+def load_airbnb_market() -> pd.DataFrame:
+    """Load short-term-rental competitive market summary from analytics.sqlite."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        df = pd.read_sql_query(
+            "SELECT * FROM airbnb_market_summary ORDER BY report_date DESC LIMIT 60",
+            conn
+        )
+        conn.close()
+        if not df.empty:
+            df["report_date"] = pd.to_datetime(df["report_date"])
+        return df
+    except Exception as e:
+        st.error(f"Could not load STVR market data: {e}")
+        return pd.DataFrame()
+
+
+def render_stvr_competitive(df_air: pd.DataFrame):
+    """Render short-term-rental (Airbnb) competitive market panel.
+    Layer 2 context: how Dana Point's STVR supply and pricing compare to
+    neighboring South OC coastal cities."""
+    st.markdown(sec_div("🏘️ Short-Term Rental Market, Dana Point vs. South OC Coastal Cities"), unsafe_allow_html=True)
+
+    if df_air.empty:
+        st.markdown(
+            '<div class="empty-card"><div class="empty-icon">🏘️</div>'
+            '<div class="empty-title">STVR Market Data Not Loaded</div>'
+            '<div class="empty-body">Short-term rental competitive data will appear once loaded.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    latest_date = df_air["report_date"].max()
+    latest = df_air[df_air["report_date"] == latest_date].sort_values("total_listings", ascending=False)
+    dp_row = latest[latest["city"] == "Dana Point"]
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        if not dp_row.empty:
+            st.metric("Dana Point Listings", f"{int(dp_row['total_listings'].iloc[0]):,}")
+    with col2:
+        if not dp_row.empty:
+            st.metric("Dana Point Median Price", f"${dp_row['median_price_usd'].iloc[0]:,.0f}/night")
+    with col3:
+        if not dp_row.empty and not latest.empty:
+            _mkt_median = latest["median_price_usd"].mean()
+            _gap = dp_row["median_price_usd"].iloc[0] - _mkt_median
+            st.metric("vs. South OC Avg", f"{'+' if _gap >= 0 else ''}${_gap:,.0f}/night")
+    with col4:
+        if not dp_row.empty:
+            st.metric("Entire-Home Share", f"{dp_row['entire_home_pct'].iloc[0]:.0f}%")
+
+    # Competitive-set comparison bars, one metric per subplot to avoid a dual-axis chart.
+    st.markdown("#### Listings & Median Nightly Price by City")
+    fig = make_subplots(rows=1, cols=2, subplot_titles=("Total Listings", "Median Price ($/night)"))
+    _city_colors = [TEAL if c == "Dana Point" else "#94A3B8" for c in latest["city"]]
+    fig.add_trace(go.Bar(x=latest["city"], y=latest["total_listings"], marker_color=_city_colors,
+                          text=latest["total_listings"], textposition="outside", showlegend=False), row=1, col=1)
+    fig.add_trace(go.Bar(x=latest["city"], y=latest["median_price_usd"], marker_color=_city_colors,
+                          text=latest["median_price_usd"].map(lambda v: f"${v:,.0f}"),
+                          textposition="outside", showlegend=False), row=1, col=2)
+    fig.update_layout(title=f"South OC STVR Snapshot, {latest_date.strftime('%B %Y')}")
+    st.plotly_chart(style_fig(fig, height=320), use_container_width=True)
+
+    # 12-month listing-count trend for Dana Point vs comp set
+    st.markdown("#### STVR Listing Growth, Trailing 12 Reports")
+    trend = df_air.sort_values("report_date")
+    fig2 = go.Figure()
+    for city in trend["city"].unique():
+        city_df = trend[trend["city"] == city]
+        fig2.add_trace(go.Scatter(
+            x=city_df["report_date"], y=city_df["total_listings"], name=city, mode="lines+markers",
+            line=dict(width=3 if city == "Dana Point" else 2),
+            marker=dict(size=6 if city == "Dana Point" else 4),
+        ))
+    fig2.update_layout(title="STVR Listing Count Trend", yaxis_title="Active Listings", hovermode="x unified")
+    st.plotly_chart(style_fig(fig2, height=320), use_container_width=True)
+
+    stvr_note = (
+        "**STVR supply is a demand-side signal, not a Layer 1 revenue source.** Dana Point's listing count and "
+        "median price relative to Laguna Beach and San Clemente show where price-sensitive travelers may be "
+        "shifting. A rising comp-set listing count with flat Dana Point occupancy signals share loss to "
+        "alternative lodging, worth cross-checking against the STR compression calendar."
+    )
+    st.markdown(f'<div class="dp-callout">{stvr_note}</div>', unsafe_allow_html=True)
+
+
 def render_beach_intelligence(df_beach: pd.DataFrame, df_kpi: pd.DataFrame):
     """Render Beach Water Quality Intelligence panel."""
     st.markdown(sec_div("🌊 Beach Water Quality Grades, Visitor Health & Experience Signal"), unsafe_allow_html=True)
@@ -330,11 +418,15 @@ def render_coastal_intelligence(df_kpi: pd.DataFrame):
     """Main entry point: render all coastal intelligence components."""
     df_beach = load_beach_water_quality()
     df_whale = load_whale_watching()
+    df_air   = load_airbnb_market()
 
     render_beach_intelligence(df_beach, df_kpi)
     st.markdown("")
 
     render_whale_watching(df_whale, df_kpi)
+    st.markdown("")
+
+    render_stvr_competitive(df_air)
     st.markdown("")
 
     render_revenue_opportunities(df_kpi, df_beach, df_whale)
