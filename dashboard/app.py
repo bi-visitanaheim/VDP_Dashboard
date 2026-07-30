@@ -938,7 +938,7 @@ st.markdown("""
   .kpi-card {
     background: var(--dp-card);
     border-radius: var(--dp-radius-lg);
-    padding: 18px 18px 15px 18px;
+    padding: 26px 24px 20px 24px;
     border: 1px solid var(--dp-border);
     color: var(--dp-text-1);
     margin-bottom: 12px;
@@ -977,12 +977,12 @@ st.markdown("""
   .kpi-icon-svg { flex-shrink: 0; line-height: 0; opacity: 0.45; }
   .kpi-value {
     font-family: 'Outfit', 'Inter', sans-serif;
-    font-size: 34px; font-weight: 700;
+    font-size: 42px; font-weight: 800;
     letter-spacing: -.03em; line-height: 1.05;
     font-variant-numeric: tabular-nums;
     color: var(--dp-text-1);
     -webkit-text-fill-color: var(--dp-text-1);
-    margin: 6px 0 9px 0;
+    margin: 8px 0 11px 0;
     text-align: center;
   }
   .kpi-delta-pos,
@@ -2421,7 +2421,7 @@ st.markdown("""
     .event-val  { font-size: 22px !important; }
     .nlm-briefing { padding: 12px 14px !important; }
     .src-card { padding: 10px 12px !important; }
-    .kpi-value { font-size: 28px !important; }
+    .kpi-value { font-size: 32px !important; }
     /* Demo question buttons: wrap to 2×2 grid on mobile */
     div[data-testid="stHorizontalBlock"]:has(button[data-testid^="stBaseButton-secondary"]) > div {
       min-width: calc(50% - 4px) !important;
@@ -3337,7 +3337,15 @@ st.markdown("""
 # Applied from: Linear, Vercel, Railway, Twingate, Plausible, Resend (April 2026 research)
 st.markdown("""
 <style>
-  /* ── JetBrains Mono for KPI numbers (Twingate/Linear standard) ── */
+  /* ── JetBrains Mono for KPI numbers (Twingate/Linear standard) ──────────
+     Fixed 2026-07-30: this rule used to hardcode #FFFFFF text at 21px with
+     !important, landing AFTER the light-theme .kpi-value rule (34px,
+     var(--dp-text-1)) earlier in this file and winning the cascade, so
+     every KPI number rendered white-on-white at less than two-thirds size.
+     Exactly the multi-block cascade trap CLAUDE.md's Lessons Learned warns
+     about. Now matches the light design-tokens block instead of fighting
+     it, and is the single place that sets the "read from across a
+     conference room" size the owner asked for (34px → 42px). */
   .kpi-value,
   [data-testid="stMetricValue"],
   div[data-testid="metric-container"] [data-testid="stMetricValue"],
@@ -3346,9 +3354,10 @@ st.markdown("""
     font-family: 'JetBrains Mono', 'Fira Code', 'Outfit', monospace !important;
     font-variant-numeric: tabular-nums !important;
     letter-spacing: -0.03em !important;
-    color: #FFFFFF !important;
-    font-weight: 900 !important;
-    font-size: 21px !important;
+    color: var(--dp-text-1) !important;
+    -webkit-text-fill-color: var(--dp-text-1) !important;
+    font-weight: 800 !important;
+    font-size: 42px !important;
   }
 
   /* ── Chart container glow (Railway pattern, teal instead of indigo) ── */
@@ -4375,6 +4384,24 @@ def load_datafy_spending() -> pd.DataFrame:
     try:
         return pd.read_sql_query(
             "SELECT * FROM datafy_overview_category_spending ORDER BY report_period_start DESC, spend_share_pct DESC", conn
+        )
+    except Exception as _e:
+        _logger.debug("loader error: %s", _e)
+        return pd.DataFrame()
+
+
+@st.cache_data(ttl=300)
+def load_datafy_los_distribution() -> pd.DataFrame:
+    """Load Datafy length-of-stay distribution (1 Day, 2 Days, ... buckets).
+    Added for the Stay Patterns page: datafy_overview_los_distribution exists
+    in the schema (report_period_start/end, length_of_stay, pct_of_trips) and
+    was previously left unused, following the same @st.cache_data(ttl=300)
+    pattern as the other Datafy overview loaders above."""
+    conn = get_connection()
+    try:
+        return pd.read_sql_query(
+            "SELECT * FROM datafy_overview_los_distribution "
+            "ORDER BY report_period_start DESC, length_of_stay", conn
         )
     except Exception as _e:
         _logger.debug("loader error: %s", _e)
@@ -9600,6 +9627,8 @@ if not use_classic_view:
         "table_counts": get_table_counts(),
         "log": load_load_log(),
         "insights": load_insights(),
+        "travel_types": load_us_travel_traveler_types(),
+        "los": load_datafy_los_distribution(),
     })
     st.stop()
 

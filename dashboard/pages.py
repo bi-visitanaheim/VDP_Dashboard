@@ -282,13 +282,160 @@ def _nav_row(buttons: list) -> None:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# MAIN-PAGE PERIOD FILTER — per owner feedback, a date/period control belongs
+# on the main content area, not only in the sidebar. Rendered at the top of
+# every hotel-operations-facing page (occupancy, rate, revenue) and the
+# Overview page, right below the top nav / sub nav and before the page's own
+# hero. Selection persists in st.session_state across page navigation and
+# actually re-slices the STR-derived trend charts on those pages, it is not
+# decorative.
+# ═══════════════════════════════════════════════════════════════════════════
+
+PERIOD_OPTIONS = ["Last 30 Days", "Last 90 Days", "Trailing 12 Months", "Year to Date"]
+# Only pages whose trend charts the selector actually re-slices. Compression
+# Calendar is quarterly-only and Overview has no windowed STR trend chart, so
+# neither is included, per the "no decorative control that does nothing" rule.
+_PERIOD_PAGES = {"occupancy", "rate_strategy", "revenue"}
+
+
+def render_period_selector() -> str:
+    """Compact selector, persisted in st.session_state['pulse_period']. Only
+    called for pages whose numbers it actually changes (see _PERIOD_PAGES)."""
+    if "pulse_period" not in st.session_state:
+        st.session_state["pulse_period"] = "Last 90 Days"
+    c1, c2 = st.columns([1, 3])
+    with c1:
+        selected = st.selectbox(
+            "Reporting period",
+            PERIOD_OPTIONS,
+            index=PERIOD_OPTIONS.index(st.session_state["pulse_period"]),
+            key="pulse_period_select",
+        )
+    st.session_state["pulse_period"] = selected
+    return selected
+
+
+def _lodging_mix(df_compset: pd.DataFrame) -> dict:
+    """Real, current Dana Point group-vs-transient lodging mix, computed from
+    fact_str_group_metrics (via load_str_compset, the same table the Market
+    Intelligence page's 6-market comp set already uses). This is the STR
+    segment breakdown, not the group_intelligence benchmark estimate, so it
+    is Dana Point's own actual mix, not an industry benchmark. Returns an
+    empty dict if the segment rows are not present for the latest date."""
+    out = {}
+    if df_compset.empty:
+        return out
+    dp = df_compset[(df_compset["market"] == "Dana Point") & (df_compset["data_period"] == "current")]
+    if dp.empty:
+        return out
+    latest_date = dp["as_of_date"].max()
+    dp = dp[dp["as_of_date"] == latest_date]
+    total_demand = dp[(dp["segment"] == "Total") & (dp["metric_name"] == "demand")]["metric_value"]
+    trans_demand = dp[(dp["segment"] == "Trans.") & (dp["metric_name"] == "demand")]["metric_value"]
+    grp_demand = dp[(dp["segment"] == "Grp.") & (dp["metric_name"] == "demand")]["metric_value"]
+    cont_demand = dp[dp["segment"].isin(["Cont.", "Con."]) & (dp["metric_name"] == "demand")]["metric_value"]
+    trans_adr = dp[(dp["segment"] == "Trans.") & (dp["metric_name"] == "adr")]["metric_value"]
+    grp_adr = dp[(dp["segment"] == "Grp.") & (dp["metric_name"] == "adr")]["metric_value"]
+    total = float(total_demand.iloc[0]) if not total_demand.empty else np.nan
+    if pd.isna(total) or total <= 0:
+        return out
+    out["as_of"] = str(latest_date)
+    out["group_pct"] = float(grp_demand.iloc[0]) / total * 100 if not grp_demand.empty else np.nan
+    out["transient_pct"] = float(trans_demand.iloc[0]) / total * 100 if not trans_demand.empty else np.nan
+    out["contract_pct"] = float(cont_demand.iloc[0]) / total * 100 if not cont_demand.empty else 0.0
+    out["group_adr"] = float(grp_adr.iloc[0]) if not grp_adr.empty else np.nan
+    out["transient_adr"] = float(trans_adr.iloc[0]) if not trans_adr.empty else np.nan
+    return out
+
+
+def _period_window(df: pd.DataFrame, date_col: str, period_label: str) -> pd.DataFrame:
+    """Slice df to the selected reporting period, anchored to the latest date
+    actually present in df (not the calendar date, per CLAUDE.md's freshness
+    lesson: anchoring to today's calendar date on a lagged feed returns an
+    empty window instead of the intended trend)."""
+    if df.empty or date_col not in df.columns:
+        return df
+    d = df.copy()
+    d[date_col] = pd.to_datetime(d[date_col])
+    latest = d[date_col].max()
+    if pd.isna(latest):
+        return df
+    if period_label == "Last 30 Days":
+        cutoff = latest - timedelta(days=30)
+    elif period_label == "Trailing 12 Months":
+        cutoff = latest - timedelta(days=365)
+    elif period_label == "Year to Date":
+        cutoff = pd.Timestamp(year=latest.year, month=1, day=1)
+    else:  # "Last 90 Days" default
+        cutoff = latest - timedelta(days=90)
+    return d[d[date_col] > cutoff].sort_values(date_col)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # TIER 1: HOTEL OPERATIONS
 # ═══════════════════════════════════════════════════════════════════════════
 
-def page_occupancy_outlook(df_kpi: pd.DataFrame, df_comp: pd.DataFrame, df_str: pd.DataFrame) -> None:
+def _render_lodging_mix_block(df_compset: pd.DataFrame, df_travel_types: pd.DataFrame) -> None:
+    """Group vs. transient vs. leisure lodging mix, rendered upfront per owner
+    feedback ("they always want to know about group and transient and
+    leisure lodging statistics", not just blended occupancy). Two layers,
+    clearly separated: (1) Dana Point's own current STR segment mix, real
+    demand-share data from fact_str_group_metrics, and (2) US Travel
+    Association national traveler-type context (leisure/business/family
+    typical length of stay), explicitly labeled as national benchmark
+    context, not Dana Point-specific, per CLAUDE.md's Layer 2 context rule."""
+    mix = _lodging_mix(df_compset)
+    if not mix:
+        st.info("No current-week STR group/transient segment data loaded yet (fact_str_group_metrics).")
+        return
+    st.markdown('<p class="insight-body" style="padding-left:0;font-weight:700;">Lodging Mix: Group, Transient &amp; Leisure</p>',
+                unsafe_allow_html=True)
+    as_of_wk = pd.to_datetime(mix["as_of"]).strftime("%b %d, %Y")
+    cols = st.columns(4)
+    with cols[0]:
+        st.markdown(format_metric_card("Transient Demand Share", f"{mix['transient_pct']:.0f}%",
+                                        icon=_icon("visitor_markets"), context="of room-nights",
+                                        as_of=f"STR weekly, week of {as_of_wk}"), unsafe_allow_html=True)
+    with cols[1]:
+        st.markdown(format_metric_card("Group Demand Share", f"{mix['group_pct']:.0f}%",
+                                        icon=_icon("group"), context="of room-nights",
+                                        as_of=f"STR weekly, week of {as_of_wk}"), unsafe_allow_html=True)
+    with cols[2]:
+        adr_gap = mix["transient_adr"] - mix["group_adr"] if pd.notna(mix.get("transient_adr")) and pd.notna(mix.get("group_adr")) else np.nan
+        st.markdown(format_metric_card("Transient vs. Group ADR", f"${adr_gap:+,.0f}" if pd.notna(adr_gap) else "N/A",
+                                        icon=_icon("rate_strategy"), context="transient premium over group",
+                                        as_of=f"STR weekly, week of {as_of_wk}"), unsafe_allow_html=True)
+    with cols[3]:
+        leisure_note, leisure_los = "N/A", "N/A"
+        if not df_travel_types.empty and "traveler_type" in df_travel_types.columns:
+            leisure_row = df_travel_types[df_travel_types["traveler_type"] == "leisure"]
+            if leisure_row.empty:
+                leisure_row = df_travel_types[df_travel_types["traveler_type"] == "family"]
+            if not leisure_row.empty:
+                lo = leisure_row.iloc[0].get("typical_los_nights_low")
+                hi = leisure_row.iloc[0].get("typical_los_nights_high")
+                if pd.notna(lo) and pd.notna(hi):
+                    leisure_los = f"{lo:.0f}-{hi:.0f} nights"
+        st.markdown(format_metric_card("Leisure Typical Stay", leisure_los,
+                                        icon=_icon("stay"), context="US Travel Assn., national benchmark",
+                                        as_of="us_travel_traveler_types, 2024"), unsafe_allow_html=True)
+    st.caption(
+        "Transient and group shares are Dana Point's own current STR segment mix. Leisure typical "
+        "stay is US Travel Association national context, not a Dana Point-specific figure, shown "
+        "here because leadership consistently asks for it alongside occupancy."
+    )
+    st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
+
+
+def page_occupancy_outlook(df_kpi: pd.DataFrame, df_comp: pd.DataFrame, df_str: pd.DataFrame,
+                            period_label: str = "Last 90 Days", df_compset: pd.DataFrame = None,
+                            df_travel_types: pd.DataFrame = None) -> None:
     """Page 1: Occupancy Outlook. Source: kpi_daily_summary (load_kpi_daily),
     kpi_compression_quarterly (load_compression), fact_str_metrics daily
-    (load_str_daily, for the 90-day trend + day-of-week breakdown)."""
+    (load_str_daily, for the daily trend + day-of-week breakdown). The daily
+    trend chart's window is driven by the main-page period selector
+    (render_period_selector), not hardcoded, per owner feedback that the date
+    filter needs to live on the main page, not only the sidebar."""
     _hero("Occupancy <span>Outlook</span>",
           "Hotel Operations &nbsp;·&nbsp; STR Daily &nbsp;·&nbsp; Compression Tracking")
     _framing(
@@ -300,6 +447,9 @@ def page_occupancy_outlook(df_kpi: pd.DataFrame, df_comp: pd.DataFrame, df_str: 
     if df_kpi.empty:
         st.warning("No STR daily KPI data loaded yet. Run the pipeline to populate kpi_daily_summary.")
         return
+
+    df_compset = df_compset if df_compset is not None else pd.DataFrame()
+    df_travel_types = df_travel_types if df_travel_types is not None else pd.DataFrame()
 
     df_kpi = df_kpi.sort_values("as_of_date")
     latest = df_kpi.iloc[-1]
@@ -351,10 +501,13 @@ def page_occupancy_outlook(df_kpi: pd.DataFrame, df_comp: pd.DataFrame, df_str: 
         ("30-Day Momentum", trend_word, trend_sub, "revenue", "Trailing 30 vs. prior 30 days"),
     ])
 
+    st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
+    _render_lodging_mix_block(df_compset, df_travel_types)
+
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("Daily Occupancy, Last 90 Days")
-        recent = df_str.sort_values("as_of_date").tail(90) if not df_str.empty else pd.DataFrame()
+        st.subheader(f"Daily Occupancy, {period_label}")
+        recent = _period_window(df_str, "as_of_date", period_label) if not df_str.empty else pd.DataFrame()
         if not recent.empty:
             fig = go.Figure()
             fig.add_trace(go.Scatter(
@@ -412,7 +565,8 @@ def page_occupancy_outlook(df_kpi: pd.DataFrame, df_comp: pd.DataFrame, df_str: 
 
 
 def page_rate_strategy(df_kpi: pd.DataFrame, df_str: pd.DataFrame,
-                        df_costar: pd.DataFrame, df_compset: pd.DataFrame) -> None:
+                        df_costar: pd.DataFrame, df_compset: pd.DataFrame,
+                        period_label: str = "Last 90 Days") -> None:
     """Page 2: Rate Strategy. Source: kpi_daily_summary (ADR/RevPAR + YoY),
     fact_str_metrics daily (weekday/weekend ADR premium), costar_competitive_set
     (load_costar_compset, RGI per property vs. the South OC comp set),
@@ -474,8 +628,8 @@ def page_rate_strategy(df_kpi: pd.DataFrame, df_str: pd.DataFrame,
 
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("ADR Trend, Last 30 Days")
-        recent = df_kpi.tail(30)
+        st.subheader(f"ADR Trend, {period_label}")
+        recent = _period_window(df_kpi, "as_of_date", period_label)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=recent["as_of_date"], y=recent["adr"], name="Dana Point ADR",
                                   line=dict(color=CATEGORICAL[0], width=2)))
@@ -524,7 +678,8 @@ def page_rate_strategy(df_kpi: pd.DataFrame, df_str: pd.DataFrame,
     ])
 
 
-def page_revenue_generation(df_kpi: pd.DataFrame, df_str: pd.DataFrame) -> None:
+def page_revenue_generation(df_kpi: pd.DataFrame, df_str: pd.DataFrame,
+                             period_label: str = "Last 90 Days") -> None:
     """Page 3: Revenue Generation. Source: kpi_daily_summary (RevPAR + YoY),
     fact_str_metrics daily revenue column (trailing-12-month room revenue for
     the TBID 1.25% / TOT 10% projections, per CLAUDE.md's TBID formula), and
@@ -595,8 +750,8 @@ def page_revenue_generation(df_kpi: pd.DataFrame, df_str: pd.DataFrame) -> None:
 
     c1, c2 = st.columns(2)
     with c1:
-        st.subheader("RevPAR Trend, Last 90 Days")
-        recent = df_kpi.tail(90)
+        st.subheader(f"RevPAR Trend, {period_label}")
+        recent = _period_window(df_kpi, "as_of_date", period_label)
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=recent["as_of_date"], y=recent["revpar"], name="RevPAR",
                                   line=dict(color=CATEGORICAL[3], width=2)))
@@ -920,24 +1075,27 @@ def page_spend_pathways(df_dfy: pd.DataFrame, df_spend: pd.DataFrame) -> None:
     ])
 
 
-def page_stay_patterns(df_dfy: pd.DataFrame) -> None:
+def page_stay_patterns(df_dfy: pd.DataFrame, df_los: pd.DataFrame = None) -> None:
     """Page 7: Stay Patterns. Source: datafy_overview_kpis (load_datafy_overview)
     avg_length_of_stay_days / day_trips_pct / overnight_trips_pct and their
-    vs.-compare deltas. Note: there is no length-of-stay *distribution* table
-    (1-night, 2-night, ... buckets) in the DB, so that chart is replaced with
-    what the data actually supports: the day-trip vs. overnight split, current
-    period vs. compare period."""
+    vs.-compare deltas, PLUS datafy_overview_los_distribution (load_datafy_los_distribution),
+    the real 1-night-through-6+-night length-of-stay distribution. A prior
+    pass claimed this distribution table did not exist in the schema; that
+    was wrong, it is in analytics.sqlite and is wired in here."""
     _hero("Stay <span>Patterns</span>",
           "Visitor Economy &nbsp;·&nbsp; Datafy Length of Stay")
     _framing(
         "Length of stay is one of the simplest levers on room revenue, and it is also one of the "
-        "easiest to lose track of. This page tracks the average nights per trip and the day-trip "
-        "versus overnight split against the prior comparison period."
+        "easiest to lose track of. This page tracks the average nights per trip, the real "
+        "night-by-night length-of-stay distribution, and the day-trip versus overnight split "
+        "against the prior comparison period."
     )
 
     if df_dfy.empty:
         st.warning("No Datafy visitor overview data loaded yet (datafy_overview_kpis).")
         return
+
+    df_los = df_los if df_los is not None else pd.DataFrame()
 
     latest = df_dfy.sort_values("report_period_start", ascending=False).iloc[0]
     avg_los = latest.get("avg_length_of_stay_days")
@@ -982,24 +1140,42 @@ def page_stay_patterns(df_dfy: pd.DataFrame) -> None:
             st.info("Day trip / overnight split not available for this report period.")
 
     with c2:
-        st.subheader("Current vs. Compare Period")
-        if pd.notna(day_trip_pct) and pd.notna(overnight_pct):
-            prior_day = day_trip_pct - (day_trip_delta or 0)
-            prior_overnight = overnight_pct - (overnight_delta or 0)
-            periods = ["Compare Period", "Current Period"]
-            fig = go.Figure()
-            fig.add_trace(go.Bar(x=periods, y=[prior_day, day_trip_pct], name="Day Trip", marker_color=CATEGORICAL[1]))
-            fig.add_trace(go.Bar(x=periods, y=[prior_overnight, overnight_pct], name="Overnight", marker_color=CATEGORICAL[0]))
-            fig.update_layout(barmode="stack", height=300, margin=dict(l=0, r=0, t=10, b=0), yaxis_title="% of Trips")
+        st.subheader("Length-of-Stay Distribution")
+        if not df_los.empty:
+            los_period = df_los["report_period_start"].max()
+            los_latest = df_los[df_los["report_period_start"] == los_period].copy()
+            # Sort buckets numerically ("1 Day", "2 Days", ... "6+ Days") rather
+            # than alphabetically, so the chart reads left-to-right by length.
+            los_latest["_sort_key"] = pd.to_numeric(
+                los_latest["length_of_stay"].astype(str).str.extract(r"(\d+)")[0], errors="coerce"
+            )
+            los_latest = los_latest.sort_values("_sort_key")
+            fig = go.Figure([go.Bar(
+                x=los_latest["length_of_stay"], y=los_latest["pct_of_trips"],
+                marker_color=CATEGORICAL[0],
+            )])
+            fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0), yaxis_title="% of Trips")
             _render_chart(fig)
         else:
-            st.info("No compare-period data available yet.")
+            st.info("No length-of-stay distribution loaded yet (datafy_overview_los_distribution).")
+
+    one_night_pct = np.nan
+    if not df_los.empty:
+        los_period = df_los["report_period_start"].max()
+        one_row = df_los[(df_los["report_period_start"] == los_period) &
+                          (df_los["length_of_stay"].astype(str).str.contains("1", na=False))]
+        if not one_row.empty:
+            one_night_pct = float(one_row.iloc[0]["pct_of_trips"])
+    one_night_action = (
+        f"{one_night_pct:.0f}% of trips are single-night stays, the single largest bucket by far"
+        if pd.notna(one_night_pct) else "the single-night share is not available this period"
+    )
 
     st.markdown(f"""
     **Next Best Actions**
-    1. **Target day-trip-to-overnight conversion**. {_Fmt_pct(day_trip_pct)} of trips are same-day; a hotel-plus-dining bundle aimed at even a few points of that pool moves real room-nights.
-    2. **Track the {los_str} average stay** each report cycle; a rising trend means packages are working, a falling one means demand is thinning to single-night stays.
-    3. **Request a length-of-stay distribution export from Datafy**. The current feed supports the average and the day/overnight split, not a 1-night-through-6+-night breakdown.
+    1. **Target day-trip-to-overnight conversion**. {_fmt_pct(day_trip_pct)} of trips are same-day; a hotel-plus-dining bundle aimed at even a few points of that pool moves real room-nights.
+    2. **Target the single-night bucket specifically**. {one_night_action}; a second-night incentive aimed at this bucket is the most direct lever on average length of stay.
+    3. **Track the {los_str} average stay** each report cycle; a rising trend means packages are working, a falling one means demand is thinning toward single-night stays.
     """)
 
     _nav_row([
@@ -1485,7 +1661,7 @@ def page_stakeholder_brief(df_kpi: pd.DataFrame, df_comp: pd.DataFrame, df_dfy: 
         st.markdown(f"""
         **Your Next Steps**
         1. **Form a partnership around {top_cat_name}** ({top_cat_share} of visitor spend). The highest-leverage category for co-marketing.
-        2. **Build a repeat-visitor loyalty offer**. {_Fmt_pct(repeat_pct)} of trips are repeat visits already.
+        2. **Build a repeat-visitor loyalty offer**. {_fmt_pct(repeat_pct)} of trips are repeat visits already.
         3. **Review the Spend Pathways page** for the full category share and spend-correlation breakdown before committing marketing budget.
         """)
 
@@ -1615,58 +1791,119 @@ def page_brain_status(table_counts: dict, df_log: pd.DataFrame, df_kpi: pd.DataF
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# PAGE 13: OVERVIEW — cross-category landing page, added per owner request for
-# a persistent top nav that always has somewhere to land. This is deliberately
-# NOT a fourth Occupancy Outlook page: the headline is today's top-priority
-# insight from insights_daily (same audience-priority pick the Classic View's
-# Overview tab uses, so the two views never disagree), and the three hero
-# metrics are one representative figure from each of the three categories.
+# PAGE 13: OVERVIEW — cross-category landing page. Per owner feedback, this
+# is now a genuine cross-dataset analysis, not a light summary: the top
+# insight across ALL FIVE insights_daily audiences (not just cross/dmo), a
+# multi-category KPI section spanning hotel operations, visitor economy and
+# strategic planning with real numbers and date stamps, and a direct path
+# into the Classic View's Board Report for the full brain / board-level view.
 # ═══════════════════════════════════════════════════════════════════════════
 
+_OVERVIEW_AUDIENCE_LABELS = {
+    "dmo": "DMO Strategy", "city": "City / Finance", "visitor": "Visitor Intel",
+    "resident": "Community", "cross": "Hidden Signals",
+}
+
+
 def page_overview(df_kpi: pd.DataFrame, df_dfy: pd.DataFrame, df_comp: pd.DataFrame,
-                   df_group: pd.DataFrame, df_insights: pd.DataFrame) -> None:
+                   df_group: pd.DataFrame, df_insights: pd.DataFrame,
+                   df_compset: pd.DataFrame = None, df_spend: pd.DataFrame = None,
+                   df_events: pd.DataFrame = None, df_zfe: pd.DataFrame = None) -> None:
+    df_compset = df_compset if df_compset is not None else pd.DataFrame()
+    df_spend = df_spend if df_spend is not None else pd.DataFrame()
+    df_events = df_events if df_events is not None else pd.DataFrame()
+    df_zfe = df_zfe if df_zfe is not None else pd.DataFrame()
+
     _hero("Dana Point <span>PULSE</span>",
           "Cross-Category Overview &nbsp;·&nbsp; Hotel Operations &nbsp;·&nbsp; Visitor Economy &nbsp;·&nbsp; Strategic Planning")
     _framing(
-        "This page is a 30-second cross-section of the three sections below, hotel performance, the "
-        "visitor economy, and strategic planning, not a replacement for any one of them. Choose a "
-        "section from the bar above, or one of the cards at the bottom of this page, for the full detail."
+        "This is Dana Point's full cross-dataset read: today's top signal from every stakeholder "
+        "audience the brain tracks, the real numbers behind hotel performance, the visitor economy "
+        "and strategic planning in one place, and a direct line into the Board Report for the "
+        "board-level version of the same data."
     )
 
-    top_headline, top_body, top_as_of = "", "", ""
+    # ── (a) Top signal across ALL FIVE insights_daily audiences ─────────────
+    # Per CLAUDE.md's "All-audience summaries" lesson: showing only dmo/cross
+    # is incomplete. City officials, visitors, residents and the DMO itself
+    # are five separate stakeholders with five separate top priorities.
     if not df_insights.empty:
-        _cross = df_insights[df_insights["audience"].isin(["cross", "dmo"])].sort_values("priority")
-        _src = _cross if not _cross.empty else df_insights.sort_values("priority")
-        _top = _src.iloc[0]
-        top_headline = str(_top.get("headline", "") or "").strip()
-        top_body = str(_top.get("body", "") or "").strip()
-        if len(top_body) > 320:
-            top_body = top_body[:317].rstrip() + "…"
-        top_as_of = str(_top.get("as_of_date", "") or "")
-
-    if top_headline:
+        _top_cross = df_insights[df_insights["audience"].isin(["cross", "dmo"])].sort_values("priority")
+        _headline_src = _top_cross if not _top_cross.empty else df_insights.sort_values("priority")
+        _top = _headline_src.iloc[0]
+        _top_headline = str(_top.get("headline", "") or "").strip()
+        _top_body = str(_top.get("body", "") or "").strip()
+        if len(_top_body) > 320:
+            _top_body = _top_body[:317].rstrip() + "…"
+        _top_as_of = str(_top.get("as_of_date", "") or "")
         _headline(
             "overview", "Today's Top Signal", "",
-            "highest-priority insight, cross and DMO audiences" + (f", generated {top_as_of}" if top_as_of else ""),
-            f"{top_headline} {top_body}".strip(),
-            as_of=f"insights_daily, generated {top_as_of}" if top_as_of else "insights_daily",
+            "highest-priority insight, cross and DMO audiences" + (f", generated {_top_as_of}" if _top_as_of else ""),
+            f"{_top_headline} {_top_body}".strip(),
+            as_of=f"insights_daily, generated {_top_as_of}" if _top_as_of else "insights_daily",
         )
+
+        st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
+        st.markdown('<p class="insight-body" style="padding-left:0;font-weight:700;">'
+                     'Top Signal by Stakeholder Audience</p>', unsafe_allow_html=True)
+        audience_order = ["dmo", "city", "visitor", "resident", "cross"]
+        acols = st.columns(5)
+        for i, aud in enumerate(audience_order):
+            subset = df_insights[df_insights["audience"] == aud].sort_values("priority")
+            with acols[i]:
+                if subset.empty:
+                    st.markdown(
+                        f'<div class="kpi-card"><div class="kpi-label">{_OVERVIEW_AUDIENCE_LABELS[aud]}</div>'
+                        f'<div class="kpi-date" style="text-align:center;">No insight generated today</div></div>',
+                        unsafe_allow_html=True,
+                    )
+                    continue
+                row = subset.iloc[0]
+                body = str(row.get("body", "") or "").strip()
+                if len(body) > 130:
+                    body = body[:127].rstrip() + "…"
+                as_of_i = str(row.get("as_of_date", "") or "")
+                st.markdown(
+                    f'<div class="kpi-card" style="text-align:left;">'
+                    f'<div class="kpi-label">{_OVERVIEW_AUDIENCE_LABELS[aud]}</div>'
+                    f'<div style="font-size:13px;font-weight:700;color:var(--dp-text-1);margin:6px 0 4px 0;">'
+                    f'{row["headline"]}</div>'
+                    f'<div style="font-size:11.5px;color:var(--dp-text-3);line-height:1.4;">{body}</div>'
+                    f'<div class="kpi-date">insights_daily, {as_of_i}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
     else:
         st.info("No insights_daily rows loaded yet. Run the pipeline (compute_insights.py) to generate today's signals.")
 
+    # ── (b) Multi-category KPI section, real numbers, hotel ops + visitor
+    #        economy + strategic planning, per owner request for a genuine
+    #        cross-dataset analysis rather than one metric per category. ────
     occ_now, occ_as_of, occ_delta = None, "", ""
+    adr_now, rvp_now = None, None
     if not df_kpi.empty:
         _k = df_kpi.sort_values("as_of_date")
         _latest = _k.iloc[-1]
         occ_now = float(_latest.get("occ_pct", 0) or 0)
+        adr_now = float(_latest.get("adr", 0) or 0)
+        rvp_now = float(_latest.get("revpar", 0) or 0)
         occ_as_of = pd.to_datetime(_latest["as_of_date"]).strftime("%b %d, %Y")
         occ_delta = _delta_pct(_latest.get("occ_yoy")) or "flat vs. last year"
 
-    trips_now, trips_period = None, ""
+    trips_now, trips_period, oos_pct = None, "", None
+    top_cat_name, top_cat_share = "N/A", "N/A"
     if not df_dfy.empty:
         _d = df_dfy.sort_values("report_period_start", ascending=False).iloc[0]
         trips_now = _d.get("total_trips")
+        oos_pct = _d.get("out_of_state_vd_pct")
         trips_period = f"{_d['report_period_start']} to {_d['report_period_end']}"
+    if not df_spend.empty:
+        _sp_period = df_spend["report_period_start"].max()
+        _sp_latest = df_spend[df_spend["report_period_start"] == _sp_period].sort_values(
+            "spend_share_pct", ascending=False)
+        if not _sp_latest.empty:
+            top_cat_name = _sp_latest.iloc[0]["category"]
+            top_cat_share = f"{_sp_latest.iloc[0]['spend_share_pct']:.1f}%"
 
     q3_days, q3_label = None, ""
     if not df_comp.empty:
@@ -1675,14 +1912,82 @@ def page_overview(df_kpi: pd.DataFrame, df_dfy: pd.DataFrame, df_comp: pd.DataFr
             q3_days = int(_q3.iloc[0]["days_above_80_occ"])
             q3_label = str(_q3.iloc[0]["quarter"])
 
+    mix = _lodging_mix(df_compset)
+
+    next_event_name, next_event_days = "N/A", None
+    if not df_events.empty:
+        today = pd.Timestamp.now().normalize()
+        ev = df_events.copy()
+        ev["event_date"] = pd.to_datetime(ev["event_date"], errors="coerce")
+        upcoming = ev[ev["event_date"] >= today].sort_values("event_date")
+        if not upcoming.empty:
+            next_event_name = upcoming.iloc[0]["event_name"]
+            next_event_days = (upcoming.iloc[0]["event_date"] - today).days
+
+    st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
+    st.markdown('<p class="insight-body" style="padding-left:0;font-weight:700;">Hotel Operations</p>',
+                unsafe_allow_html=True)
     _kpis([
-        ("Occupancy", f"{occ_now:.1f}%" if occ_now is not None else "N/A", occ_delta, "hotel_operations",
+        ("Occupancy", f"{occ_now:.1f}%" if occ_now is not None else "N/A", occ_delta, "occupancy",
          f"STR daily, as of {occ_as_of}" if occ_as_of else "STR daily, no data loaded"),
-        ("Total Visitor Trips", f"{int(trips_now):,}" if pd.notna(trips_now) else "N/A", trips_period, "visitor_economy",
-         f"Datafy, {trips_period}" if trips_period else "Datafy, no data loaded"),
-        (f"{q3_label or 'Q3'} Compression", f"{q3_days} days" if q3_days is not None else "N/A", "80%+ occupancy", "strategic_planning",
+        ("ADR", f"${adr_now:,.0f}" if adr_now is not None else "N/A", "current", "rate_strategy",
+         f"STR daily, as of {occ_as_of}" if occ_as_of else "STR daily, no data loaded"),
+        ("RevPAR", f"${rvp_now:,.0f}" if rvp_now is not None else "N/A", "current", "revenue",
+         f"STR daily, as of {occ_as_of}" if occ_as_of else "STR daily, no data loaded"),
+        (f"{q3_label or 'Q3'} Compression", f"{q3_days} days" if q3_days is not None else "N/A", "80%+ occupancy", "compression",
          f"{q3_label}, STR daily" if q3_label else "STR daily, no data loaded"),
     ])
+    if mix:
+        st.caption(
+            f"Lodging mix, week of {pd.to_datetime(mix['as_of']).strftime('%b %d, %Y')}: "
+            f"{mix['transient_pct']:.0f}% transient, {mix['group_pct']:.0f}% group "
+            f"(STR weekly, fact_str_group_metrics). Full breakdown on the Occupancy Outlook page."
+        )
+
+    st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
+    st.markdown('<p class="insight-body" style="padding-left:0;font-weight:700;">Visitor Economy</p>',
+                unsafe_allow_html=True)
+    _kpis([
+        ("Total Visitor Trips", f"{int(trips_now):,}" if pd.notna(trips_now) else "N/A", trips_period, "visitor_markets",
+         f"Datafy, {trips_period}" if trips_period else "Datafy, no data loaded"),
+        ("Out-of-State Visitor Days", _fmt_pct(oos_pct), "vs. compare period", "visitor_markets",
+         f"Datafy, {trips_period}" if trips_period else "Datafy, no data loaded"),
+        ("Top Spend Category", top_cat_name, top_cat_share, "spend",
+         f"Datafy, {trips_period}" if trips_period else "Datafy, no data loaded"),
+    ])
+
+    st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
+    st.markdown('<p class="insight-body" style="padding-left:0;font-weight:700;">Strategic Planning</p>',
+                unsafe_allow_html=True)
+    _kpis([
+        ("Next Event", next_event_name, f"{next_event_days} days away" if next_event_days is not None else "vdp_events",
+         "events", "Visit Dana Point events calendar"),
+        ("Ohana Fest '25 ADR Lift", "+$139", "verified Datafy benchmark", "revenue",
+         "Datafy, Sept 26–Oct 4, 2025"),
+        ("YoY Event Growth", f"{df_zfe.iloc[0].get('yoy_pct_change_events'):+.0f}%" if not df_zfe.empty and pd.notna(df_zfe.iloc[0].get('yoy_pct_change_events')) else "N/A",
+         "Zartico historical reference", "intelligence", "Zartico, historical reference snapshot, Jun 2025"),
+    ])
+
+    # ── (c) Path to the Board Report / brain in Classic View ────────────────
+    st.markdown('<div style="height:14px"></div>', unsafe_allow_html=True)
+    st.markdown(
+        format_insight_card(
+            _icon("brain_status", 24, "#0891B2"), "Run the Full Brain",
+            "", body=(
+                "This page is the 30-second cross-section. The Board Report carries the full "
+                "12-month scorecard, the AI Assistant panel and every insight the brain has "
+                "generated across all five audiences, all inside Classic View."
+            ), accent_color="#0891B2",
+        ),
+        unsafe_allow_html=True,
+    )
+    if st.button("Open Board Report (Classic View)", use_container_width=True, key="ov_to_board_report"):
+        st.session_state["classic_toggle"] = True
+        st.rerun()
+    st.caption(
+        "Opens Classic View's Today's Overview tab, Deep Dives, Board Report sub-tab, the same "
+        "auto-generated talking points used for board and council presentations."
+    )
 
     st.markdown('<div style="height:8px"></div>', unsafe_allow_html=True)
     st.markdown('<p class="insight-body" style="padding-left:0;font-weight:700;">Go deeper</p>', unsafe_allow_html=True)
@@ -1716,7 +2021,8 @@ def render_page(page_name: str, data: dict) -> None:
     `data` carries every loader render_page's callers currently need, keyed by
     short name (see the call site in app.py, just above `render_page(...)`):
         kpi, dfy, comp, str, dma, spend, group, events, zfe, zartico_impact,
-        costar, compset, costar_snap, table_counts, log, insights
+        costar, compset, costar_snap, table_counts, log, insights,
+        travel_types, los
     """
     df_kpi = data.get("kpi", pd.DataFrame())
     df_dfy = data.get("dfy", pd.DataFrame())
@@ -1734,15 +2040,26 @@ def render_page(page_name: str, data: dict) -> None:
     table_counts = data.get("table_counts", {})
     df_log = data.get("log", pd.DataFrame())
     df_insights = data.get("insights", pd.DataFrame())
+    df_travel_types = data.get("travel_types", pd.DataFrame())
+    df_los = data.get("los", pd.DataFrame())
+
+    # Main-page period filter: rendered above the hero on the three pages
+    # whose trend charts it actually re-slices (see _PERIOD_PAGES). Owner
+    # feedback: this control needs to live on the main content area, not
+    # only in the sidebar.
+    period_label = "Last 90 Days"
+    if page_name in _PERIOD_PAGES:
+        period_label = render_period_selector()
 
     if page_name == "overview":
-        page_overview(df_kpi, df_dfy, df_comp, df_group, df_insights)
+        page_overview(df_kpi, df_dfy, df_comp, df_group, df_insights, df_compset,
+                      df_spend, df_events, df_zfe)
     elif page_name == "occupancy":
-        page_occupancy_outlook(df_kpi, df_comp, df_str)
+        page_occupancy_outlook(df_kpi, df_comp, df_str, period_label, df_compset, df_travel_types)
     elif page_name == "rate_strategy":
-        page_rate_strategy(df_kpi, df_str, df_costar, df_compset)
+        page_rate_strategy(df_kpi, df_str, df_costar, df_compset, period_label)
     elif page_name == "revenue":
-        page_revenue_generation(df_kpi, df_str)
+        page_revenue_generation(df_kpi, df_str, period_label)
     elif page_name == "compression":
         page_compression_calendar(df_comp, df_str)
     elif page_name == "visitor_markets":
@@ -1750,7 +2067,7 @@ def render_page(page_name: str, data: dict) -> None:
     elif page_name == "spend":
         page_spend_pathways(df_dfy, df_spend)
     elif page_name == "stay":
-        page_stay_patterns(df_dfy)
+        page_stay_patterns(df_dfy, df_los)
     elif page_name == "group":
         page_group_demand(df_group, df_comp)
     elif page_name == "events":
