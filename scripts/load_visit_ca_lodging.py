@@ -10,6 +10,7 @@ Table created:
   visit_ca_lodging_monthly
 """
 
+import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -18,7 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DB   = ROOT / "data" / "analytics.sqlite"
 DATA_DIR = ROOT / "data" / "Visit_California"
 
-XLS_FILE = DATA_DIR / "CALodgingPerformance_202601.xls"
+XLS_FILE = DATA_DIR / "CALodgingPerformance_2026 06.xls"
 
 DDL = """
 CREATE TABLE IF NOT EXISTS visit_ca_lodging_monthly (
@@ -305,7 +306,30 @@ def _parse_xls(conn: sqlite3.Connection) -> int:
         return 0
 
     sh = wb.sheet_by_index(0)
-    report_period = "2026-01"  # derived from filename suffix 202601
+
+    # Row 2 ("For the month of: June 2026") carries the true report period —
+    # deriving this from the filename broke every month after January 2026.
+    report_period = None
+    _MONTHS = {
+        "january": "01", "february": "02", "march": "03", "april": "04",
+        "may": "05", "june": "06", "july": "07", "august": "08",
+        "september": "09", "october": "10", "november": "11", "december": "12",
+    }
+    for r in range(min(sh.nrows, 5)):
+        for c in range(sh.ncols):
+            cell = sh.cell_value(r, c)
+            if isinstance(cell, str) and "for the month of" in cell.lower():
+                m = re.search(r"([A-Za-z]+)\s+(\d{4})", cell)
+                if m:
+                    month_name, year = m.group(1).lower(), m.group(2)
+                    if month_name in _MONTHS:
+                        report_period = f"{year}-{_MONTHS[month_name]}"
+                break
+        if report_period:
+            break
+    if report_period is None:
+        print(f"{ts()} [WARN] could not derive report_period from {XLS_FILE.name}; skipping")
+        return 0
 
     rows_inserted = 0
     cur = conn.cursor()
@@ -436,8 +460,8 @@ def main() -> int:
 
     conn.execute("""
         INSERT INTO load_log (source, grain, file_name, rows_inserted, run_at)
-        VALUES ('Visit_CA_Lodging', 'monthly', 'CALodgingPerformance_202601.xls', ?, datetime('now'))
-    """, (total,))
+        VALUES ('Visit_CA_Lodging', 'monthly', ?, ?, datetime('now'))
+    """, (XLS_FILE.name, total))
     conn.commit()
     conn.close()
 
