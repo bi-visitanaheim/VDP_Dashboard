@@ -161,8 +161,10 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Inject interactive shader wallpaper
-inject_shader_wallpaper()
+# Interactive mouse-tracking shader wallpaper removed 2026-07-30: an animated
+# canvas background reads as a consumer/marketing gimmick, not an executive
+# decision-support tool. See CLAUDE.md Lessons Learned.
+# inject_shader_wallpaper()
 
 # ─── Login Gate ───────────────────────────────────────────────────────────────
 # © 2026 Wilton John Picou · GloCon Solutions LLC
@@ -813,8 +815,8 @@ st.markdown("""
   }
   .block-container {
     background-color: transparent !important;
-    padding-left: 2.5rem !important;
-    padding-right: 2.5rem !important;
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
     max-width: 100% !important;
   }
 
@@ -1008,73 +1010,6 @@ st.markdown("""
     font-size: 14.5px; color: var(--dp-text-2);
     line-height: 1.70; margin: 0;
     padding-left: 12px;
-  }
-
-  /* ── Flip Card Engine (3D card flip on click, like openart.ai) ───────── */
-  .dp-flip-card {
-    perspective: 1200px;
-    cursor: pointer;
-    height: 210px;
-    margin-bottom: 10px;
-    position: relative;
-    pointer-events: auto;
-  }
-  .dp-flip-inner {
-    position: relative;
-    width: 100%; height: 100%;
-    transform-style: preserve-3d;
-    transition: transform 0.58s cubic-bezier(0.4, 0.2, 0.2, 1);
-  }
-  .dp-flip-card.is-flipped .dp-flip-inner {
-    transform: rotateY(180deg);
-  }
-  .dp-flip-front, .dp-flip-back {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    border-radius: var(--dp-radius-lg);
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-  /* Override hover lift inside flip cards (insight + kpi) */
-  .dp-flip-card .insight-card,
-  .dp-flip-card .kpi-card {
-    margin-bottom: 0;
-    height: 100%;
-    box-sizing: border-box;
-  }
-  .dp-flip-card .insight-card:hover,
-  .dp-flip-card .kpi-card:hover {
-    transform: none;
-    box-shadow: none;
-  }
-  .dp-flip-front {
-    transform: rotateY(0deg);
-    z-index: 2;
-  }
-  .dp-flip-back {
-    transform: rotateY(180deg);
-    z-index: 1;
-  }
-  .dp-flip-card.is-flipped .dp-flip-front {
-    transform: rotateY(180deg);
-    z-index: 1;
-  }
-  .dp-flip-card.is-flipped .dp-flip-back {
-    transform: rotateY(0deg);
-    z-index: 2;
-  }
-  .dp-flip-hint {
-    font-size: 9px;
-    color: var(--dp-text-4);
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    margin-top: auto;
-    padding-top: 8px;
-    display: block;
-    text-align: right;
-    opacity: 0.7;
   }
 
   /* ── AI Chip Badge ───────────────────────────────────────────────────── */
@@ -1927,30 +1862,6 @@ st.markdown("""
     100% { transform: scale(1.40); opacity: 0;    }
   }
 
-  /* ── Entry Animations ────────────────────────────────────────────────── */
-  @keyframes fadeSlideUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0);    }
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  .kpi-card   { animation: fadeSlideUp 0.35s ease both; }
-  .insight-card { animation: fadeSlideUp 0.40s ease both; }
-  .event-stat { animation: fadeSlideUp 0.35s ease both; }
-  .src-card   { animation: fadeIn 0.30s ease both; }
-  .tab-summary { animation: fadeIn 0.25s ease both; }
-  .kpi-card:nth-child(2) { animation-delay: 0.05s; }
-  .kpi-card:nth-child(3) { animation-delay: 0.10s; }
-  .kpi-card:nth-child(4) { animation-delay: 0.15s; }
-  .kpi-card:nth-child(5) { animation-delay: 0.20s; }
-  .insight-card:nth-child(2) { animation-delay: 0.06s; }
-  .insight-card:nth-child(3) { animation-delay: 0.12s; }
-  .event-stat:nth-child(2)  { animation-delay: 0.05s; }
-  .event-stat:nth-child(3)  { animation-delay: 0.10s; }
-  .event-stat:nth-child(4)  { animation-delay: 0.15s; }
-
   /* ── Global Text Contrast, Dark Mode ────────────────────────────────── */
   .stMarkdown, .stMarkdown p, .stMarkdown span, .stMarkdown div {
     color: var(--dp-text-1) !important;
@@ -2068,7 +1979,7 @@ st.markdown("""
   }
 
   /* ── Layout Spacing ──────────────────────────────────────────────────── */
-  .block-container { padding-top: 0 !important; margin-top: 0 !important; padding-left: 3rem !important; padding-right: 3rem !important; overflow: visible !important; }
+  .block-container { padding-top: 0 !important; margin-top: 0 !important; padding-left: 2rem !important; padding-right: 2rem !important; overflow: visible !important; }
   [data-testid="stAppViewContainer"] > section > div:first-child { padding-top: 0 !important; margin-top: 0 !important; }
   [data-testid="stMain"] { padding-top: 0 !important; margin-top: 0 !important; }
   [data-testid="stMainBlockContainer"] { padding-top: 0 !important; margin-top: 0 !important; }
@@ -2122,9 +2033,13 @@ st.markdown("""
   }
 
   /* ── Sidebar Styling ─────────────────────────────────────────────────── */
+  /* Was a stray dark-navy (#0E1B2A) leftover from an earlier dark theme,
+     sitting underneath the light gradient on the sidebar's first-child div
+     (see the design-tokens block above). Aligned to the light theme so no
+     dark edge can show through during resize/collapse. */
   [data-testid="stSidebar"] {
-    background: #0E1B2A !important;
-    border-right: 1px solid rgba(0,212,200,0.14) !important;
+    background: var(--dp-bg2) !important;
+    border-right: 1px solid var(--dp-border) !important;
   }
   [data-testid="stSidebar"] .stRadio label {
     font-size: 13px !important; font-weight: 500 !important;
@@ -2132,6 +2047,43 @@ st.markdown("""
   }
   [data-testid="stSidebar"] * { color: var(--dp-text-2) !important; }
   [data-testid="stSidebar"] .stMarkdown p { color: var(--dp-text-3) !important; }
+
+  /* ── Sidebar compactness (gives the main content area more width) ──────
+     Streamlit's default sidebar is 21rem wide with 1rem gaps between every
+     widget. Narrower + tighter vertical rhythm here means the main
+     block-container effectively gets more room without removing any
+     control or filter. */
+  [data-testid="stSidebar"] {
+    min-width: 15.5rem !important;
+    max-width: 17rem !important;
+  }
+  [data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {
+    padding-top: 0.75rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    gap: 0.5rem !important;
+  }
+  [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
+    margin-bottom: 2px !important;
+  }
+  [data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {
+    margin-bottom: 0 !important;
+  }
+  [data-testid="stSidebar"] hr {
+    margin: 0.5rem 0 !important;
+  }
+  [data-testid="stSidebar"] h1,
+  [data-testid="stSidebar"] h2,
+  [data-testid="stSidebar"] h3 {
+    margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+  }
+  [data-testid="stSidebar"] .stButton,
+  [data-testid="stSidebar"] .stDownloadButton {
+    margin-bottom: 0 !important;
+  }
 
   /* ── Selectbox / Widget Styling ──────────────────────────────────────── */
   [data-testid="stSelectbox"] > div,
@@ -2892,143 +2844,6 @@ st.markdown("""
     border: 1px solid var(--dp-border) !important;
   }
 
-  /* ── Master Data Card (sensat.co style) ──────────────────────────────── */
-  .master-card {
-    background: linear-gradient(135deg, #060C18 0%, #0C1830 60%, #081828 100%);
-    border-radius: var(--dp-radius-lg); padding: 28px 32px;
-    border: 1px solid rgba(0,212,200,0.25); position: relative; overflow: hidden;
-    box-shadow: 0 4px 32px rgba(0,212,200,0.10), 0 1px 4px rgba(0,0,0,0.40);
-    margin-bottom: 14px; animation: fadeSlideUp 0.4s ease both;
-  }
-  .master-card::before {
-    content: ''; position: absolute; top: -60px; right: -60px;
-    width: 240px; height: 240px;
-    background: radial-gradient(circle, rgba(0,212,200,0.18) 0%, transparent 65%);
-    pointer-events: none; animation: hero-glow-pulse 5s ease-in-out infinite;
-  }
-  .master-card::after {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent 0%, #0891B2 30%, #38BDF8 60%, transparent 100%);
-  }
-  .master-card-label {
-    font-family: 'Syne', 'DM Sans', sans-serif; font-size: 9.5px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .18em; color: rgba(255,255,255,0.40); margin-bottom: 8px;
-  }
-  .master-card-value {
-    font-family: 'Syne', 'Outfit', sans-serif; font-size: 3.8rem; font-weight: 800;
-    letter-spacing: -0.05em; line-height: 1; margin-bottom: 6px;
-    background: linear-gradient(110deg, #FFFFFF 40%, #7DD3FC 100%);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .master-card-body {
-    font-family: 'DM Sans', sans-serif; font-size: 13px; color: rgba(255,255,255,0.55);
-    line-height: 1.65; border-top: 1px solid rgba(255,255,255,0.08);
-    padding-top: 10px; margin-top: 4px;
-  }
-  .master-card-body strong { color: rgba(255,255,255,0.85); }
-
-  /* ── Timeline (decimalstudios × CNN style) ───────────────────────────── */
-  .pulse-timeline { position: relative; padding: 4px 0; margin: 16px 0; }
-  .pulse-timeline::before {
-    content: ''; position: absolute; left: 16px; top: 0; bottom: 0; width: 2px;
-    background: linear-gradient(180deg, rgba(5,103,200,0.60) 0%, rgba(5,103,200,0.08) 100%);
-    border-radius: 2px;
-  }
-  .tl-item {
-    display: flex; gap: 20px; margin-bottom: 18px; padding-left: 4px;
-    animation: fadeSlideUp 0.4s ease both;
-  }
-  .tl-item:nth-child(2){animation-delay:.06s} .tl-item:nth-child(3){animation-delay:.12s}
-  .tl-item:nth-child(4){animation-delay:.18s} .tl-item:nth-child(5){animation-delay:.24s}
-  .tl-dot {
-    width: 30px; height: 30px; min-width: 30px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
-    position: relative; z-index: 1; margin-left: 2px; box-shadow: 0 0 0 4px var(--dp-bg);
-  }
-  .tl-dot-high   { background:rgba(0,212,200,0.15);   color:#0891B2; border:2px solid #0891B2; }
-  .tl-dot-peak   { background:rgba(16,185,129,0.15);  color:#15803D; border:2px solid #15803D; }
-  .tl-dot-low    { background:rgba(239,68,68,0.12);   color:#DC2626; border:2px solid #DC2626; }
-  .tl-dot-event  { background:rgba(167,139,250,0.12); color:#A78BFA; border:2px solid #A78BFA; }
-  .tl-dot-warn   { background:rgba(245,185,64,0.12);  color:#F5B940; border:2px solid #F5B940; }
-  .tl-content {
-    background: var(--dp-card); border: 1px solid var(--dp-border);
-    border-radius: var(--dp-radius); padding: 12px 16px; flex: 1;
-    box-shadow: var(--dp-shadow);
-    transition: box-shadow 0.22s ease, transform 0.22s ease;
-  }
-  .tl-content:hover { box-shadow: var(--dp-shadow-hover); transform: translateX(3px); }
-  .tl-date {
-    font-family: 'Syne', 'DM Sans', sans-serif; font-size: 9.5px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .12em; color: var(--dp-text-3); margin-bottom: 3px;
-  }
-  .tl-headline {
-    font-family: 'Outfit', sans-serif; font-size: 13.5px; font-weight: 800;
-    letter-spacing: -.02em; color: var(--dp-text-1); margin-bottom: 4px;
-  }
-  .tl-body  { font-size: 12.5px; color: var(--dp-text-2); line-height: 1.60; }
-  .tl-stat  {
-    display: inline-block; margin-top: 6px; font-family: 'Outfit', sans-serif;
-    font-size: 11.5px; font-weight: 800; padding: 2px 10px; border-radius: 20px;
-    background: rgba(0,212,200,0.10); color: var(--dp-teal); border: 1px solid rgba(0,212,200,0.22);
-  }
-
-  /* ── Datamotive.io clean data cards ──────────────────────────────────── */
-  .dm-card {
-    background: var(--dp-card); border: 1px solid var(--dp-border); border-radius: var(--dp-radius-lg);
-    padding: 20px 22px; position: relative; overflow: hidden;
-    transition: box-shadow 0.22s ease, transform 0.22s ease;
-    box-shadow: var(--dp-shadow); margin-bottom: 12px;
-  }
-  .dm-card:hover { box-shadow: var(--dp-shadow-hover); transform: translateY(-3px); background: var(--dp-card-hover); }
-  .dm-card-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 16px 16px 0 0; }
-  .dm-card-value {
-    font-family: 'Syne', 'Outfit', sans-serif; font-size: 2.4rem; font-weight: 800;
-    letter-spacing: -0.05em; color: var(--dp-text-1); line-height: 1; margin-bottom: 4px;
-  }
-  .dm-card-label {
-    font-family: 'DM Sans', 'Inter', sans-serif; font-size: 11px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .12em; color: var(--dp-text-3); margin-bottom: 8px;
-  }
-  .dm-card-sub {
-    font-size: 12.5px; color: var(--dp-text-2); line-height: 1.55;
-    border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px; margin-top: 6px;
-  }
-
-  /* ── Levinriegner.com narrative card ─────────────────────────────────── */
-  .levi-card {
-    border-radius: var(--dp-radius-lg); padding: 28px 30px; background: var(--dp-card);
-    border: 1px solid var(--dp-border); box-shadow: var(--dp-shadow);
-    position: relative; overflow: hidden; margin-bottom: 14px; animation: fadeSlideUp 0.5s ease both;
-  }
-  .levi-card-eyebrow {
-    font-family: 'Syne', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: .20em;
-    text-transform: uppercase; color: var(--dp-teal); margin-bottom: 10px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .levi-card-eyebrow::before { content:''; width:20px; height:2px; background:var(--dp-teal); border-radius:1px; }
-  .levi-card-headline {
-    font-family: 'Syne', 'Outfit', sans-serif; font-size: 1.9rem; font-weight: 800;
-    letter-spacing: -0.04em; color: var(--dp-text-1); line-height: 1.15; margin-bottom: 14px;
-  }
-  .levi-card-headline em {
-    font-style: normal;
-    background: linear-gradient(110deg, var(--dp-teal), #38BDF8);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .levi-card-body { font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--dp-text-2); line-height: 1.75; }
-  .levi-card-stats {
-    display: flex; gap: 24px; flex-wrap: wrap;
-    border-top: 1px solid rgba(255,255,255,0.07); margin-top: 18px; padding-top: 18px;
-  }
-  .levi-stat-value {
-    font-family: 'Outfit', sans-serif; font-size: 1.6rem; font-weight: 900;
-    letter-spacing: -0.04em; color: var(--dp-text-1); line-height: 1;
-  }
-  .levi-stat-label {
-    font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .10em; color: var(--dp-text-3);
-  }
-
   /* ── Global smooth scroll ─────────────────────────────────────────────── */
   html { scroll-behavior: smooth; }
 
@@ -3165,31 +2980,6 @@ st.markdown("""
 </button>
 
 <script>
-/* ── Flip Card Engine, event delegation on document ────────────────────────
-   Catches clicks on .dp-flip-card anywhere in the app.
-   document.addEventListener works in Streamlit (unlike onclick= attributes).
-   Guard prevents adding duplicate listeners on Streamlit rerenders.
-──────────────────────────────────────────────────────────────────────────── */
-(function(){
-  if (window.__dpFlipReady) return;
-  window.__dpFlipReady = true;
-  document.addEventListener('click', function(e) {
-    if (!e.target) return;
-    var card = e.target.closest ? e.target.closest('.dp-flip-card') : null;
-    if (!card) {
-      var parent = e.target.parentElement;
-      while (parent && !parent.classList.contains('dp-flip-card')) {
-        parent = parent.parentElement;
-      }
-      card = parent;
-    }
-    if (card) {
-      card.classList.toggle('is-flipped');
-      e.stopPropagation();
-    }
-  }, true);  // Use capture phase to ensure we catch clicks even in iframe contexts
-})();
-
 (function(){
   // Nuke floating Streamlit badges
   function killBadges(){
@@ -3383,50 +3173,17 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# Godly.website-inspired: scroll animations, counter fx, ambient effects, glass cards
+# Executive interaction polish: live-status pulse (sidebar/quick-action) and the
+# fade-up keyframe still used by .insight-card and .section-label. The scroll-reveal
+# fade-in, animated number counter, and ambient aurora-orb effects that used to live
+# in this block were removed 2026-07-30, they re-hid every KPI/insight card on load
+# and counted numbers up on scroll, which read as a consumer demo, not a board tool.
 st.markdown("""
 <style>
-  /* ════════════════════════════════════════════════════════════════
-     PULSE v6, Interaction & Animation System
-     Scroll-reveal · Counter animation · Ambient glow · Glass cards
-  ════════════════════════════════════════════════════════════════ */
-
-  /* ── Animated background dot grid (hero ambient) ─────────────── */
-  @keyframes dot-drift {
-    0%   { background-position: 0 0; }
-    100% { background-position: 40px 40px; }
-  }
-  @keyframes aurora-shift {
-    0%,100% { opacity: 0.18; transform: translate(0,0) scale(1); }
-    33%      { opacity: 0.28; transform: translate(30px,-20px) scale(1.06); }
-    66%      { opacity: 0.22; transform: translate(-20px,15px) scale(0.97); }
-  }
-  @keyframes aurora-shift-2 {
-    0%,100% { opacity: 0.12; transform: translate(0,0) scale(1); }
-    50%      { opacity: 0.22; transform: translate(-40px,25px) scale(1.09); }
-  }
-
-  /* ── Scroll-reveal animation classes ────────────────────────────── */
-  @keyframes pulse-fade-up {
-    from { opacity: 0; transform: translateY(22px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
   @keyframes pulse-fade-in {
     from { opacity: 0; }
     to   { opacity: 1; }
   }
-  @keyframes pulse-scale-in {
-    from { opacity: 0; transform: scale(0.95); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-  .reveal-up   { opacity: 0; animation: pulse-fade-up 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
-  .reveal-fade { opacity: 0; animation: pulse-fade-in 0.45s ease forwards; }
-  .reveal-scale { opacity: 0; animation: pulse-scale-in 0.40s cubic-bezier(0.22,1,0.36,1) forwards; }
-  .stagger-1 { animation-delay: 0.05s; }
-  .stagger-2 { animation-delay: 0.12s; }
-  .stagger-3 { animation-delay: 0.20s; }
-  .stagger-4 { animation-delay: 0.28s; }
-  .stagger-5 { animation-delay: 0.36s; }
 
   /* ── Live pulse ring (data freshness dots) ───────────────────── */
   @keyframes live-ring {
@@ -3447,128 +3204,16 @@ st.markdown("""
   .live-dot.red    { background: #EF4444;
     animation: none; box-shadow: 0 0 0 3px rgba(239,68,68,0.22); }
 
-  /* ── Enhanced glass card ─────────────────────────────────────── */
-  .glass-card {
-    background: rgba(36,67,102,0.72);
-    backdrop-filter: blur(18px) saturate(1.5);
-    -webkit-backdrop-filter: blur(18px) saturate(1.5);
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 16px;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.08);
-    transition: transform 0.28s cubic-bezier(0.22,1,0.36,1),
-                box-shadow 0.28s cubic-bezier(0.22,1,0.36,1);
-  }
-  .glass-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,212,200,0.22),
-                inset 0 1px 0 rgba(255,255,255,0.12);
-  }
-
-  /* ── Noise texture overlay (premium grain) ───────────────────── */
-  .noise-overlay::after {
-    content: '';
-    position: absolute; inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 128px 128px;
-    pointer-events: none;
-    border-radius: inherit;
-    opacity: 0.45;
-    mix-blend-mode: overlay;
-  }
-
-  /* ── Enhanced KPI card, entrance + neon glow on hover ────────── */
-  @keyframes kpi-card-in {
-    from { opacity: 0; transform: translateY(12px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0)    scale(1); }
-  }
-  @keyframes kpi-value-pop {
-    0%   { transform: scale(1); }
-    40%  { transform: scale(1.06); }
-    100% { transform: scale(1); }
-  }
+  /* ── KPI card: instant, still render ──────────────────────────
+     Prior versions faded/scaled every KPI card in on load and
+     "popped" the number on hover. Removed 2026-07-30: leadership
+     opens this tab repeatedly through the day and the motion read
+     as decorative rather than informative. Cards render immediately;
+     the existing border/shadow hover state (see the design-tokens
+     block above) is the only hover feedback now. */
   .kpi-card {
     position: relative;
     overflow: hidden;
-    animation: kpi-card-in 0.4s ease both;
-  }
-  .kpi-card:nth-child(1) { animation-delay: 0.00s; }
-  .kpi-card:nth-child(2) { animation-delay: 0.07s; }
-  .kpi-card:nth-child(3) { animation-delay: 0.14s; }
-  .kpi-card:nth-child(4) { animation-delay: 0.21s; }
-  .kpi-card:nth-child(5) { animation-delay: 0.28s; }
-  .kpi-card:nth-child(6) { animation-delay: 0.35s; }
-  .kpi-card::after {
-    content: '';
-    position: absolute; inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(circle at 50% 0%, rgba(0,212,200,0.10) 0%, transparent 65%);
-    opacity: 0;
-    transition: opacity 0.35s ease;
-    pointer-events: none;
-  }
-  .kpi-card:hover::after { opacity: 1; }
-  .kpi-card:hover .kpi-value { animation: kpi-value-pop 0.3s ease; }
-
-  /* ── Animated number counter (JS handles the actual counting) ── */
-  .counter-num {
-    font-variant-numeric: tabular-nums;
-    transition: color 0.3s ease;
-  }
-
-  /* ── Shimmer skeleton loading ────────────────────────────────── */
-  @keyframes shimmer-slide {
-    0%   { background-position: -400px 0; }
-    100% { background-position: 400px 0; }
-  }
-  .skeleton {
-    background: linear-gradient(90deg,
-      rgba(255,255,255,0.04) 0%,
-      rgba(255,255,255,0.10) 50%,
-      rgba(255,255,255,0.04) 100%);
-    background-size: 800px 100%;
-    animation: shimmer-slide 1.6s linear infinite;
-    border-radius: 8px;
-    min-height: 18px;
-  }
-
-  /* ── Gradient border cards ───────────────────────────────────── */
-  .grad-border-card {
-    position: relative;
-    border-radius: 16px;
-    padding: 1px;
-    background: linear-gradient(135deg, rgba(0,212,200,0.40) 0%, rgba(56,189,248,0.20) 50%, rgba(167,139,250,0.25) 100%);
-  }
-  .grad-border-card > * {
-    background: var(--dp-card);
-    border-radius: 15px;
-  }
-
-  /* ── Data signal card, animated border ─────────────────────── */
-  @keyframes border-sweep {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-  .signal-card {
-    position: relative;
-    border-radius: 14px;
-    background: var(--dp-card);
-    padding: 18px 20px;
-    overflow: hidden;
-  }
-  .signal-card::before {
-    content: '';
-    position: absolute; inset: 0;
-    border-radius: 14px;
-    padding: 1px;
-    background: linear-gradient(270deg, #0891B2, #38BDF8, #A78BFA, #0891B2);
-    background-size: 300% 300%;
-    animation: border-sweep 5s ease infinite;
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
   }
 
   /* ── Enhanced tab bar, sliding pill ────────────────────────── */
@@ -3590,23 +3235,14 @@ st.markdown("""
     color: var(--dp-text-2) !important;
   }
 
-  /* ── Chart container enhancement ────────────────────────────── */
-  .chart-wrap {
-    background: rgba(22,40,66,0.65);
-    border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.07);
-    padding: 0;
-    overflow: hidden;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.28);
-    backdrop-filter: blur(4px);
-  }
+  /* ── Chart section header (used above nearly every chart app-wide) ──── */
   .chart-header {
     font-family: 'Syne', sans-serif;
     font-size: 12px; font-weight: 800;
     text-transform: uppercase; letter-spacing: .10em;
     color: var(--dp-text-3);
     padding: 14px 18px 0 18px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid var(--dp-border);
     margin-bottom: 4px;
     display: flex; align-items: center; gap: 8px;
   }
@@ -3621,12 +3257,6 @@ st.markdown("""
     background: rgba(0,212,200,0.10); color: var(--dp-teal);
     border: 1px solid rgba(0,212,200,0.22);
     text-transform: uppercase; letter-spacing: .08em;
-  }
-
-  /* ── Metric number glow on hover ─────────────────────────────── */
-  .kpi-card:hover .kpi-value {
-    text-shadow: 0 0 24px rgba(0,212,200,0.35);
-    transition: text-shadow 0.3s ease;
   }
 
   /* ── Animated section label line ─────────────────────────────── */
@@ -3681,9 +3311,6 @@ st.markdown("""
     outline-offset: 2px;
   }
 
-  /* ── Insight card stagger reveal ─────────────────────────────── */
-  .insight-card { animation: pulse-fade-up 0.45s cubic-bezier(0.22,1,0.36,1) both; }
-
   /* ── Horizontal rule aesthetic ───────────────────────────────── */
   hr {
     border: none !important;
@@ -3698,160 +3325,6 @@ st.markdown("""
   }
 
 </style>
-<script>
-/* ── PULSE v6 Interaction Engine ─────────────────────────────────
-   1. Scroll-reveal (IntersectionObserver)
-   2. Animated number counter
-   3. Stagger children of .stagger-children
-   4. Tab bar pill indicator
-   ─────────────────────────────────────────────────────────────── */
-(function(){
-
-  /* 1 ─ Intersection-Observer scroll-reveal ─────────────────── */
-  function initScrollReveal(){
-    if(!window.IntersectionObserver) return;
-    var items = document.querySelectorAll(
-      '.kpi-card, .insight-card, .event-stat, .src-card, ' +
-      '.glass-card, .signal-card, .sh-block, .tab-summary, ' +
-      '.dp-callout, .dp-callout-amber, .dp-callout-purple, .dp-callout-green'
-    );
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(e.isIntersecting){
-          var el = e.target;
-          if(!el.dataset.revealed){
-            el.dataset.revealed = '1';
-            el.style.animation = 'pulse-fade-up 0.50s cubic-bezier(0.22,1,0.36,1) both';
-          }
-          io.unobserve(el);
-        }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
-    items.forEach(function(el){
-      if(!el.dataset.revealed){
-        el.style.opacity = '0';
-        io.observe(el);
-      }
-    });
-  }
-
-  /* 2 ─ Number counter animation ────────────────────────────── */
-  function animateCounter(el){
-    var raw = el.textContent || '';
-    var prefix = raw.match(/^[^0-9.,-]*/)[0];
-    var suffix = raw.match(/[^0-9.,]*$/)[0];
-    var numStr = raw.replace(prefix,'').replace(suffix,'').replace(/,/g,'');
-    var target = parseFloat(numStr);
-    if(isNaN(target) || target === 0) return;
-    var decimals = (numStr.indexOf('.') >= 0) ? numStr.split('.')[1].length : 0;
-    var duration = Math.min(1200, Math.max(600, target * 2));
-    var start = null;
-    function step(ts){
-      if(!start) start = ts;
-      var progress = Math.min((ts - start) / duration, 1);
-      var eased = 1 - Math.pow(1 - progress, 3);
-      var cur = target * eased;
-      var formatted = decimals > 0
-        ? cur.toFixed(decimals)
-        : Math.floor(cur).toLocaleString();
-      el.textContent = prefix + formatted + suffix;
-      if(progress < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
-  }
-
-  function initCounters(){
-    if(!window.IntersectionObserver) return;
-    var nums = document.querySelectorAll('.kpi-value, .event-val, [data-counter]');
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(e){
-        if(e.isIntersecting && !e.target.dataset.counted){
-          e.target.dataset.counted = '1';
-          animateCounter(e.target);
-          io.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.5 });
-    nums.forEach(function(el){ io.observe(el); });
-  }
-
-  /* 3 ─ Stagger children animation ──────────────────────────── */
-  function initStagger(){
-    document.querySelectorAll('.stagger-children').forEach(function(parent){
-      var kids = parent.children;
-      Array.from(kids).forEach(function(child, i){
-        child.style.opacity = '0';
-        child.style.animation = 'pulse-fade-up 0.45s cubic-bezier(0.22,1,0.36,1) '
-          + (i * 0.08) + 's both';
-      });
-    });
-  }
-
-  /* 4 ─ Ambient aurora effect enhancement ───────────────────── */
-  function initAuroraHero(){
-    var hero = document.querySelector('.hero-banner');
-    if(!hero) return;
-    hero.style.position = 'relative';
-    hero.style.overflow = 'hidden';
-    // Add a secondary aurora orb if not already present
-    if(!hero.querySelector('.hero-aurora-2')){
-      var orb = document.createElement('div');
-      orb.className = 'hero-aurora-2';
-      orb.style.cssText = [
-        'position:absolute','bottom:-60px','left:-40px',
-        'width:280px','height:280px','border-radius:50%',
-        'background:radial-gradient(circle,rgba(56,189,248,0.14) 0%,transparent 70%)',
-        'pointer-events:none',
-        'animation:aurora-shift-2 7s ease-in-out infinite'
-      ].join(';');
-      hero.appendChild(orb);
-    }
-  }
-
-  /* 5 ─ Live status dots pulse (sidebar pipeline dots) ──────── */
-  function initLiveDots(){
-    // Find sidebar text nodes containing green circle emoji and add pulse
-    document.querySelectorAll('[data-testid="stSidebar"] p, [data-testid="stSidebar"] span').forEach(function(el){
-      if(el.textContent && el.textContent.includes('🟢')){
-        el.style.animation = 'none'; // handled by sidebar CSS
-      }
-    });
-  }
-
-  /* Bootstrap, run after DOM is ready, re-run on Streamlit rerenders */
-  function bootstrap(){
-    initScrollReveal();
-    initCounters();
-    initStagger();
-    initAuroraHero();
-    initLiveDots();
-  }
-
-  if(document.readyState !== 'loading'){
-    bootstrap();
-    setTimeout(bootstrap, 800);
-    setTimeout(bootstrap, 2000);
-  } else {
-    document.addEventListener('DOMContentLoaded', function(){
-      bootstrap();
-      setTimeout(bootstrap, 800);
-    });
-  }
-
-  /* Re-run on Streamlit dynamic updates (tab switches, rerenders) */
-  if(window.MutationObserver){
-    var _lastRun = 0;
-    new MutationObserver(function(){
-      var now = Date.now();
-      if(now - _lastRun > 400){
-        _lastRun = now;
-        setTimeout(bootstrap, 100);
-      }
-    }).observe(document.body, { childList: true, subtree: true });
-  }
-
-})();
-</script>
 """, unsafe_allow_html=True)
 
 # ─── Godly.website Intelligence, v6.1 premium upgrade ───────────────────────
@@ -3907,35 +3380,6 @@ st.markdown("""
     background: rgba(239,68,68,0.12) !important;
     color: #DC2626 !important;
   }
-
-  /* ── Staggered slideUp on Streamlit native metrics (Linear style) ── */
-  div[data-testid="metric-container"] {
-    animation: pulse-fade-up 0.45s cubic-bezier(0.22,1,0.36,1) both;
-  }
-  div[data-testid="stHorizontalBlock"] > div:nth-child(1) div[data-testid="metric-container"] { animation-delay: 0.04s; }
-  div[data-testid="stHorizontalBlock"] > div:nth-child(2) div[data-testid="metric-container"] { animation-delay: 0.10s; }
-  div[data-testid="stHorizontalBlock"] > div:nth-child(3) div[data-testid="metric-container"] { animation-delay: 0.16s; }
-  div[data-testid="stHorizontalBlock"] > div:nth-child(4) div[data-testid="metric-container"] { animation-delay: 0.22s; }
-  div[data-testid="stHorizontalBlock"] > div:nth-child(5) div[data-testid="metric-container"] { animation-delay: 0.28s; }
-
-  /* ── Rotating ambient conic gradient (Vercel hero pattern, subtle) ── */
-  [data-testid="stAppViewContainer"]::before {
-    content: '';
-    position: fixed;
-    top: -40%; left: -40%;
-    width: 180%; height: 180%;
-    background: conic-gradient(
-      from 0deg at 65% 35%,
-      rgba(0,212,200,0.04) 0deg,
-      rgba(56,189,248,0.03) 90deg,
-      rgba(167,139,250,0.03) 180deg,
-      rgba(0,212,200,0.04) 360deg
-    );
-    animation: slowSpin 40s linear infinite;
-    pointer-events: none;
-    z-index: 0;
-  }
-  @keyframes slowSpin { to { transform: rotate(360deg); } }
 
   /* ── Vercel-style subtle dot grid on hero ── */
   .hero-banner {
