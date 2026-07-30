@@ -743,14 +743,21 @@ st.markdown("""
   /* ── Google Fonts ────────────────────────────────────────────────────── */
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
-  /* ── Design Tokens, Modern Light Theme ─────────────────────────────── */
+  /* ── Design Tokens, Modern Light Theme v6 ────────────────────────────
+     Refreshed 2026-07-30 against the owner's own reference mockup
+     (dashboard/vdp-dashboard-v2.html): softer multi-layer shadows, a
+     tighter radius scale, and named easing/timing so every card in the
+     app animates on the same curve instead of each block improvising
+     its own. Chart colors are untouched (dashboard/chart_theme.py's
+     palette is separately contrast-validated) — --dp-teal stays
+     #0891B2 so KPI accents match the charts sitting next to them. */
   :root {
     --dp-bg:            #FFFFFF;
     --dp-bg2:           #F8FAFC;
     --dp-surface:       #F1F5F9;
     --dp-card:          #FFFFFF;
     --dp-card-solid:    #FFFFFF;
-    --dp-card-hover:    #F8FAFC;
+    --dp-card-hover:    #FCFDFE;
     --dp-border:        #E2E8F0;
     --dp-border-accent: #0EA5E9;
     --dp-teal:          #0891B2;
@@ -766,12 +773,23 @@ st.markdown("""
     --dp-text-2:        #334155;
     --dp-text-3:        #64748B;
     --dp-text-4:        #94A3B8;
-    --dp-radius:        8px;
-    --dp-radius-lg:     12px;
-    --dp-shadow:        0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
-    --dp-shadow-hover:  0 4px 12px rgba(15,23,42,0.15), 0 2px 4px rgba(15,23,42,0.10);
-    --dp-shadow-deep:   0 10px 25px rgba(15,23,42,0.15);
+    --dp-radius-sm:     6px;
+    --dp-radius:        10px;
+    --dp-radius-lg:     14px;
+    --dp-radius-xl:     18px;
+    --dp-shadow:        0 1px 3px rgba(15,23,42,0.04), 0 1px 2px rgba(15,23,42,0.02);
+    --dp-shadow-hover:  0 4px 12px rgba(15,23,42,0.07), 0 2px 4px rgba(15,23,42,0.03);
+    --dp-shadow-deep:   0 12px 32px rgba(15,23,42,0.09), 0 4px 10px rgba(15,23,42,0.04);
+    --dp-ease:          cubic-bezier(0.16,1,0.3,1);
+    --dp-t-fast:        140ms;
+    --dp-t-norm:        200ms;
   }
+
+  /* ── Slim, unobtrusive scrollbar (matches the reference mockup) ─────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--dp-border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--dp-text-4); }
 
   html, body, [class*="css"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -916,32 +934,33 @@ st.markdown("""
     border-bottom-color: var(--dp-blue) !important;
   }
 
-  /* ── KPI Cards ───────────────────────────────────────────────────────── */
+  /* ── KPI Cards, v6: quiet by default, accent line appears on hover ──── */
   .kpi-card {
     background: var(--dp-card);
     border-radius: var(--dp-radius-lg);
-    padding: 22px 22px 18px 22px;
+    padding: 18px 18px 15px 18px;
     border: 1px solid var(--dp-border);
-    border-bottom: 3px solid var(--dp-teal);
     color: var(--dp-text-1);
-    margin-bottom: 14px;
+    margin-bottom: 12px;
     position: relative;
     overflow: hidden;
     text-align: center;
-    transition: box-shadow 0.24s cubic-bezier(0.28,0,0.49,1),
-                transform 0.24s cubic-bezier(0.28,0,0.49,1);
+    transition: box-shadow var(--dp-t-norm) var(--dp-ease),
+                transform var(--dp-t-norm) var(--dp-ease);
     box-shadow: var(--dp-shadow);
   }
   .kpi-card::before {
     content: '';
-    position: absolute; bottom: 0; left: 0; right: 0;
-    height: 40%; pointer-events: none;
-    background: linear-gradient(0deg, rgba(0,212,200,0.04) 0%, transparent 100%);
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; pointer-events: none;
+    background: linear-gradient(90deg, var(--dp-teal), #7DD3E8);
+    opacity: 0;
+    transition: opacity var(--dp-t-norm) ease;
   }
-  .kpi-card::after { content: none; }
+  .kpi-card:hover::before { opacity: 1; }
   .kpi-card:hover {
     box-shadow: var(--dp-shadow-hover);
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     background: var(--dp-card-hover);
   }
   .kpi-header {
@@ -949,29 +968,38 @@ st.markdown("""
     margin-bottom: 6px;
   }
   .kpi-label {
-    font-family: 'Syne', 'DM Sans', 'Inter', sans-serif;
-    font-size: 10px; font-weight: 800;
-    text-transform: uppercase; letter-spacing: .15em;
-    color: var(--dp-text-1) !important; -webkit-text-fill-color: var(--dp-text-1) !important;
+    font-family: 'DM Sans', 'Inter', sans-serif;
+    font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--dp-text-3) !important; -webkit-text-fill-color: var(--dp-text-3) !important;
     text-align: center;
   }
   .kpi-icon-svg { flex-shrink: 0; line-height: 0; opacity: 0.45; }
   .kpi-value {
-    font-family: 'Syne', 'Outfit', sans-serif;
-    font-size: 48px; font-weight: 800;
-    letter-spacing: -.04em; line-height: 1.0;
+    font-family: 'Outfit', 'Inter', sans-serif;
+    font-size: 34px; font-weight: 700;
+    letter-spacing: -.03em; line-height: 1.05;
+    font-variant-numeric: tabular-nums;
     color: var(--dp-text-1);
     -webkit-text-fill-color: var(--dp-text-1);
-    margin: 6px 0 8px 0;
+    margin: 6px 0 9px 0;
     text-align: center;
   }
-  .kpi-delta-pos     { color: #15803D; font-size: 12px; font-weight: 700; display:flex; align-items:center; justify-content:center; gap:4px; }
-  .kpi-delta-neg     { color: #DC2626; font-size: 12px; font-weight: 700; display:flex; align-items:center; justify-content:center; gap:4px; }
-  .kpi-delta-neutral { color: var(--dp-text-3); font-size: 12px; font-weight: 600; text-align: center; }
+  .kpi-delta-pos,
+  .kpi-delta-neg,
+  .kpi-delta-neutral {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 4px; font-size: 11.5px; font-weight: 700;
+    padding: 2px 9px; border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-delta-pos     { color: #0F7B6C; background: rgba(34,197,94,0.10); }
+  .kpi-delta-neg     { color: var(--dp-red); background: rgba(220,38,38,0.08); }
+  .kpi-delta-neutral { color: var(--dp-text-3); background: var(--dp-surface); font-weight: 600; }
   .kpi-date {
-    font-size: 10px; color: var(--dp-text-3);
+    font-size: 10px; color: var(--dp-text-4);
     margin-top: 10px; letter-spacing: .02em;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    border-top: 1px solid var(--dp-border);
     padding-top: 8px; display: block; font-weight: 500; text-align: center;
   }
 
@@ -990,13 +1018,13 @@ st.markdown("""
   }
   .insight-card:hover {
     box-shadow: var(--dp-shadow-hover);
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     background: var(--dp-card-hover);
   }
   .insight-card::before {
     content: '';
     position: absolute; top: 0; left: 0;
-    width: 4px; height: 100%;
+    width: 3px; height: 100%;
   }
   .insight-positive::before { background: linear-gradient(180deg, #10B981, #059669); }
   .insight-warning::before  { background: linear-gradient(180deg, #F5B940, #D97706); }
@@ -1030,26 +1058,32 @@ st.markdown("""
   .event-stat {
     background: var(--dp-card);
     border: 1px solid var(--dp-border);
-    border-top: 3px solid var(--dp-purple);
     border-radius: var(--dp-radius-lg);
-    padding: 20px 16px; text-align: center; margin-bottom: 10px;
-    transition: box-shadow 0.25s ease, transform 0.25s ease;
+    padding: 18px 16px; text-align: center; margin-bottom: 10px;
+    transition: box-shadow var(--dp-t-norm) var(--dp-ease), transform var(--dp-t-norm) var(--dp-ease);
     position: relative; overflow: hidden;
     box-shadow: var(--dp-shadow);
   }
-  .event-stat::before { content: none; }
+  .event-stat::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--dp-purple), #C4B5FD);
+    opacity: 0; transition: opacity var(--dp-t-norm) ease;
+  }
+  .event-stat:hover::before { opacity: 1; }
   .event-stat:hover {
     box-shadow: var(--dp-shadow-hover);
-    transform: translateY(-3px);
+    transform: translateY(-2px);
     background: var(--dp-card-hover);
   }
   .event-icon  { line-height: 0; display: flex; justify-content: center; margin-bottom: 10px; }
   .event-val   {
     font-family: 'Outfit', sans-serif;
-    font-size: 28px; font-weight: 800;
+    font-size: 26px; font-weight: 700;
+    font-variant-numeric: tabular-nums;
     color: var(--dp-text-1);
     -webkit-text-fill-color: var(--dp-text-1);
-    letter-spacing: -.04em; line-height: 1;
+    letter-spacing: -.03em; line-height: 1;
   }
   .event-label {
     font-family: 'Inter', sans-serif;
@@ -1194,100 +1228,58 @@ st.markdown("""
     border: 1px solid rgba(251,146,60,.25);
   }
 
-  /* ── Hero Banner ─────────────────────────────────────────────────────── */
-  @keyframes hero-grid-drift {
-    0%   { background-position: 0 0; }
-    100% { background-position: 60px 60px; }
-  }
-  @keyframes hero-glow-pulse {
-    0%,100% { opacity: 0.12; transform: scale(1); }
-    50%      { opacity: 0.22; transform: scale(1.08); }
-  }
-  @keyframes hero-line-in {
-    from { transform: scaleX(0); transform-origin: left; }
-    to   { transform: scaleX(1); transform-origin: left; }
-  }
+  /* ── Hero / masthead, v6 ───────────────────────────────────────────────
+     Replaced 2026-07-30. The prior version was a dark navy "aurora mesh"
+     banner (radial gradient orbs) with a permanently shimmering gradient
+     on the word "PULSE" and a glow orb that pulsed forever, on every tab.
+     That's the single loudest thing in the app and it read as a landing
+     page, not a masthead over board-level data. Rebuilt as a light,
+     static header in the same family as the rest of the page: white
+     surface, one static teal accent bar, no infinite animation. */
   .hero-banner {
-    background: #0F2540 !important;
-    background-image:
-      radial-gradient(circle at 78% 18%, rgba(0,212,200,0.24) 0%, transparent 50%),
-      radial-gradient(circle at 8%  80%, rgba(56,189,248,0.14) 0%, transparent 42%),
-      radial-gradient(circle at 50% 120%, rgba(167,139,250,0.10) 0%, transparent 40%),
-      linear-gradient(160deg, #0B1E38 0%, #132D50 60%, #162E52 100%) !important;
+    background: var(--dp-card) !important;
+    background-image: none !important;
     border-radius: 0 !important;
     margin: 0 -1rem 0 -1rem;
-    padding: 26px 36px 22px 36px;
-    border-bottom: 1px solid rgba(0,212,200,0.20) !important;
+    padding: 24px 36px 20px 36px;
+    border-bottom: 1px solid var(--dp-border) !important;
     overflow: hidden;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    /* Dot grid ambient pattern */
-    --dot-color: rgba(255,255,255,0.04);
-    --dot-size: 1.5px;
-    --dot-space: 22px;
-  }
-  .hero-banner::before {
-    /* Override, use animated horizontal light bar instead */
-    background: linear-gradient(90deg,
-      transparent 0%,
-      rgba(0,212,200,0.80) 20%,
-      rgba(56,189,248,0.60) 50%,
-      rgba(0,212,200,0.80) 80%,
-      transparent 100%) !important;
+    color: var(--dp-text-1) !important;
+    -webkit-text-fill-color: var(--dp-text-1) !important;
   }
   .hero-banner::before {
     content: '';
     position: absolute; top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent 0%, #0891B2 20%, #38BDF8 50%, #0891B2 80%, transparent 100%);
-    animation: hero-line-in 0.9s cubic-bezier(0.37,0,0.22,1) both;
+    height: 3px;
+    background: linear-gradient(90deg, var(--dp-teal) 0%, #38BDF8 50%, var(--dp-purple) 100%);
     opacity: 1;
   }
-  .hero-banner::after {
-    content: '';
-    position: absolute; top: -80px; right: -80px;
-    width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(0,212,200,0.18) 0%, transparent 65%);
-    pointer-events: none;
-    animation: hero-glow-pulse 5s ease-in-out infinite;
-  }
+  .hero-banner::after { content: none; }
   .hero-title {
-    font-family: 'Syne', 'Outfit', sans-serif;
-    font-size: 2.2rem; font-weight: 800; letter-spacing: -0.04em; line-height: 1.0;
-    color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
-    margin-bottom: 8px; position: relative;
-    text-shadow: 0 1px 8px rgba(0,0,0,0.30);
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05;
+    color: var(--dp-text-1) !important; -webkit-text-fill-color: var(--dp-text-1) !important;
+    margin-bottom: 6px; position: relative;
   }
   .hero-title span {
-    color: #0891B2 !important; /* fallback */
-    background: linear-gradient(110deg, #0891B2 0%, #38BDF8 40%, #6EE7FF 75%, #0891B2 100%);
-    background-size: 200% auto;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-    animation: shimmer 4s linear infinite;
-  }
-  @supports not (-webkit-background-clip: text) {
-    .hero-title span { color: #0891B2 !important; background: none !important; -webkit-text-fill-color: #0891B2 !important; }
-  }
-  @keyframes shimmer {
-    0%   { background-position: 0% center; }
-    100% { background-position: 200% center; }
+    color: var(--dp-teal) !important;
+    background: none !important;
+    -webkit-text-fill-color: var(--dp-teal) !important;
   }
   .hero-subtitle {
     font-family: 'DM Sans', 'Inter', sans-serif;
-    font-size: 12px; font-weight: 600;
-    color: rgba(200,230,255,0.90) !important; -webkit-text-fill-color: rgba(200,230,255,0.90) !important;
-    letter-spacing: 0.10em; margin-top: 8px; position: relative;
+    font-size: 11.5px; font-weight: 600;
+    color: var(--dp-text-3) !important; -webkit-text-fill-color: var(--dp-text-3) !important;
+    letter-spacing: 0.08em; margin-top: 6px; position: relative;
     text-transform: uppercase;
   }
-  /* Ensure stMarkdownContainer wrapper inside hero doesn't override white text */
+  /* stMarkdownContainer wrapper inside hero inherits the light text tokens */
   .hero-banner [data-testid="stMarkdownContainer"],
   .hero-banner [data-testid="stMarkdownContainer"] span,
   .hero-banner [data-testid="stMarkdownContainer"] div,
   .hero-banner [data-testid="stMarkdownContainer"] p {
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
+    color: var(--dp-text-1) !important;
+    -webkit-text-fill-color: var(--dp-text-1) !important;
   }
 
   /* ── Home button title ───────────────────────────────────────────────── */
@@ -1402,18 +1394,22 @@ st.markdown("""
   .tab-info-tooltip {
     position: absolute; top: calc(100% + 6px); left: 0; z-index: 9999;
     min-width: 340px; max-width: 480px;
-    background: #0F2540; border: 1px solid rgba(0,212,200,0.30);
-    border-radius: 10px; padding: 14px 16px;
+    background: #0F2540; border: 1px solid rgba(8,145,178,0.35);
+    border-radius: var(--dp-radius); padding: 14px 16px;
     font-family: 'DM Sans', 'Inter', sans-serif; font-size: 13px;
-    color: var(--dp-text-2); line-height: 1.6;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.40);
+    /* Was var(--dp-text-2), a dark slate meant for the light page, sitting
+       on this tooltip's own dark navy chip — nearly unreadable. This one
+       component is intentionally a dark accent (like a code tooltip), so
+       its text tokens are set explicitly rather than inherited. */
+    color: rgba(226,240,255,0.92); line-height: 1.6;
+    box-shadow: var(--dp-shadow-deep);
     opacity: 0; pointer-events: none;
-    transform: translateY(-4px); transition: opacity 0.18s, transform 0.18s;
+    transform: translateY(-4px); transition: opacity var(--dp-t-fast), transform var(--dp-t-fast);
   }
-  .tab-info-tooltip strong { color: var(--dp-teal); }
+  .tab-info-tooltip strong { color: #7DD3E8; }
   .tab-info-tooltip .ts-bullets { margin: 8px 0 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
-  .tab-info-tooltip .ts-bullets li { font-size: 12px; color: var(--dp-text-3); display: flex; align-items: flex-start; gap: 6px; }
-  .tab-info-tooltip .ts-bullets li::before { content: "→"; color: var(--dp-teal); font-weight: 700; flex-shrink: 0; }
+  .tab-info-tooltip .ts-bullets li { font-size: 12px; color: rgba(226,240,255,0.72); display: flex; align-items: flex-start; gap: 6px; }
+  .tab-info-tooltip .ts-bullets li::before { content: "→"; color: #7DD3E8; font-weight: 700; flex-shrink: 0; }
 
   /* ── Callout / Key Takeaway ──────────────────────────────────────────── */
   .dp-callout {
@@ -2480,13 +2476,19 @@ st.markdown("""
     transform: scale(0.97) !important;
   }
 
-  /* ── KPI Ticker (1ax / Bloomberg) ────────────────────────────────────── */
-  /* Seamlessly extends the hero banner, same dark bg, no gap */
+  /* ── KPI Ticker, v6 ────────────────────────────────────────────────────
+     Was a dark navy Bloomberg-style band explicitly built to "seamlessly
+     extend the hero banner, same dark bg" — now that the hero banner
+     above it is a light masthead (see v6 rewrite), the dark band broke
+     that continuity and sat as its own jarring dark strip. Converted to
+     the same light surface, teal-accented treatment as the rest of the
+     app; still a distinct scrolling ticker, just no longer a dark seam
+     under a light header. */
   .pulse-ticker-wrap {
     overflow: hidden;
-    background: linear-gradient(180deg, #1A3756 0%, #1E3D5E 100%);
-    border-bottom: 1px solid rgba(0,212,200,0.20);
-    box-shadow: 0 4px 28px rgba(0,0,0,0.40);
+    background: var(--dp-bg2);
+    border-bottom: 1px solid var(--dp-border);
+    box-shadow: var(--dp-shadow);
     margin: -8px -1rem 0.8rem -1rem;
     padding: 0;
     position: relative;
@@ -2497,7 +2499,7 @@ st.markdown("""
   .hero-banner ~ div > [data-testid="stMarkdownContainer"] + [data-testid="stMarkdownContainer"] {
     margin-top: 0 !important;
   }
-  /* Edge fade-out (1ax style) */
+  /* Edge fade-out */
   .pulse-ticker-wrap::before,
   .pulse-ticker-wrap::after {
     content: ''; position: absolute; top: 0; bottom: 0; width: 80px; z-index: 10;
@@ -2505,11 +2507,11 @@ st.markdown("""
   }
   .pulse-ticker-wrap::before {
     left: 0;
-    background: linear-gradient(90deg, #1A3756 0%, transparent 100%);
+    background: linear-gradient(90deg, var(--dp-bg2) 0%, transparent 100%);
   }
   .pulse-ticker-wrap::after {
     right: 0;
-    background: linear-gradient(270deg, #1A3756 0%, transparent 100%);
+    background: linear-gradient(270deg, var(--dp-bg2) 0%, transparent 100%);
   }
   .pulse-ticker-track {
     display: flex;
@@ -2527,62 +2529,63 @@ st.markdown("""
     gap: 0px;
     padding: 12px 32px;
     font-family: 'DM Sans', 'Inter', sans-serif !important;
-    font-size: 16px !important; font-weight: 900 !important;
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
+    font-size: 16px !important; font-weight: 700 !important;
+    color: var(--dp-text-1) !important;
+    -webkit-text-fill-color: var(--dp-text-1) !important;
     white-space: nowrap;
-    border-right: 1px solid rgba(255,255,255,0.20);
+    border-right: 1px solid var(--dp-border);
     transition: all 0.2s ease;
     min-height: 76px;
   }
   .pulse-ticker-item * {
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
+    color: var(--dp-text-1) !important;
+    -webkit-text-fill-color: var(--dp-text-1) !important;
   }
-  .pulse-ticker-item:hover { color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important; opacity: 0.95; }
+  .pulse-ticker-item:hover { opacity: 0.85; }
   .pulse-ticker-item:last-child { border-right: none; }
   .pulse-ticker-label {
-    font-family: 'Syne', 'DM Sans', sans-serif !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
     text-transform: uppercase !important;
-    letter-spacing: .15em !important;
-    color: #E0E7FF !important;
-    -webkit-text-fill-color: #E0E7FF !important;
-    opacity: 0.85 !important;
+    letter-spacing: .10em !important;
+    color: var(--dp-text-3) !important;
+    -webkit-text-fill-color: var(--dp-text-3) !important;
+    opacity: 1 !important;
     display: block !important;
     margin-bottom: 2px !important;
   }
   .pulse-ticker-val {
-    color: #FFFFFF !important;
-    -webkit-text-fill-color: #FFFFFF !important;
+    color: var(--dp-text-1) !important;
+    -webkit-text-fill-color: var(--dp-text-1) !important;
     font-family: 'Outfit', sans-serif !important;
-    font-size: 42px !important;
-    font-weight: 900 !important;
+    font-size: 32px !important;
+    font-weight: 700 !important;
+    font-variant-numeric: tabular-nums !important;
     letter-spacing: -0.02em !important;
     display: block !important;
     margin: 0 0 4px 0 !important;
     line-height: 1 !important;
   }
   .pulse-ticker-status {
-    color: #22D3EE !important;
-    -webkit-text-fill-color: #22D3EE !important;
+    color: var(--dp-teal) !important;
+    -webkit-text-fill-color: var(--dp-teal) !important;
   }
   .pulse-ticker-pos {
-    color: #10B981 !important;
-    -webkit-text-fill-color: #10B981 !important;
+    color: #0F7B6C !important;
+    -webkit-text-fill-color: #0F7B6C !important;
     font-size: 13px !important;
-    font-weight: 900 !important;
+    font-weight: 700 !important;
     letter-spacing: 0.05em !important;
     text-transform: uppercase !important;
     display: block !important;
     margin-top: 2px !important;
   }
   .pulse-ticker-neg {
-    color: #FB7185 !important;
-    -webkit-text-fill-color: #FB7185 !important;
+    color: var(--dp-red) !important;
+    -webkit-text-fill-color: var(--dp-red) !important;
     font-size: 13px !important;
-    font-weight: 900 !important;
+    font-weight: 700 !important;
     letter-spacing: 0.05em !important;
     text-transform: uppercase !important;
     display: block !important;
@@ -2599,14 +2602,14 @@ st.markdown("""
   }
   .pulse-ticker-dot {
     width: 6px; height: 6px; border-radius: 50%;
-    background: #22D3EE;
-    box-shadow: 0 0 6px rgba(34,211,238,0.60);
+    background: var(--dp-teal);
+    box-shadow: 0 0 5px rgba(8,145,178,0.45);
     animation: ticker-pulse 1.8s ease-in-out infinite;
     flex-shrink: 0;
   }
   @keyframes ticker-left  { 0%{transform:translateX(0)} 100%{transform:translateX(-33.333%)} }
   @keyframes ticker-right { 0%{transform:translateX(-33.333%)} 100%{transform:translateX(0)} }
-  @keyframes ticker-pulse { 0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 6px rgba(34,211,238,0.60);} 50%{opacity:.4;transform:scale(.65);box-shadow:0 0 0 rgba(34,211,238,0);} }
+  @keyframes ticker-pulse { 0%,100%{opacity:1;transform:scale(1);box-shadow:0 0 5px rgba(8,145,178,0.45);} 50%{opacity:.4;transform:scale(.65);box-shadow:0 0 0 rgba(8,145,178,0);} }
 
   /* ── Responsive Design: Desktop, Tablet, Mobile ────────────────────── */
   @media (max-width: 1024px) {
@@ -2746,27 +2749,27 @@ st.markdown("""
     font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
     text-transform: uppercase; letter-spacing: .10em; color: #64748B;
   }
-  /* ── Hero banner stats row ────────────────────────────────────────────── */
+  /* ── Hero banner stats row, light surface (matches hero-banner v6) ──── */
   .hero-stats-row {
-    display: flex; gap: 60px; margin-top: 24px; flex-wrap: wrap;
-    border-top: 1px solid rgba(255,255,255,0.18); padding-top: 24px;
+    display: flex; gap: 48px; margin-top: 20px; flex-wrap: wrap;
+    border-top: 1px solid var(--dp-border); padding-top: 20px;
     justify-content: center; align-items: flex-start;
   }
-  .hero-stat { display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; }
+  .hero-stat { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; }
   .hero-stat-val {
-    font-family: 'Outfit', sans-serif !important; font-size: 64px !important; font-weight: 900 !important;
-    letter-spacing: -0.04em !important;
-    color: #FFFFFF !important; -webkit-text-fill-color: #FFFFFF !important;
-    line-height: 0.95 !important; text-shadow: 0 3px 12px rgba(0,0,0,0.50) !important;
+    font-family: 'Outfit', sans-serif !important; font-size: 40px !important; font-weight: 800 !important;
+    letter-spacing: -0.03em !important; font-variant-numeric: tabular-nums !important;
+    color: var(--dp-text-1) !important; -webkit-text-fill-color: var(--dp-text-1) !important;
+    line-height: 1.0 !important;
   }
   .hero-stat-label {
-    font-family: 'DM Sans', sans-serif !important; font-size: 16px !important; font-weight: 800 !important;
-    text-transform: uppercase !important; letter-spacing: .16em !important;
-    color: rgba(230,250,255,0.98) !important; -webkit-text-fill-color: rgba(230,250,255,0.98) !important;
+    font-family: 'DM Sans', sans-serif !important; font-size: 11px !important; font-weight: 700 !important;
+    text-transform: uppercase !important; letter-spacing: .10em !important;
+    color: var(--dp-text-3) !important; -webkit-text-fill-color: var(--dp-text-3) !important;
   }
-  .hero-stat-delta { font-size: 16px !important; font-weight: 800 !important; }
-  .hero-stat-pos { color: #34D399 !important; -webkit-text-fill-color: #34D399 !important; font-weight: 800 !important; }
-  .hero-stat-neg { color: #F87171 !important; -webkit-text-fill-color: #F87171 !important; font-weight: 800 !important; }
+  .hero-stat-delta { font-size: 13px !important; font-weight: 700 !important; }
+  .hero-stat-pos { color: #0F7B6C !important; -webkit-text-fill-color: #0F7B6C !important; font-weight: 700 !important; }
+  .hero-stat-neg { color: var(--dp-red) !important; -webkit-text-fill-color: var(--dp-red) !important; font-weight: 700 !important; }
 
   /* ── Painted Heatmap (Giorgia Lupi / Long-Covid density style) ───────── */
   .painted-legend {
@@ -3384,23 +3387,27 @@ st.markdown("""
     color: #DC2626 !important;
   }
 
-  /* ── Vercel-style subtle dot grid on hero ── */
-  .hero-banner {
-    background-image:
-      radial-gradient(circle at 78% 18%, rgba(0,212,200,0.24) 0%, transparent 50%),
-      radial-gradient(circle at 8% 80%, rgba(56,189,248,0.14) 0%, transparent 42%),
-      radial-gradient(circle at 50% 120%, rgba(167,139,250,0.10) 0%, transparent 40%),
-      radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px),
-      linear-gradient(160deg, #0B1E38 0%, #132D50 60%, #162E52 100%) !important;
-    background-size: auto, auto, auto, 28px 28px, auto !important;
-  }
+  /* ── Hero banner override, retired 2026-07-30 ─────────────────────────
+     This block used to reassert a dark navy aurora background + dot grid
+     on .hero-banner with !important, AFTER the light v6 masthead rule
+     earlier in this stylesheet — so the light rewrite above was silently
+     losing the cascade and the banner was still rendering dark navy.
+     Found by reading the full document for every rule touching the same
+     selector, exactly the trap CLAUDE.md's Lessons Learned already warns
+     about (17 separate <style> blocks in this file). No replacement
+     needed; .hero-banner's one definition now stands. */
 
-  /* ── Railway gradient top-border on insight cards (replaces left bar) ── */
-  .insight-positive::before { background: linear-gradient(90deg, #10B981, #34D399, #10B981) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
-  .insight-warning::before  { background: linear-gradient(90deg, #F5B940, #FCD34D, #F5B940) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
-  .insight-negative::before { background: linear-gradient(90deg, #EF4444, #F87171, #EF4444) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
-  .insight-info::before     { background: linear-gradient(90deg, #0891B2, #38BDF8, #0891B2) !important; background-size: 200% 100% !important; animation: border-sweep 4s ease infinite !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
-  @keyframes border-sweep { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+  /* ── Insight card top border, retired animated sweep 2026-07-30 ───────
+     Same trap: this second definition of .insight-*::before used
+     !important + an infinite 4s gradient-position sweep, overriding the
+     plain colored bar defined earlier. Kept the color-by-status idea,
+     dropped the infinite animation — a KPI/insight card that never stops
+     visibly moving is the exact "consumer demo" pattern this pass is
+     removing everywhere else. */
+  .insight-positive::before { background: linear-gradient(180deg, #10B981, #059669) !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-warning::before  { background: linear-gradient(180deg, #F5B940, #D97706) !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-negative::before { background: linear-gradient(180deg, #EF4444, #DC2626) !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
+  .insight-info::before     { background: linear-gradient(180deg, #0891B2, #38BDF8) !important; height: 3px !important; width: 100% !important; top: 0 !important; left: 0 !important; border-radius: 0 !important; }
   /* Adjust insight card padding for top border (was left: 14px indent, now top: 3px bar) */
   .insight-title { padding-left: 0 !important; padding-top: 8px !important; }
   .insight-body  { padding-left: 0 !important; }
@@ -3695,8 +3702,11 @@ _st_components.html("""
       'section[data-testid="stMain"]>div{padding-top:0!important;margin-top:0!important}' +
       '.block-container{padding-top:0!important;margin-top:0!important}' +
       '.hero-banner{margin-top:0!important}' +
+      /* Was #0E1B2A (dark navy), same dark-theme leftover as the inline
+         setProperty version below in this same fix — forcing a dark
+         shell background behind an all-white app. Fixed 2026-07-30. */
       '[data-testid="stApp"],[data-testid="stAppViewContainer"],[data-testid="stBottom"],' +
-      'body,.main,.stApp{background:#0E1B2A!important}';
+      'body,.main,.stApp{background:#FFFFFF!important}';
     doc.head.appendChild(s);
   }
   // (b) Force inline styles, beats React inline style overrides
@@ -3717,11 +3727,15 @@ _st_components.html("""
     doc.querySelectorAll('.hero-banner').forEach(function(el){
       el.style.setProperty('margin-top','0px','important');
     });
-    // Force dark background on app shell to hide any residual gap
+    // Force the app-shell background to white to hide any residual gap.
+    // This used to force #0B1E38 (dark navy) here, a leftover from the
+    // dark-theme build that was never updated when the app moved to the
+    // light theme — any resize/scroll-bounce gap was flashing dark navy
+    // behind an otherwise all-white page. Fixed 2026-07-30.
     ['[data-testid="stApp"]','[data-testid="stAppViewContainer"]','body'].forEach(function(sel){
       doc.querySelectorAll(sel).forEach(function(el){
-        el.style.setProperty('background','#0B1E38','important');
-        el.style.setProperty('background-color','#0B1E38','important');
+        el.style.setProperty('background','#FFFFFF','important');
+        el.style.setProperty('background-color','#FFFFFF','important');
       });
     });
     // (e) Kill host-injected Streamlit badges (viewer "Hosted with Streamlit",
@@ -6723,7 +6737,7 @@ def render_kpi_ticker(df_kpi: "pd.DataFrame", df_dfy: "pd.DataFrame",
     return (
         f'<div class="pulse-ticker-wrap">'
         f'<div class="pulse-ticker-track left">{row1_html}</div>'
-        f'<div class="pulse-ticker-track right" style="border-top:1px solid rgba(255,255,255,0.05);">{row2_html}</div>'
+        f'<div class="pulse-ticker-track right" style="border-top:1px solid #E2E8F0;">{row2_html}</div>'
         f'</div>'
     )
 
@@ -13951,16 +13965,19 @@ margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                 _inc_v = f"${int(_inc.iloc[0]):,}" if not _inc.empty else ", "
                 _hom_v = f"${int(_hom.iloc[0]):,}" if not _hom.empty else ", "
                 short_geo = geo.replace(" County, CA", "").replace(" County", "")
+                # Was background:#1E3550 (dark navy) with #0F172A (near-black)
+                # value text on top of it — effectively invisible. Switched to
+                # the same light-card treatment as the rest of the app.
                 st.markdown(
-                    f'<div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);border-radius:12px;'
+                    f'<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;'
                     f'border-top:3px solid #7C3AED;padding:14px 18px;">'
-                    f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A7A95;margin-bottom:6px;">{short_geo}</div>'
+                    f'<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748B;margin-bottom:6px;">{short_geo}</div>'
                     f'<div style="font-size:18px;font-weight:900;color:#7C3AED;">{_pop_v}</div>'
-                    f'<div style="font-size:11px;color:#5A7A95;">Population</div>'
+                    f'<div style="font-size:11px;color:#64748B;">Population</div>'
                     f'<div style="font-size:14px;font-weight:700;color:#0F172A;margin-top:6px;">{_inc_v}</div>'
-                    f'<div style="font-size:11px;color:#5A7A95;">Median HH Income</div>'
+                    f'<div style="font-size:11px;color:#64748B;">Median HH Income</div>'
                     f'<div style="font-size:13px;font-weight:600;color:#0F172A;margin-top:4px;">{_hom_v}</div>'
-                    f'<div style="font-size:11px;color:#5A7A95;">Median Home Value</div>'
+                    f'<div style="font-size:11px;color:#64748B;">Median Home Value</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
@@ -18690,31 +18707,31 @@ _GLOSSARY_TERMS = {
 
 _SOURCES_HTML = """
 <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;">
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid #E2E8F0;
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">STR</div>
     <div style="color:#64748B;">Smith Travel Research · daily &amp; monthly hotel benchmarking</div>
   </div>
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid #E2E8F0;
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Datafy</div>
     <div style="color:#64748B;">Visitor economy platform · trips, spend, DMA attribution</div>
   </div>
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid #E2E8F0;
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">CoStar</div>
     <div style="color:#64748B;">Market data · comp set, pipeline, profitability</div>
   </div>
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid #E2E8F0;
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Visit California</div>
     <div style="color:#64748B;">State forecasts · lodging, travel volume, airport traffic</div>
   </div>
-  <div style="background:#1E3550;border:1px solid rgba(255,255,255,0.07);
+  <div style="background:#FFFFFF;border:1px solid #E2E8F0;
               border-radius:8px;padding:10px 16px;font-size:12px;min-width:160px;
               box-shadow:0 1px 4px rgba(0,0,0,0.07);">
     <div style="font-weight:700;color:#0F172A;margin-bottom:2px;">Zartico</div>
