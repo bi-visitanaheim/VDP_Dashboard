@@ -14,6 +14,8 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from chart_theme import style_fig as _shared_style_fig
+
 # Constants (match app.py styling)
 BLUE = "#1D7B8F"
 TEAL = "#0F766E"
@@ -32,17 +34,16 @@ def sec_div(title: str) -> str:
     return f'<div style="margin-top:36px;margin-bottom:12px;border-left:4px solid #E5E7EB;padding-left:12px;font-size:14px;font-weight:600;color:#6B7280;">{title}</div>'
 
 def style_fig(fig, height=400):
-    """Style Plotly figure (matches app.py)."""
-    fig.update_layout(
-        height=height,
-        margin=dict(l=0, r=0, t=30, b=0),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(255,255,255,0)",
-        font=dict(family="system-ui, sans-serif", size=11, color="#4B5563"),
-        hovermode="x unified",
-        xaxis=dict(showgrid=False, zeroline=False),
-        yaxis=dict(showgrid=True, gridwidth=1, gridcolor="rgba(0,0,0,0.05)", zeroline=False),
-    )
+    """Apply the shared PULSE chart theme, then keep this tab's unified hover.
+
+    This module used to carry its own copy of style_fig that only claimed to
+    match app.py: 11px system-ui type, no colorway, no legend styling. Charts
+    here now come from chart_theme like the rest of the app.
+    """
+    _shared_style_fig(fig, height=height)
+    # Coastal series are all read against a shared date axis, so a single
+    # crosshair tooltip beats per-trace hover here.
+    fig.update_layout(hovermode="x unified")
     return fig
 
 def load_beach_water_quality() -> pd.DataFrame:

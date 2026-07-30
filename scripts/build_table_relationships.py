@@ -1019,6 +1019,54 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("socal_gas_prices",             "demand_signal_weekly",         "context",       "period/week_date",
      "LA Basin gas prices augment the drive-market affordability component of the PULSE Demand Signal Index"),
+
+    # ── NWS weather.gov: forecast / hourly / observations ──────────────────
+    # Written by fetch_nws_weather.py. weather_monthly is the long-run seasonal
+    # baseline; these three are the live short-horizon layer on top of it.
+    ("weather_forecast",             "weather_monthly",              "enriches",      "start_time→year+month",
+     "Seven-day NWS forecast is the live short-horizon layer over the weather_monthly seasonal baseline"),
+
+    ("weather_forecast",             "kpi_daily_summary",            "context",       "start_time→as_of_date",
+     "Forecast conditions in the booking window shape walk-in and short-lead demand: clear 70F+ weekends support rate holds, rain forecasts precede same-week softness"),
+
+    ("weather_forecast",             "vdp_events",                   "context",       "start_time→event_date",
+     "Forecast for each event date flags weather risk on outdoor events (Doheny Blues, Festival of Whales, Tall Ships)"),
+
+    ("weather_forecast",             "surf_conditions_daily",        "cross_ref",     "start_time→obs_date",
+     "Wind speed and direction in the forecast drive surf quality: offshore wind plus clean swell is the premium beach-day signal"),
+
+    ("weather_forecast",             "beach_water_quality_weekly",   "context",       "start_time→sample_date",
+     "Rain in the forecast predicts post-storm bacterial exceedances 24-72 hours out, ahead of the next beach sample"),
+
+    ("weather_forecast",             "demand_signal_weekly",         "context",       "start_time→week_date",
+     "Forecast beach-day quality is the near-term weather input to the PULSE Demand Signal Index"),
+
+    ("weather_forecast",             "insights_daily",               "derived_from",  "start_time→as_of_date",
+     "compute_insights.py uses the forecast horizon for visitor best-value and resident peak-alert cards"),
+
+    ("weather_hourly",               "weather_forecast",             "enriches",      "start_time",
+     "48-hour hourly detail (temp, wind, precip chance) breaks the daily forecast period down to arrival-time granularity"),
+
+    ("weather_hourly",               "noaa_tides_daily",             "cross_ref",     "start_time→obs_date",
+     "Hourly conditions joined to tide timing identify the best beach windows within a day, not just the best days"),
+
+    ("weather_hourly",               "vdp_events",                   "context",       "start_time→event_date",
+     "Hourly precipitation chance across event hours is a sharper go/no-go signal than the daily forecast summary"),
+
+    ("weather_observations",         "weather_forecast",             "measures",      "obs_time→start_time",
+     "Actual station observations scored against the prior forecast measure local NWS forecast accuracy before it is trusted for pricing"),
+
+    ("weather_observations",         "weather_monthly",              "derived_from",  "obs_time→year+month",
+     "Thirty days of station observations roll up into the weather_monthly averages and beach_day_score"),
+
+    ("weather_observations",         "kpi_daily_summary",            "cross_ref",     "obs_time→as_of_date",
+     "Observed conditions matched to same-day occupancy and ADR quantify realized weather sensitivity by day of week"),
+
+    ("weather_observations",         "beach_water_quality_weekly",   "context",       "obs_time→sample_date",
+     "Observed rainfall is the upstream cause of creek-mouth bacterial exceedances in the beach grade data"),
+
+    ("weather_observations",         "noaa_marine_monthly",          "cross_ref",     "obs_time→year+month",
+     "Land station observations and NOAA buoy readings together describe the full coastal condition picture"),
 ]
 
 
