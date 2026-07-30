@@ -57,6 +57,9 @@ from chart_theme import (
 )
 from components_coastal import render_coastal_intelligence
 from components_group import render_group_tab
+from data_quality import validate_ticker_data
+from ticker_redesign import render_ticker_redesigned, TICKER_REDESIGNED_CSS
+from pages import render_page
 
 
 def md_to_html(text: str) -> str:
@@ -8255,14 +8258,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Live KPI Ticker (1ax / Bloomberg dual-row marquee) ─────────────────────
-try:
-    st.markdown(
-        render_kpi_ticker(df_kpi, df_dfy_ov, df_later_ig_profile),
-        unsafe_allow_html=True,
-    )
-except Exception:
-    pass  # Ticker is non-fatal, never crash the page
+# ── KPI Ticker (Temporarily removed for dashboard restructuring) ────────────
+# Being replaced with multi-page layout. See DASHBOARD_RESTRUCTURING.md for details.
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BOARD REPORT HTML GENERATOR
@@ -9535,7 +9532,56 @@ if _requested_tab:
     except:
         pass
 
-# ── Consolidated 6-tab navigation ─────────────────────────────────────────────
+# ── Initialize page routing ──────────────────────────────────────────────────
+if "page" not in st.session_state:
+    st.session_state.page = "occupancy"
+
+# ── Page selector for new 12-page dashboard ──────────────────────────────────
+# Render the clean 12-page view by default; classic tabs available via sidebar toggle
+use_classic_view = st.sidebar.checkbox("Use Classic View (6 tabs)", value=False, key="classic_toggle")
+
+if not use_classic_view:
+    # NEW CLEAN 12-PAGE VIEW
+    st.sidebar.markdown("**Dana Point PULSE**")
+    st.sidebar.markdown("---")
+
+    page_categories = {
+        "🏨 Hotel Operations": [
+            ("⬥ Occupancy Outlook", "occupancy"),
+            ("💰 Rate Strategy", "rate_strategy"),
+            ("📊 Revenue Generation", "revenue"),
+            ("🗓️ Compression Calendar", "compression"),
+        ],
+        "👥 Visitor Economy": [
+            ("🗺️ Visitor Markets", "visitor_markets"),
+            ("💸 Spend Pathways", "spend"),
+            ("🛏️ Stay Patterns", "stay"),
+            ("👫 Group Demand", "group"),
+        ],
+        "🔮 Strategic Planning": [
+            ("🎉 Events Impact", "events"),
+            ("📈 Market Intelligence", "intelligence"),
+            ("👤 Stakeholder Brief", "stakeholder"),
+            ("🧠 Brain Status", "brain_status"),
+        ],
+    }
+
+    for category, pages in page_categories.items():
+        st.sidebar.markdown(f"**{category}**")
+        for label, page_key in pages:
+            if st.sidebar.button(label, use_container_width=True, key=f"nav_{page_key}"):
+                st.session_state.page = page_key
+                st.rerun()
+
+    # Render the selected page
+    df_kpi = load_kpi_daily()
+    df_dfy = load_datafy_overview()
+    df_comp = load_compression()
+
+    render_page(st.session_state.page, df_kpi, df_dfy, df_comp)
+    st.stop()
+
+# ── Consolidated 6-tab navigation (Classic View) ──────────────────────────────
 # The 10 original sections are grouped into 6 top-level tabs with consistent
 # sub-tabs so the app scans cleanly instead of presenting 10 peers at once.
 # The sub-tab DeltaGenerators reuse the SAME variable names the existing
