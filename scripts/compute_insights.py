@@ -205,7 +205,18 @@ def upsert_insight(
 # ---------------------------------------------------------------------------
 
 def load_kpi_recent(conn: sqlite3.Connection, days: int = 90) -> pd.DataFrame:
-    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    """Trailing `days` window, anchored to the latest as_of_date actually in
+    kpi_daily_summary, not to date.today(). STR feeds lag the calendar (see
+    CLAUDE.md's freshness lesson from audit_app.py) — anchoring to today() on
+    a lagged feed silently returns zero rows, which every downstream insight
+    generator then reads as revpar/adr == 0 or "N/A" instead of the real
+    trailing figures."""
+    max_row = pd.read_sql_query("SELECT MAX(as_of_date) AS m FROM kpi_daily_summary", conn)
+    max_date = max_row["m"].iloc[0] if not max_row.empty else None
+    if not max_date:
+        return pd.DataFrame(columns=["as_of_date", "occ_pct", "adr", "revpar",
+                                      "occ_yoy", "adr_yoy", "revpar_yoy", "is_occ_80", "is_occ_90"])
+    cutoff = (pd.to_datetime(max_date) - timedelta(days=days)).strftime("%Y-%m-%d")
     df = pd.read_sql_query(
         "SELECT as_of_date, occ_pct, adr, revpar, occ_yoy, adr_yoy, revpar_yoy, "
         "       is_occ_80, is_occ_90 "
@@ -234,8 +245,16 @@ def load_compression(conn: sqlite3.Connection) -> pd.DataFrame:
 
 
 def load_str_revenue(conn: sqlite3.Connection, days: int = 90) -> pd.DataFrame:
-    """Trailing room revenue from fact_str_metrics for TBID/TOT calcs."""
-    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    """Trailing room revenue from fact_str_metrics for TBID/TOT calcs. Anchored
+    to the latest as_of_date actually in fact_str_metrics, not date.today() —
+    same freshness fix as load_kpi_recent (see CLAUDE.md Lessons Learned)."""
+    max_row = pd.read_sql_query(
+        "SELECT MAX(as_of_date) AS m FROM fact_str_metrics WHERE source='STR' AND grain='daily'", conn
+    )
+    max_date = max_row["m"].iloc[0] if not max_row.empty else None
+    if not max_date:
+        return pd.DataFrame(columns=["as_of_date", "metric_name", "metric_value"])
+    cutoff = (pd.to_datetime(max_date) - timedelta(days=days)).strftime("%Y-%m-%d")
     df = pd.read_sql_query(
         "SELECT as_of_date, metric_name, metric_value "
         "FROM fact_str_metrics "
@@ -666,7 +685,7 @@ def gen_dmo_compression_outlook(comp: pd.DataFrame, kpi: pd.DataFrame) -> dict:
 
     days_to_q3 = _days_to_event(7, 1)   # July 1 = Q3 start proxy
     headline = (
-        f"{cq} compression: {cq_80} days >80% occ — "
+        f"{cq} compression: {cq_80} days above 80% occ — "
         f"Q3 peak ({int(avg_q3_80)}-day avg) starts in ~{days_to_q3} days"
     )
     body = (
@@ -1163,7 +1182,7 @@ def gen_resident_quiet_windows(kpi: pd.DataFrame) -> dict:
         )
 
     headline = (
-        f"Resident access: {pct_quiet:.0f}% of recent days had <65% hotel occupancy — "
+        f"Resident access: {pct_quiet:.0f}% of recent days had below 65% hotel occupancy — "
         f"{season} conditions"
     )
     body = (
@@ -2442,10 +2461,10 @@ def gen_cross_competitive_set_group_gap(
     body = (
         f"CROSS-SIGNAL: CoStar competitive set RevPAR index (RGI) × group demand benchmarks "
         f"show the South OC market averaging RGI {avg_rgi:.1f} — market is {signal} on RevPAR. "
-        f"{n_under} of {n_total} properties index below fair share (RGI < 100), suggesting "
+        f"{n_under} of {n_total} properties index below fair share (RGI under 100), suggesting "
         f"rate compression from over-reliance on transient leisure or suboptimal group mix. "
         f"Industry benchmark group demand share of 25–32% implies ${tbid_low/1e6:.1f}M–"
-        f"${tbid_high/1e6:.1f}M TBID opportunity. Properties with RGI < 100 are prime candidates "
+        f"${tbid_high/1e6:.1f}M TBID opportunity. Properties with RGI under 100 are prime candidates "
         f"for targeted group sales support to rebalance their mix."
         + _5wh(
             who="VDP DMO, hotel revenue managers, TBID board",
@@ -2714,7 +2733,7 @@ def gen_dmo_macro_demand_signal(fred: dict[str, Any], gas: dict[str, Any], kpi: 
             when="Forward 6–8 weeks — macro signals lag leisure booking patterns",
             where="National macro indicators from Federal Reserve FRED database",
             why="Consumer sentiment predicts discretionary travel spend; unemployment predicts booking cancellation risk",
-            how="Brief macro summary in monthly board deck; flag if sentiment drops >5pts in single month",
+            how="Brief macro summary in monthly board deck; flag if sentiment drops more than 5pts in a single month",
         )
     )
     return dict(
@@ -3029,7 +3048,7 @@ def gen_cross_demand_index(demand_signal: dict[str, Any], kpi: pd.DataFrame) -> 
         f"4-week average: {avg_4wk:.0f}/100. Week-over-week change: {'+'if wow_chg>0 else ''}{wow_chg:.1f} pts. "
         f"Current 30-day hotel occupancy: {avg_occ_30:.1f}%. "
         f"Historical data shows the demand index leads STR occupancy by 2–3 weeks. "
-        f"A score above 65 typically correlates with >75% occupancy in the following 2 weeks. "
+        f"A score above 65 typically correlates with above 75% occupancy in the following 2 weeks. "
         f"Action: {'Increase rate floors — demand is tracking high.' if score >= 65 else 'Monitor rate parity — demand is moderate.' if score >= 50 else 'Activate shoulder-season promotions to stimulate demand.'}"
     )
     return dict(
@@ -3077,7 +3096,7 @@ def gen_cross_statistical_correlation(correlations: list[dict], kpi: pd.DataFram
         f"Cross-source statistical analysis (Pearson correlation, n={n} weeks): "
         f"{metric_a} shows a {interp} with {metric_b} at a {lag}-week lead time. "
         f"r={r:.3f} means {metric_a} explains approximately {r_pct:.0f}% of the variance in hotel occupancy. "
-        f"{'This is statistically significant (p<0.10).' if best.get('is_significant') else 'Sample size is growing — correlation will strengthen with more data.'} "
+        f"{'This is statistically significant (p under 0.10).' if best.get('is_significant') else 'Sample size is growing — correlation will strengthen with more data.'} "
         f"Practical implication: "
         + (f"Google search volume for Dana Point terms 2–3 weeks ago predicts this week's occupancy. "
            f"If search interest rises sharply this week, expect higher occ in 2–3 weeks. "
@@ -3191,7 +3210,7 @@ def gen_dmo_social_reach(social: dict[str, Any]) -> dict:
             when="Ongoing — review monthly against campaign spend",
             where="Instagram, Facebook, TikTok (Later.com analytics)",
             why="Social reach is the top-of-funnel driver of destination awareness and visitor intent",
-            how="Benchmark IG engagement >3%; shift content mix toward Reels and TikTok for organic reach growth",
+            how="Benchmark IG engagement above 3%; shift content mix toward Reels and TikTok for organic reach growth",
         )
     )
     return dict(

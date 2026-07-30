@@ -3,11 +3,26 @@ VDP Dashboard Utilities, Consolidated helpers for KPI formatting, SQL queries, a
 GloCon Solutions LLC, Dana Point PULSE
 """
 
+import html
 import logging
 import pandas as pd
 from typing import Optional, Dict, Any
 
 _logger = logging.getLogger("vdp_dashboard")
+
+
+def _esc(text) -> str:
+    """HTML-escape any data-driven string before it is dropped into a raw HTML
+    card (label, value, headline, insight body, as_of date, etc.). Card
+    formatters render via st.markdown(..., unsafe_allow_html=True), so a stray
+    '<' or '>' coming from generated text (e.g. "days >80% occ" written by
+    compute_insights.py) will otherwise be parsed as the start of a tag and
+    corrupt the rest of the card's markup into visible text on the page. Only
+    call this on data/prose fields, never on the hand-authored icon SVG/HTML
+    strings passed in via the `icon` parameter — those are meant to render."""
+    if text is None:
+        return ""
+    return html.escape(str(text), quote=False)
 
 
 def format_hero_kpi_card(label: str, value: str, delta: str = "", delta_class: str = "neutral", color: str = "#00D4C8") -> str:
@@ -115,13 +130,13 @@ def format_metric_card(label: str, value: str, icon: str = "", context: str = ""
         HTML string for metric card
     """
     icon_html = f'<div class="kpi-icon-svg" style="opacity:.55;margin-bottom:2px;">{icon}</div>' if icon else ''
-    context_html = f'<div class="kpi-delta-neutral">{context}</div>' if context else ''
-    date_html = f'<div class="kpi-date">{as_of}</div>' if as_of else ''
+    context_html = f'<div class="kpi-delta-neutral">{_esc(context)}</div>' if context else ''
+    date_html = f'<div class="kpi-date">{_esc(as_of)}</div>' if as_of else ''
 
     return (
         f'<div class="kpi-card">'
-        f'<div class="kpi-header">{icon_html}<div class="kpi-label">{label}</div></div>'
-        f'<div class="kpi-value">{value}</div>'
+        f'<div class="kpi-header">{icon_html}<div class="kpi-label">{_esc(label)}</div></div>'
+        f'<div class="kpi-value">{_esc(value)}</div>'
         f'{context_html}'
         f'{date_html}'
         f'</div>'
@@ -253,23 +268,23 @@ def format_insight_card(icon: str, title: str, main_value: str = "", subtitle: s
         HTML string for the insight card
     """
     subtitle_html = (
-        f'<div style="font-size:12px;color:var(--dp-text-3);margin-top:3px;font-weight:500;">{subtitle}</div>'
+        f'<div style="font-size:12px;color:var(--dp-text-3);margin-top:3px;font-weight:500;">{_esc(subtitle)}</div>'
         if subtitle else ''
     )
     value_html = (
-        f'<div class="kpi-value" style="color:{accent_color};margin:8px 0 10px 0;text-align:left;">{main_value}</div>'
+        f'<div class="kpi-value" style="color:{accent_color};margin:8px 0 10px 0;text-align:left;">{_esc(main_value)}</div>'
         if main_value else ''
     )
-    body_html = f'<p class="insight-body" style="padding-left:0;">{body}</p>' if body else ''
+    body_html = f'<p class="insight-body" style="padding-left:0;">{_esc(body)}</p>' if body else ''
     date_html = (
-        f'<div class="kpi-date" style="text-align:left;">{as_of}</div>' if as_of else ''
+        f'<div class="kpi-date" style="text-align:left;">{_esc(as_of)}</div>' if as_of else ''
     )
 
     return f"""<div class="insight-card" style="border-left:4px solid {accent_color};text-align:left;">
     <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:4px;">
     <span style="width:26px;height:26px;display:inline-flex;flex-shrink:0;color:{accent_color};">{icon}</span>
     <div>
-    <h3 class="insight-title" style="padding-left:0;margin-bottom:2px;">{title}</h3>
+    <h3 class="insight-title" style="padding-left:0;margin-bottom:2px;">{_esc(title)}</h3>
     {subtitle_html}
     </div>
     </div>
