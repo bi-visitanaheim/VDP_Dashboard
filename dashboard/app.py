@@ -2084,6 +2084,37 @@ st.markdown("""
     margin-bottom: 0 !important;
   }
 
+  /* ── Sidebar as overlay, not a layout column ──────────────────────────
+     Per owner feedback: the report is the focus; the sidebar should only
+     ever sit on top of the main content when explicitly opened, never push
+     or narrow it. Streamlit's default lays the sidebar out as a flex sibling
+     of stMain, so opening/closing it resizes the main column and the whole
+     page reflows off-center. Taking the sidebar out of flow with
+     position:fixed removes it from that flex calculation entirely — stMain
+     then always renders at full width, and the sidebar floats above it with
+     a shadow instead of shoving it aside. Streamlit's own collapse/expand
+     JS still toggles the sidebar's transform/visibility; this only changes
+     how it's positioned relative to the content when it IS open. */
+  [data-testid="stSidebar"] {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    z-index: 999 !important;
+    box-shadow: var(--dp-shadow-hover), 8px 0 32px rgba(15, 23, 42, 0.14) !important;
+  }
+  [data-testid="stAppViewContainer"] {
+    margin-left: 0 !important;
+  }
+  /* The block-container itself: centered, with breathing room on both
+     sides at wide viewports, instead of stretching edge-to-edge or looking
+     shifted toward whichever side the (now-floating) sidebar sits on. */
+  .block-container {
+    max-width: 1440px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
   /* ── Selectbox / Widget Styling ──────────────────────────────────────── */
   [data-testid="stSelectbox"] > div,
   [data-testid="stDateInput"] > div {
