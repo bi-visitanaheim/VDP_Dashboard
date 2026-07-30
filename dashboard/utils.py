@@ -95,35 +95,37 @@ def format_section_header(icon: str, title: str, subtitle: str = "") -> str:
     </div>"""
 
 
-def format_metric_card(label: str, value: str, icon: str = "", context: str = "") -> str:
+def format_metric_card(label: str, value: str, icon: str = "", context: str = "", as_of: str = "") -> str:
     """
-    Consistent metric card for use throughout dashboard tabs.
+    Consistent metric card for use throughout dashboard tabs. Renders through the
+    site-wide light-theme `.kpi-card` / `.kpi-label` / `.kpi-value` / `.kpi-date`
+    classes defined in app.py's style block, so it always matches the Classic
+    View's own KPI cards instead of carrying its own (dark-theme) inline colors.
 
     Args:
         label: Metric label
         value: Metric value
-        icon: Optional icon/emoji
-        context: Optional context text
+        icon: Optional icon HTML (an inline SVG string, e.g. from pages.ICONS)
+        context: Optional context text (delta/comparison, shown under the value)
+        as_of: Optional date or period reference for this specific metric
+               (e.g. "STR through Mar 28, 2026", "Trailing 90 days", "FY26 YTD").
+               Every card should carry one; it renders via `.kpi-date`.
 
     Returns:
         HTML string for metric card
     """
-    icon_html = f'<div style="font-size:22px;margin-bottom:8px;opacity:0.8;">{icon}</div>' if icon else ''
-    context_html = f'<div style="font-size:11px;color:#8EC4DC;margin-top:8px;font-weight:500;">{context}</div>' if context else ''
+    icon_html = f'<div class="kpi-icon-svg" style="opacity:.55;margin-bottom:2px;">{icon}</div>' if icon else ''
+    context_html = f'<div class="kpi-delta-neutral">{context}</div>' if context else ''
+    date_html = f'<div class="kpi-date">{as_of}</div>' if as_of else ''
 
-    return f"""<div style="
-    background:linear-gradient(135deg,rgba(0,212,200,0.08) 0%,rgba(56,189,248,0.04) 100%);
-    border:1px solid rgba(0,212,200,0.25);
-    border-top:3px solid #00D4C8;
-    border-radius:12px;
-    padding:20px;
-    box-shadow:0 2px 12px rgba(0,0,0,0.12);
-    ">
-    {icon_html}
-    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#8EC4DC;margin-bottom:6px;">{label}</div>
-    <div style="font-family:'Outfit',sans-serif;font-size:28px;font-weight:900;letter-spacing:-0.03em;color:#F4FAFF;line-height:1;">{value}</div>
-    {context_html}
-    </div>"""
+    return (
+        f'<div class="kpi-card">'
+        f'<div class="kpi-header">{icon_html}<div class="kpi-label">{label}</div></div>'
+        f'<div class="kpi-value">{value}</div>'
+        f'{context_html}'
+        f'{date_html}'
+        f'</div>'
+    )
 
 
 def safe_sql_query(conn, query: str, params: tuple = ()) -> pd.DataFrame:
@@ -230,42 +232,50 @@ def format_metric_delta(value: float, decimals: int = 1, as_percentage: bool = T
     return formatted, css_class
 
 
-def format_insight_card(icon: str, title: str, main_value: str, subtitle: str = "", body: str = "", accent_color: str = "#0284C7") -> str:
+def format_insight_card(icon: str, title: str, main_value: str = "", subtitle: str = "",
+                         body: str = "", accent_color: str = "#0891B2", as_of: str = "") -> str:
     """
-    Format a styled insight card with metric highlight, supporting text, and visual hierarchy.
+    Format a styled insight card with metric highlight, supporting text, and visual
+    hierarchy. Renders through the site-wide `.insight-card` / `.insight-title` /
+    `.insight-body` / `.kpi-value` / `.kpi-date` classes so it stays on the same
+    light design system as the rest of the app (no standalone inline palette).
 
     Args:
-        icon: Emoji icon (e.g., "💰")
+        icon: Icon HTML (an inline SVG string, e.g. from pages.ICONS)
         title: Card title (e.g., "Transient Occupancy Tax")
         main_value: Large metric value (e.g., "$3.6M")
         subtitle: Optional subtext below title (e.g., "90-day trailing")
         body: Supporting context paragraph
-        accent_color: Left border color
+        accent_color: Left border / value accent color
+        as_of: Optional date or period reference this insight is grounded in
 
     Returns:
         HTML string for the insight card
     """
-    subtitle_html = f'<div style="font-size:12px;color:#64748B;margin-top:4px;font-weight:500;">{subtitle}</div>' if subtitle else ''
-    body_html = f'<p style="font-size:13px;color:#334155;line-height:1.6;margin:16px 0 0 0;">{body}</p>' if body else ''
+    subtitle_html = (
+        f'<div style="font-size:12px;color:var(--dp-text-3);margin-top:3px;font-weight:500;">{subtitle}</div>'
+        if subtitle else ''
+    )
+    value_html = (
+        f'<div class="kpi-value" style="color:{accent_color};margin:8px 0 10px 0;text-align:left;">{main_value}</div>'
+        if main_value else ''
+    )
+    body_html = f'<p class="insight-body" style="padding-left:0;">{body}</p>' if body else ''
+    date_html = (
+        f'<div class="kpi-date" style="text-align:left;">{as_of}</div>' if as_of else ''
+    )
 
-    return f"""<div style="
-    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
-    border: 1px solid #E2E8F0;
-    border-left: 4px solid {accent_color};
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin: 16px 0;
-    box-shadow: 0 1px 3px rgba(15,23,42,0.12), 0 1px 2px rgba(15,23,42,0.24);
-    ">
-    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-    <span style="font-size: 24px;">{icon}</span>
+    return f"""<div class="insight-card" style="border-left:4px solid {accent_color};text-align:left;">
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:4px;">
+    <span style="width:26px;height:26px;display:inline-flex;flex-shrink:0;color:{accent_color};">{icon}</span>
     <div>
-    <h3 style="font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 800; color: #0F172A; margin: 0; letter-spacing: -0.01em;">{title}</h3>
+    <h3 class="insight-title" style="padding-left:0;margin-bottom:2px;">{title}</h3>
     {subtitle_html}
     </div>
     </div>
-    <div style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 900; letter-spacing: -0.03em; color: {accent_color}; margin: 8px 0;">{main_value}</div>
+    {value_html}
     {body_html}
+    {date_html}
     </div>"""
 
 

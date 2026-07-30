@@ -59,7 +59,7 @@ from components_coastal import render_coastal_intelligence
 from components_group import render_group_tab
 from data_quality import validate_ticker_data
 from ticker_redesign import render_ticker_redesigned, TICKER_REDESIGNED_CSS
-from pages import render_page
+from pages import render_page, render_top_nav, render_sub_nav, ALL_PAGE_KEYS, ICONS
 
 
 def md_to_html(text: str) -> str:
@@ -1038,8 +1038,8 @@ st.markdown("""
     color: var(--dp-text-1);
   }
   .insight-body {
-    font-size: 14.5px; color: var(--dp-text-2);
-    line-height: 1.70; margin: 0;
+    font-size: 15.5px; color: var(--dp-text-2);
+    line-height: 1.7; margin: 0;
     padding-left: 12px;
   }
 
@@ -9548,51 +9548,59 @@ if _requested_tab:
 
 # ── Initialize page routing ──────────────────────────────────────────────────
 if "page" not in st.session_state:
-    st.session_state.page = "occupancy"
+    st.session_state.page = "overview"
 
-# ── Page selector for new 12-page dashboard ──────────────────────────────────
-# Render the clean 12-page view by default; classic tabs available via sidebar toggle
+# ── Page selector for new 13-page dashboard ──────────────────────────────────
+# Render the clean multi-page view by default; classic tabs available via sidebar toggle
 use_classic_view = st.sidebar.checkbox("Use Classic View (6 tabs)", value=False, key="classic_toggle")
 
 if not use_classic_view:
-    # NEW CLEAN 12-PAGE VIEW
+    # NEW CLEAN MULTI-PAGE VIEW
+    # ── Query-param page routing (same convention as _requested_tab/tab_index
+    # below): a click on the top nav or a sub-nav pill is a plain <a href=
+    # "?page=..."> link, so it lands here as a query param on rerun. Read it
+    # once, apply it, then clear it so it doesn't stick around on future
+    # reruns (e.g. a manual back-button navigation).
+    _requested_page = st.query_params.get("page")
+    if _requested_page and _requested_page in ALL_PAGE_KEYS:
+        st.session_state.page = _requested_page
+        try:
+            del st.query_params["page"]
+        except Exception:
+            pass
+
+    # Sidebar kept deliberately light here — the owner's screenshot feedback
+    # was that the sidebar's long category/page button list was crowding the
+    # report and the focus should be the report itself. Full navigation
+    # (4-item top bar + sub-page pills) now lives in the main content area,
+    # rendered on every page via render_top_nav()/render_sub_nav() below.
     st.sidebar.markdown("**Dana Point PULSE**")
     st.sidebar.markdown("---")
 
-    page_categories = {
-        "🏨 Hotel Operations": [
-            ("⬥ Occupancy Outlook", "occupancy"),
-            ("💰 Rate Strategy", "rate_strategy"),
-            ("📊 Revenue Generation", "revenue"),
-            ("🗓️ Compression Calendar", "compression"),
-        ],
-        "👥 Visitor Economy": [
-            ("🗺️ Visitor Markets", "visitor_markets"),
-            ("💸 Spend Pathways", "spend"),
-            ("🛏️ Stay Patterns", "stay"),
-            ("👫 Group Demand", "group"),
-        ],
-        "🔮 Strategic Planning": [
-            ("🎉 Events Impact", "events"),
-            ("📈 Market Intelligence", "intelligence"),
-            ("👤 Stakeholder Brief", "stakeholder"),
-            ("🧠 Brain Status", "brain_status"),
-        ],
-    }
+    render_top_nav(st.session_state.page)
+    render_sub_nav(st.session_state.page)
 
-    for category, pages in page_categories.items():
-        st.sidebar.markdown(f"**{category}**")
-        for label, page_key in pages:
-            if st.sidebar.button(label, use_container_width=True, key=f"nav_{page_key}"):
-                st.session_state.page = page_key
-                st.rerun()
-
-    # Render the selected page
-    df_kpi = load_kpi_daily()
-    df_dfy = load_datafy_overview()
-    df_comp = load_compression()
-
-    render_page(st.session_state.page, df_kpi, df_dfy, df_comp)
+    # Render the selected page. Every loader below already exists elsewhere in
+    # this file and backs the Classic View tabs; pages.py reuses them so the
+    # two views never drift on the underlying numbers.
+    render_page(st.session_state.page, {
+        "kpi": load_kpi_daily(),
+        "dfy": load_datafy_overview(),
+        "comp": load_compression(),
+        "str": load_str_daily(),
+        "dma": load_datafy_dma(),
+        "spend": load_datafy_spending(),
+        "group": load_group_intelligence(),
+        "events": load_vdp_events(),
+        "zfe": load_zartico_future_events(),
+        "zartico_impact": load_zartico_events(),
+        "costar": load_costar_compset(),
+        "compset": load_str_compset(),
+        "costar_snap": load_costar_snapshot(),
+        "table_counts": get_table_counts(),
+        "log": load_load_log(),
+        "insights": load_insights(),
+    })
     st.stop()
 
 # ── Consolidated 6-tab navigation (Classic View) ──────────────────────────────
@@ -18358,12 +18366,13 @@ with tab_cs:
                         st.markdown("**Group Intelligence Insights**")
                         for _, row in grp_rows.iterrows():
                             from utils import format_insight_card
+                            from pages import ICONS
                             st.markdown(
                                 format_insight_card(
-                                    icon="👥",
+                                    icon=f'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:100%;height:100%;" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c2.4.4 4.5 2.4 4.5 5.8"/></svg>',
                                     title=row.get("headline", "")[:90] + ("…" if len(str(row.get("headline",""))) > 90 else ""),
                                     body=row.get("body", "")[:400] + ("…" if len(str(row.get("body",""))) > 400 else ""),
-                                    accent="#2563EB",
+                                    accent_color="#2563EB",
                                 ),
                                 unsafe_allow_html=True,
                             )
