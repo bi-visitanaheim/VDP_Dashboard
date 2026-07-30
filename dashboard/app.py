@@ -57,6 +57,8 @@ from chart_theme import (
 )
 from components_coastal import render_coastal_intelligence
 from components_group import render_group_tab
+from data_quality import validate_ticker_data
+from ticker_redesign import render_ticker_redesigned, TICKER_REDESIGNED_CSS
 
 
 def md_to_html(text: str) -> str:
@@ -8811,14 +8813,17 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Live KPI Ticker (1ax / Bloomberg dual-row marquee) ─────────────────────
+# ── Live KPI Ticker (Redesigned: Current/Forward/Reference sections) ────────
+st.markdown(TICKER_REDESIGNED_CSS, unsafe_allow_html=True)
 try:
+    quality_report = validate_ticker_data(df_kpi, df_dfy_ov, df_comp)
     st.markdown(
-        render_kpi_ticker(df_kpi, df_dfy_ov, df_later_ig_profile),
+        render_ticker_redesigned(df_kpi, df_dfy_ov, df_comp, df_later_ig_profile, quality_report),
         unsafe_allow_html=True,
     )
-except Exception:
-    pass  # Ticker is non-fatal, never crash the page
+except Exception as e:
+    _logger.error(f"Ticker render error: {e}")
+    st.warning("⚠️ KPI ticker not available. Refresh the page.")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BOARD REPORT HTML GENERATOR
