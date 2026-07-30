@@ -8813,17 +8813,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ── Live KPI Ticker (Redesigned: Current/Forward/Reference sections) ────────
-st.markdown(TICKER_REDESIGNED_CSS, unsafe_allow_html=True)
-try:
-    quality_report = validate_ticker_data(df_kpi, df_dfy_ov, df_comp)
-    st.markdown(
-        render_ticker_redesigned(df_kpi, df_dfy_ov, df_comp, df_later_ig_profile, quality_report),
-        unsafe_allow_html=True,
-    )
-except Exception as e:
-    _logger.error(f"Ticker render error: {e}")
-    st.warning("⚠️ KPI ticker not available. Refresh the page.")
+# ── KPI Ticker (Temporarily removed for dashboard restructuring) ────────────
+# Being replaced with multi-page layout. See DASHBOARD_RESTRUCTURING.md for details.
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BOARD REPORT HTML GENERATOR
