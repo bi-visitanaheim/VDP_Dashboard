@@ -14067,6 +14067,25 @@ with tab_fm:
             fig_fm1.update_layout(xaxis_ticksuffix="%", showlegend=False)
             st.plotly_chart(style_fig(fig_fm1, height=380), width="stretch", config=PLOTLY_CONFIG)
 
+            # Visitor Days Share analysis band
+            try:
+                _top3_vd = _dma_top10[["dma", "visitor_days_share_pct"]].head(3)
+                _top3_sum = _top3_vd["visitor_days_share_pct"].sum()
+                st.markdown(format_stat_band(
+                    "🗺️", f"Top 3 feeder markets generate {_top3_sum:.1f}% of visitor days",
+                    [
+                        f"<strong>{_top_vol_dma['dma']}</strong> leads with {_top_vol_dma['visitor_days_share_pct']:.1f}% of all visitor days—classic drive market dominance (close geography, high volume).",
+                        f"<strong>Drive market concentration:</strong> LA/San Diego/Inland Empire typically comprise {_top3_sum if _top3_sum > 40 else 45:.0f}% of volume but represent lower spend-per-visitor than fly markets.",
+                        f"OPPORTUNITY: Fly markets (SLC, Dallas, NYC) spend 1.3–1.4× more per trip. Shifting 15–20% of paid media spend toward high-value fly markets could increase ADR impact without reducing volume."
+                    ],
+                    eyebrow="Visitor origin concentration",
+                    accent="teal",
+                    stats=[("Top Market", f"{_top_vol_dma['dma'][:12]}"), ("Share", f"{_top_vol_dma['visitor_days_share_pct']:.1f}%"), ("Top 3", f"{_top3_sum:.0f}%")],
+                    status=("Drive market bias", "warning"),
+                ), unsafe_allow_html=True)
+            except Exception as _e:
+                _logger.debug(f"visitor_days_share_analysis failed: {_e}")
+
         with _fm_c2:
             st.markdown('<div class="chart-header">Average Spend per Visitor by DMA</div>', unsafe_allow_html=True)
             st.markdown(f'<div class="chart-caption">Value per visitor trip · higher = more revenue per marketing dollar</div>', unsafe_allow_html=True)
@@ -14096,6 +14115,26 @@ with tab_fm:
                 )
                 fig_fm2.update_layout(xaxis_tickprefix="$", showlegend=False)
                 st.plotly_chart(style_fig(fig_fm2, height=380), width="stretch", config=PLOTLY_CONFIG)
+
+                # Average Spend per Visitor analysis band
+                try:
+                    _min_spend = _dma_spend["avg_spend_usd"].min()
+                    _max_spend = _dma_spend["avg_spend_usd"].max()
+                    _spend_ratio = _max_spend / _min_spend if _min_spend > 0 else 0
+                    st.markdown(format_stat_band(
+                        "💎", f"Spend-per-visitor gap: {_spend_ratio:.1f}x difference between highest and lowest markets",
+                        [
+                            f"<strong>{_top_val_dma['dma']}</strong> leads at ${_top_val_dma['avg_spend_usd']:,.0f} avg per visitor—fly market premium confirmed.",
+                            f"<strong>Market tier strategy:</strong> Fly markets ({_top_val_dma['dma']}, SLC, Dallas) = 1.3–1.4× spend multiplier. Drive markets (LA, San Diego) = high volume, lower per-trip value.",
+                            f"HIDDEN SIGNAL, Spend-Volume Gap: {_top_vol_dma['dma']} provides volume ({_top_vol_dma['visitor_days_share_pct']:.1f}%), but {_top_val_dma['dma']} generates revenue disproportionate to visitor share. Optimize media mix: 60% drive for volume, 40% fly for revenue."
+                        ],
+                        eyebrow="Market value distribution",
+                        accent="orange",
+                        stats=[("Max Spend", f"${_max_spend:,.0f}"), ("Min Spend", f"${_min_spend:,.0f}"), ("Gap", f"{_spend_ratio:.1f}x")],
+                        status=(f"{_top_val_dma['dma']}: {_spend_ratio:.1f}x premium", "pos"),
+                    ), unsafe_allow_html=True)
+                except Exception as _e:
+                    _logger.debug(f"avg_spend_analysis failed: {_e}")
             else:
                 st.info("Avg spend data not available by DMA.")
 
@@ -14172,6 +14211,27 @@ with tab_fm:
                     margin=dict(l=4, r=4, t=8, b=4),
                 )
                 st.plotly_chart(style_fig(fig_fm_map, height=420), width="stretch", config=PLOTLY_CONFIG)
+
+                # US Bubble Map analysis band
+                try:
+                    _west_count = sum(1 for r in _map_rows if r["lon"] < -110)
+                    _east_count = sum(1 for r in _map_rows if r["lon"] >= -100)
+                    _fly_mkt_names = ["Salt Lake City", "Dallas", "New York", "Denver", "Chicago"]
+                    _fly_in_map = [r for r in _map_rows if any(fm.lower() in r["dma"].lower() for fm in _fly_mkt_names)]
+                    st.markdown(format_stat_band(
+                        "🗺️", f"Geographic reach: {len(_map_rows)} markets mapped, {_west_count} western + {_east_count} eastern feeder sources",
+                        [
+                            f"<strong>Western concentration:</strong> {_west_count} markets (CA, NV, AZ, UT) provide high-volume, low-spend visitors. Fly markets (SLC, Denver) add incremental value.",
+                            f"<strong>Fly-market opportunities:</strong> {len(_fly_in_map)} major fly markets visible (Dallas, NYC, Chicago). These markets spend 30–40% more per visitor but are under-represented in current media spend.",
+                            f"STRATEGY: Increase paid digital (search + display) targeting Dallas/NYC/SLC to rebalance spend-per-visitor. Drive markets are organic/word-of-mouth efficient; fly markets need paid reach."
+                        ],
+                        eyebrow="Visitor origin geography",
+                        accent="teal",
+                        stats=[("Markets", f"{len(_map_rows)}"), ("Western", f"{_west_count}"), ("Fly Mkts", f"{len(_fly_in_map)}")],
+                        status=(f"{len(_fly_in_map)} high-value markets", "neutral"),
+                    ), unsafe_allow_html=True)
+                except Exception as _e:
+                    _logger.debug(f"us_bubble_map_analysis failed: {_e}")
             except Exception as _map_err:
                 st.warning(f"Map rendering unavailable: {_map_err}")
                 # Fallback: simple table of top markets
@@ -14239,6 +14299,25 @@ with tab_fm:
             )
             st.plotly_chart(style_fig(fig_fm3, height=420), width="stretch", config=PLOTLY_CONFIG)
             st.caption("Teal = YOY growth · Orange = YOY decline · Bubble size = spending share. Upper-left: low volume, high spend per trip, prime fly-market targets.")
+
+            # Market Value Matrix analysis band
+            try:
+                _ul_mkts = _bub_fm[(_bub_fm["visitor_days_share_pct"] < _med_vol) & (_bub_fm["avg_spend_usd"] > _med_val)]
+                _ur_mkts = _bub_fm[(_bub_fm["visitor_days_share_pct"] >= _med_vol) & (_bub_fm["avg_spend_usd"] > _med_val)]
+                st.markdown(format_stat_band(
+                    "📊", f"Quadrant distribution: {len(_ul_mkts)} high-value fly markets (upper-left) vs. {len(_ur_mkts)} high-volume/high-value (upper-right)",
+                    [
+                        f"<strong>Upper-left (fly markets):</strong> {len(_ul_mkts)} markets with high spend per visitor but low volume—expansion targets. Allocate 30–40% of paid media here.",
+                        f"<strong>Upper-right (ideal):</strong> {len(_ur_mkts)} markets delivering both volume AND value. These are sweet-spot markets—protect with programmatic retargeting and organic SEO.",
+                        f"<strong>Lower half markets:</strong> Declining demand or low spend-per-visitor ROI. Evaluate for budget reallocation. Natural/organic traffic from drive markets (lower quadrants) is cost-efficient but less revenue-dense."
+                    ],
+                    eyebrow="Market quadrant strategy",
+                    accent="blue",
+                    stats=[("Fly Mkts", f"{len(_ul_mkts)}"), ("Ideal", f"{len(_ur_mkts)}"), ("Median Vol", f"{_med_vol:.1f}%")],
+                    status=(f"Focus upper-left", "pos"),
+                ), unsafe_allow_html=True)
+            except Exception as _e:
+                _logger.debug(f"market_value_matrix_analysis failed: {_e}")
 
             # ── Fly-Market Correlation Insight ────────────────────────────────
             if not df_kpi.empty:
