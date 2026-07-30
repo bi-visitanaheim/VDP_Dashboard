@@ -1067,6 +1067,76 @@ RELATIONSHIPS: list[tuple[str, str, str, str, str]] = [
 
     ("weather_observations",         "noaa_marine_monthly",          "cross_ref",     "obs_time→year+month",
      "Land station observations and NOAA buoy readings together describe the full coastal condition picture"),
+
+    # ── CoStar Market Daily/Monthly (raw HospitalityDataGrid export) ───────
+    ("costar_market_daily",          "fact_str_metrics",             "cross_ref",     "as_of_date",
+     "CoStar's raw daily submarket export cross-referenced against STR daily VDP metrics for third-party rate validation"),
+
+    ("costar_market_daily",          "costar_market_monthly",        "same_source",   "as_of_date→report_period",
+     "costar_market_daily rolls up into costar_market_monthly — same CoStar submarket export, daily vs. monthly grain"),
+
+    ("costar_market_monthly",        "costar_monthly_performance",   "cross_platform","report_period→as_of_date",
+     "costar_market_monthly (raw CoStar tool export, current) and costar_monthly_performance (parsed from CoStar PDF reports) measure the same submarket — cross-check for consistency"),
+
+    ("costar_market_monthly",        "kpi_daily_summary",            "cross_ref",     "report_period→as_of_date",
+     "CoStar submarket OCC/ADR/RevPAR benchmarks VDP's own STR-reported performance"),
+
+    # ── Visit California Resident Sentiment ─────────────────────────────────
+    ("visit_ca_resident_sentiment",  "kpi_daily_summary",            "context",       "area/report_period",
+     "Orange County resident sentiment on tourism benefits/costs contextualizes community support for VDP visitor growth"),
+
+    ("visit_ca_resident_sentiment",  "datafy_overview_kpis",         "context",       "area",
+     "Resident sentiment scores (jobs, cost of living, quality of life impact) inform destination-management narrative alongside visitor economy KPIs"),
+
+    # ── U.S. Travel Inbound Market Profiles (national overseas visitor activity) ──
+    ("us_travel_inbound_market_profile", "datafy_overview_category_spending", "context", "year",
+     "National overseas-visitor activity participation trends (Hotel-Motel, Shopping, Fine-Dining, Vacation, etc.) contextualize Datafy's local visitor spending-by-category mix"),
+
+    ("us_travel_inbound_market_profile", "fact_str_metrics",         "context",       "year→as_of_date",
+     "National inbound Hotel-Motel visitor volume trend provides macro demand context for VDP's local STR performance"),
+
+    # ── Datafy: new July-2026 Advanced/Enhanced Spending Overview family ───
+    ("datafy_overview_instate_outstate",     "datafy_overview_dma",              "enriches", "report_period",
+     "In-state vs. out-of-state spend split enriches the DMA feeder-market breakdown with an origin-state summary"),
+
+    ("datafy_overview_local_visitor_spend",  "datafy_overview_kpis",             "enriches", "report_period",
+     "Local vs. visitor spend split enriches the annual overview KPIs with a resident/visitor spending divide"),
+
+    ("datafy_overview_spending_peak_insights", "datafy_overview_category_spending", "context", "report_period",
+     "Highest/lowest spend day-of-week context explains seasonality in the category spending breakdown"),
+
+    ("datafy_overview_spending_by_month",    "fact_str_metrics",                 "cross_ref", "year+month→as_of_date",
+     "Datafy monthly visitor spending cross-referenced against STR monthly room revenue for total economic-impact validation"),
+
+    ("datafy_advanced_spending_top_markets", "datafy_overview_dma",              "cross_ref", "dma",
+     "Advanced Spending Overview top (hotel) markets is a finer-grained, more current cut of the same DMA spend-share concept as datafy_overview_dma"),
+
+    ("datafy_overview_spend_density_by_zip", "datafy_overview_dma",              "enriches", "report_period",
+     "ZIP-level spend density enriches the DMA-level feeder market view with sub-metro geographic resolution"),
+
+    ("datafy_overview_los_distribution",     "datafy_overview_kpis",             "enriches", "report_period",
+     "Length-of-stay distribution enriches the overview avg_los_days KPI with the full stay-length curve"),
+
+    ("datafy_overview_state_origin",         "datafy_overview_dma",              "cross_ref", "report_period",
+     "State-of-origin share is a coarser geographic cut of the same visitor-origin concept as the DMA breakdown"),
+
+    ("datafy_overview_visitation_by_month",  "kpi_daily_summary",                "cross_ref", "year+month→as_of_date",
+     "Datafy monthly visitor-days cross-referenced against STR monthly demand (room-nights) for total visitation vs. hotel-only demand"),
+
+    ("datafy_overview_local_visitor_trips",  "datafy_overview_kpis",             "enriches", "year→report_period",
+     "Local vs. visitor trip and visitor-day split by year enriches the annual overview KPIs with a resident/visitor trip divide"),
+
+    ("datafy_overview_weekday_visitation",   "kpi_daily_summary",                "cross_ref", "day_of_week",
+     "Datafy weekday vs. weekend visitor-day totals cross-referenced against STR weekday/weekend occupancy gap"),
+
+    ("datafy_social_ga_performance_visual",  "datafy_social_audience_overview",  "enriches", "report_period",
+     "GA4 performance visual summary (sessions, engagement rate, conversions) enriches the audience overview snapshot"),
+
+    ("datafy_campaign_pixel_fires_daily",    "datafy_attribution_media_kpis",    "context",  "fire_date→report_period",
+     "Daily campaign pixel fire counts provide the day-level activity trend underlying the media attribution KPI totals"),
+
+    ("datafy_campaign_pixel_fires_daily",    "kpi_daily_summary",                "cross_ref", "fire_date→as_of_date",
+     "Daily campaign pixel activity cross-referenced against same-day STR demand to gauge campaign-to-booking lag"),
 ]
 
 

@@ -18,15 +18,18 @@ Pipeline steps:
    3. compute_kpis.py             — pivot STR                   → kpi_daily_summary, kpi_compression_quarterly
    4. load_datafy_reports.py      — Datafy visitor economy CSVs → 17 datafy_* tables (skip-safe)
    5. load_costar_reports.py      — CoStar market data          → 7 costar_* tables (skip-safe)
+   5a. load_costar_market_daily.py — CoStar raw submarket export (daily_costar.xlsx/monhtly_costar.xlsx) → costar_market_daily, costar_market_monthly (skip-safe)
    6. compute_insights.py         — AI insights engine          → insights_daily (FAIL-FAST)
    7. load_zartico_reports.py     — Zartico historical PDFs     → 8 zartico_* tables (skip-safe)
    8. fetch_vdp_events.py         — VDP event calendar scraper  → vdp_events (skip-safe)
    9. load_visit_ca.py            — Visit California Excel      → 5 visit_ca_* tables incl. travel_indicators (skip-safe)
   9a. load_visit_ca_gmp.py       — Visit CA Global Market Profile PDFs → visit_ca_intl_market_profiles (skip-safe)
-  9b. load_visit_ca_lodging.py   — CALodgingPerformance_202601.xls → visit_ca_lodging_monthly (skip-safe)
+  9b. load_visit_ca_lodging.py   — CALodgingPerformance monthly XLS → visit_ca_lodging_monthly (skip-safe)
+  9c. load_visit_ca_sentiment.py — CA Resident Sentiment survey → visit_ca_resident_sentiment (skip-safe)
   10. load_later_reports.py       — Later.com social CSVs       → 14 later_* tables (skip-safe)
   11. fetch_event_analytics.py    — Event impact analysis       → 5 events_* tables (skip-safe)
   12. audit_data.py               — data-quality audit; stdout summary (skip-safe)
+  11a. load_us_travel_inbound_profiles.py — ITA Inbound Market Profile xlsx (7 categories) → us_travel_inbound_market_profile (skip-safe)
   12. fetch_fred_data.py          — FRED macro indicators       → fred_economic_indicators (skip-safe, needs FRED_API_KEY)
   13. fetch_google_trends.py      — Google search demand        → google_trends_weekly (skip-safe)
   14. fetch_weather_data.py       — Open-Meteo coastal weather  → weather_monthly (skip-safe)
@@ -124,10 +127,16 @@ STEPS = [
     ("compute_kpis",      os.path.join(BASE_DIR, "compute_kpis.py"),            True),
     ("load_datafy",       os.path.join(BASE_DIR, "load_datafy_reports.py"),     False),
     ("load_costar",           os.path.join(BASE_DIR, "load_costar_reports.py"),     False),
+    # CoStar's raw submarket HospitalityDataGrid export (daily_costar.xlsx / monhtly_costar.xlsx)
+    # — current, higher-frequency than the PDF-parsed costar_monthly_performance table above.
+    ("load_costar_market_daily", os.path.join(BASE_DIR, "load_costar_market_daily.py"), False),
     # U.S. Travel Association national benchmarks (group + business travel + traveler types)
     # Seeds hardcoded 2024 benchmarks + parses any PDFs in data/us_travel/.
     # Download monthly from ustravel.org/state-of-group-travel-report and save to data/us_travel/
     ("load_us_travel",        os.path.join(BASE_DIR, "load_us_travel_reports.py"),  False),
+    # U.S. Dept of Commerce ITA Inbound Market Profile xlsx (Air/Hotel-Motel/Vacation/etc.)
+    # — national overseas-visitor activity-participation trend, added 2026-07-30
+    ("load_us_travel_inbound", os.path.join(BASE_DIR, "load_us_travel_inbound_profiles.py"), False),
     # Group benchmarks must run before compute_insights so group_intelligence data is available
     ("seed_group_benchmarks", os.path.join(BASE_DIR, "seed_group_benchmarks.py"), False),
     ("compute_insights",      os.path.join(BASE_DIR, "compute_insights.py"),      True),
@@ -167,6 +176,8 @@ STEPS = [
     ("load_visit_ca_gmp",     os.path.join(BASE_DIR, "load_visit_ca_gmp.py"),     False),
     # CA statewide lodging performance monthly data (XLS format)
     ("load_visit_ca_lodging", os.path.join(BASE_DIR, "load_visit_ca_lodging.py"), False),
+    # California Resident Sentiment on Travel & Tourism (added 2026-07-30)
+    ("load_visit_ca_sentiment", os.path.join(BASE_DIR, "load_visit_ca_sentiment.py"), False),
     # InsideAirbnb STVR market data — competitive landscape for hotel market
     ("fetch_airbnb_market",   os.path.join(BASE_DIR, "fetch_airbnb_market.py"),   False),
     # Beach + marine visitor-experience data (added 2026-05-22)

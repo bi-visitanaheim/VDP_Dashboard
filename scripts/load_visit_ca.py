@@ -16,10 +16,10 @@ warnings.filterwarnings("ignore")
 DB_PATH = Path(__file__).parent.parent / "data" / "analytics.sqlite"
 DATA_DIR = Path(__file__).parent.parent / "data" / "Visit_California"
 
-TRAVEL_FILE = DATA_DIR / "CATravelForecast_Feb2026_data.xlsx"
-LODGING_FILE = DATA_DIR / "State and Regional lodging Forecast -February 2026.xlsx"
-AIRPORT_FILE = DATA_DIR / "CAAirportPassengerTraffic -December 2025 .xlsx"
-INTL_FILE = DATA_DIR / "CAInternationalArrivals_Jan 2026.xlsx"
+TRAVEL_FILE = DATA_DIR / "CATravelForecast_May2026_data.xlsx"
+LODGING_FILE = DATA_DIR / "State and Regional lodging Forecast -May 2026 (1).xlsx"
+AIRPORT_FILE = DATA_DIR / "CAAirportPassengerTraffic -April 2026.xlsx"
+INTL_FILE = DATA_DIR / "CAInternationalArrivals_June 2026.xlsx"
 
 # Forecast threshold: years >= this are forecast
 FORECAST_FROM = 2025
@@ -145,8 +145,25 @@ def load_travel_forecast(conn):
 
     df = pd.read_excel(TRAVEL_FILE, header=None)
 
-    # Row 5 contains year values starting at col 2
-    years_row = df.iloc[5]
+    # Year header row shifts between file vintages (row 5 in some exports, row 4
+    # in others) — locate it dynamically as the row with the most valid-year cells.
+    year_row_idx, best_count = None, 0
+    for ridx in range(min(10, len(df))):
+        cnt = 0
+        for val in df.iloc[ridx]:
+            try:
+                yr = int(float(val))
+                if 2000 <= yr <= 2035:
+                    cnt += 1
+            except (TypeError, ValueError):
+                pass
+        if cnt > best_count:
+            best_count, year_row_idx = cnt, ridx
+    if year_row_idx is None:
+        print(f"{ts()} [WARN] could not locate year header row in {TRAVEL_FILE.name}")
+        return 0
+
+    years_row = df.iloc[year_row_idx]
     year_cols = {}
     for col_idx, val in years_row.items():
         try:
@@ -431,6 +448,12 @@ def _parse_airport_sheet(df, airport_name):
       Rows 5-16: month rows (Total | Domestic | International data)
     Columns: 1=total_2025, 2=total_2024, 3=total_yoy | 5=dom_2025, 6=dom_2024, 7=dom_yoy | 9=intl_2025, 10=intl_2024, 11=intl_yoy
     """
+    # Header row (row 3) carries the report year in col 1 ("2026", "2025", ...);
+    # hardcoding this broke every export vintage after the year rolled over.
+    report_year = _safe_int(df.iloc[3, 1]) if len(df) > 3 else None
+    if report_year is None:
+        report_year = 2025
+
     rows = []
     for row_idx in range(5, min(len(df), 20)):
         month_label = str(df.iloc[row_idx, 0]).strip() if pd.notna(df.iloc[row_idx, 0]) else ""
@@ -443,7 +466,7 @@ def _parse_airport_sheet(df, airport_name):
         dom_pax = _safe_int(df.iloc[row_idx, 5])
         dom_yoy = _safe_float(df.iloc[row_idx, 7])
 
-        # International: col 9 for 2025 value
+        # International: col 9 for current-year value
         intl_pax = None
         intl_yoy = None
         ncols = len(df.columns)
@@ -457,7 +480,7 @@ def _parse_airport_sheet(df, airport_name):
 
         rows.append({
             "airport": airport_name,
-            "year": 2025,
+            "year": report_year,
             "month": month_num,
             "total_pax": total_pax,
             "domestic_pax": dom_pax,

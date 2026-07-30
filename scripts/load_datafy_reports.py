@@ -103,6 +103,8 @@ SKIP_STEMS: set[str] = {
     "attributioninsightsvisitorwebsiteattributiongroups_export (2)",
     "attributioninsightsoverviewmediabreakdown_export (1)",
     "attribution insights media overview totals_export (1)",
+    # Correlation Market columns are always "None" in this export — no usable data.
+    "enhanced spend correlation insights_export (2)",
 }
 
 # ─── Legacy file prefix → (DB table, subfolder) ───────────────────────────────
@@ -456,6 +458,153 @@ SCHEMAS: dict[str, str] = {
             spend_share_pct     REAL,
             avg_spend_usd       REAL,
             loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    # ── New tables (July 2026 "Advanced/Enhanced Spending Overview" export set) ──
+
+    "datafy_overview_instate_outstate": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_instate_outstate (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            in_state_pct        REAL,
+            out_of_state_pct    REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_local_visitor_spend": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_local_visitor_spend (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            local_pct           REAL,
+            visitor_pct         REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_spending_peak_insights": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_spending_peak_insights (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            highest_spend_date  TEXT,
+            highest_spend_day   TEXT,
+            lowest_spend_day    TEXT,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_spending_by_month": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_spending_by_month (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            year                INTEGER,
+            month                TEXT,
+            spending_usd        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now')),
+            UNIQUE(report_period_start, report_period_end, year, month) ON CONFLICT REPLACE
+        );""",
+
+    "datafy_advanced_spending_top_markets": """
+        CREATE TABLE IF NOT EXISTS datafy_advanced_spending_top_markets (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            market_type         TEXT,
+            dma                 TEXT,
+            spend_share_pct     REAL,
+            avg_spend_usd       REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_spend_density_by_zip": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_spend_density_by_zip (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            zip_code            TEXT,
+            spend_share_pct     REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_los_distribution": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_los_distribution (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            length_of_stay      TEXT,
+            pct_of_trips        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_state_origin": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_state_origin (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            state               TEXT,
+            share_of_trips_pct  REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_visitation_by_month": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_visitation_by_month (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            year                INTEGER,
+            month               TEXT,
+            visitor_days        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now')),
+            UNIQUE(report_period_start, report_period_end, year, month) ON CONFLICT REPLACE
+        );""",
+
+    "datafy_overview_local_visitor_trips": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_local_visitor_trips (
+            id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start      TEXT,
+            report_period_end        TEXT,
+            year                     INTEGER,
+            local_trips_pct          REAL,
+            visitor_trips_pct        REAL,
+            local_visitor_days_pct   REAL,
+            visitor_visitor_days_pct REAL,
+            loaded_at                TEXT DEFAULT (datetime('now')),
+            UNIQUE(report_period_start, report_period_end, year) ON CONFLICT REPLACE
+        );""",
+
+    "datafy_overview_weekday_visitation": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_weekday_visitation (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            day_of_week         TEXT,
+            visitor_days        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now')),
+            UNIQUE(report_period_start, report_period_end, day_of_week) ON CONFLICT REPLACE
+        );""",
+
+    "datafy_campaign_pixel_fires_daily": """
+        CREATE TABLE IF NOT EXISTS datafy_campaign_pixel_fires_daily (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            fire_date    TEXT NOT NULL,
+            fires        INTEGER,
+            loaded_at    TEXT DEFAULT (datetime('now')),
+            UNIQUE(fire_date) ON CONFLICT REPLACE
+        );""",
+
+    "datafy_social_ga_performance_visual": """
+        CREATE TABLE IF NOT EXISTS datafy_social_ga_performance_visual (
+            id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start      TEXT,
+            report_period_end        TEXT,
+            audience_name            TEXT,
+            sessions                 INTEGER,
+            screen_page_views        INTEGER,
+            avg_session_duration     TEXT,
+            engagement_rate_pct      REAL,
+            conversions              INTEGER,
+            loaded_at                TEXT DEFAULT (datetime('now'))
         );""",
 
     "datafy_attribution_polygons": """
@@ -933,6 +1082,359 @@ def parse_spending_by_category(csv_path: str, cur, ps: str, pe: str) -> int:
 
     _insert_rows(cur, table, rows_out)
     return len(rows_out)
+
+
+def parse_instate_outstate(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Advanced Spending Overview-In Vs Out Of State*.csv → datafy_overview_instate_outstate"""
+    table = "datafy_overview_instate_outstate"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    if not rows_in:
+        return 0
+    row = rows_in[0]
+    rows_out = [{
+        "report_period_start": ps,
+        "report_period_end":   pe,
+        "in_state_pct":        _clean_num(row.get("In-State", "")),
+        "out_of_state_pct":    _clean_num(row.get("Out-of-State", "")),
+    }]
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_local_visitor_spend(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Advanced Spending Overview-Local Vs Visitor*.csv → datafy_overview_local_visitor_spend"""
+    table = "datafy_overview_local_visitor_spend"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    if not rows_in:
+        return 0
+    row = rows_in[0]
+    rows_out = [{
+        "report_period_start": ps,
+        "report_period_end":   pe,
+        "local_pct":           _clean_num(row.get("Local", "")),
+        "visitor_pct":         _clean_num(row.get("Visitor", "")),
+    }]
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_spending_peak_insights(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Advanced Spending Overview-Peak Insights*.csv → datafy_overview_spending_peak_insights"""
+    table = "datafy_overview_spending_peak_insights"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    if not rows_in:
+        return 0
+    row = rows_in[0]
+    rows_out = [{
+        "report_period_start": ps,
+        "report_period_end":   pe,
+        "highest_spend_date":  str(row.get("Highest Spend Date", "")).strip(),
+        "highest_spend_day":   str(row.get("Highest Spend Day", "")).strip(),
+        "lowest_spend_day":    str(row.get("Lowest Spend Day", "")).strip(),
+    }]
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_spending_by_month(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Advanced Spending Overview-Spending By Year*.csv → datafy_overview_spending_by_month"""
+    table = "datafy_overview_spending_by_month"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        month = str(row.get("Month", "")).strip()
+        if not month:
+            continue
+        try:
+            year = int(str(row.get("Year", "")).strip())
+        except ValueError:
+            year = None
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "year":                year,
+            "month":               month,
+            "spending_usd":        _clean_money(row.get("Spending", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def _parse_advanced_top_markets(csv_path: str, cur, ps: str, pe: str, market_type: str) -> int:
+    """Shared body for Advanced Spending Overview Top (Hotel) Markets*.csv → datafy_advanced_spending_top_markets"""
+    table = "datafy_advanced_spending_top_markets"
+    cur.execute(
+        f"DELETE FROM {table} WHERE report_period_start=? AND report_period_end=? AND market_type=?",
+        (ps, pe, market_type),
+    )
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        dma = str(row.get("DMA", "")).strip()
+        if not dma:
+            continue
+        raw_share = row.get("Share of Spend %", "")
+        try:
+            share = float(str(raw_share).strip())
+        except ValueError:
+            share = None
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "market_type":         market_type,
+            "dma":                 dma,
+            "spend_share_pct":     share,
+            "avg_spend_usd":       _clean_money(row.get("Avg. Spend", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_advanced_top_markets(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Advanced Spending Overview-Top Markets*.csv → datafy_advanced_spending_top_markets (market_type='overall')"""
+    return _parse_advanced_top_markets(csv_path, cur, ps, pe, "overall")
+
+
+def parse_advanced_top_hotel_markets(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Advanced Spending Overview-Top Hotel Markets*.csv → datafy_advanced_spending_top_markets (market_type='hotel')"""
+    return _parse_advanced_top_markets(csv_path, cur, ps, pe, "hotel")
+
+
+def parse_spend_density_by_zip(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Enhanced Spending Density Map*.csv → datafy_overview_spend_density_by_zip"""
+    table = "datafy_overview_spend_density_by_zip"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        zip_code = str(row.get("Zip Code", "")).strip()
+        if not zip_code:
+            continue
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "zip_code":            zip_code,
+            "spend_share_pct":     _clean_num(row.get("Spend Share", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_los_distribution(csv_path: str, cur, ps: str, pe: str) -> int:
+    """LengthOfStayDonut_Export*.csv → datafy_overview_los_distribution"""
+    table = "datafy_overview_los_distribution"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        los = str(row.get("Length of Stay", "")).strip()
+        if not los:
+            continue
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "length_of_stay":      los,
+            "pct_of_trips":        _clean_pct(row.get("% of Trips", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_state_origin(csv_path: str, cur, ps: str, pe: str) -> int:
+    """StateMap_Export*.csv → datafy_overview_state_origin"""
+    table = "datafy_overview_state_origin"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        state = str(row.get("State", "")).strip()
+        if not state:
+            continue
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "state":               state,
+            "share_of_trips_pct":  _clean_pct(row.get("Share of Trips", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_visitation_by_month(csv_path: str, cur, ps: str, pe: str) -> int:
+    """VisitationByYear_Export*.csv → datafy_overview_visitation_by_month"""
+    table = "datafy_overview_visitation_by_month"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        month = str(row.get("Month", "")).strip()
+        if not month:
+            continue
+        try:
+            year = int(str(row.get("Year", "")).strip())
+        except ValueError:
+            year = None
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "year":                year,
+            "month":               month,
+            "visitor_days":        _clean_num(row.get("Visitor Days", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_local_visitor_trips(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Visitation_Export*.csv → datafy_overview_local_visitor_trips"""
+    table = "datafy_overview_local_visitor_trips"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        try:
+            year = int(str(row.get("Year", "")).strip())
+        except ValueError:
+            continue
+        rows_out.append({
+            "report_period_start":      ps,
+            "report_period_end":        pe,
+            "year":                     year,
+            "local_trips_pct":          _clean_pct(row.get("Local Trips", "")),
+            "visitor_trips_pct":        _clean_pct(row.get("Visitor Trips", "")),
+            "local_visitor_days_pct":   _clean_pct(row.get("Local Visitor Days", "")),
+            "visitor_visitor_days_pct": _clean_pct(row.get("Visitor Visitor Days", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_weekday_visitation(csv_path: str, cur, ps: str, pe: str) -> int:
+    """WeekdayVsWeekend_Export*.csv → datafy_overview_weekday_visitation"""
+    table = "datafy_overview_weekday_visitation"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        day = str(row.get("Day", "")).strip()
+        if not day:
+            continue
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "day_of_week":         day,
+            "visitor_days":        _clean_num(row.get("Visitor Days", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_ga_performance_visual(csv_path: str, cur, ps: str, pe: str) -> int:
+    """GoogleAnalytics-PerformanceVisual_Export*.csv → datafy_social_ga_performance_visual"""
+    table = "datafy_social_ga_performance_visual"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        audience = str(row.get("Audience Name", "")).strip()
+        if not audience:
+            continue
+        try:
+            sessions = int(_clean_num(row.get("Sessions", "")) or 0)
+        except (TypeError, ValueError):
+            sessions = None
+        try:
+            page_views = int(_clean_num(row.get("Screen Page Views", "")) or 0)
+        except (TypeError, ValueError):
+            page_views = None
+        try:
+            conversions = int(_clean_num(row.get("Conversions", "")) or 0)
+        except (TypeError, ValueError):
+            conversions = None
+        rows_out.append({
+            "report_period_start":  ps,
+            "report_period_end":    pe,
+            "audience_name":        audience,
+            "sessions":             sessions,
+            "screen_page_views":    page_views,
+            "avg_session_duration": str(row.get("Average Session Duration", "")).strip(),
+            "engagement_rate_pct":  _clean_pct(row.get("Engagement Rate", "")),
+            "conversions":          conversions,
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_campaign_pixel_fires(csv_path: str, cur, ps: str, pe: str) -> int:
+    """Daily Pixel Fire Report*.csv → datafy_campaign_pixel_fires_daily (date-keyed, ps/pe unused)"""
+    table = "datafy_campaign_pixel_fires_daily"
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    count = 0
+    for row in rows_in:
+        fire_date = str(row.get("date", "")).strip()
+        if not fire_date:
+            continue
+        fires = _clean_num(row.get("fires", ""))
+        cur.execute(
+            f"INSERT INTO {table} (fire_date, fires) VALUES (?, ?) "
+            f"ON CONFLICT(fire_date) DO UPDATE SET fires=excluded.fires, loaded_at=datetime('now')",
+            (fire_date, int(fires) if fires is not None else None),
+        )
+        count += 1
+
+    return count
 
 
 def parse_top_demographics(csv_path: str, cur, ps: str, pe: str) -> int:
@@ -1491,6 +1993,18 @@ NEW_FILE_HANDLERS: list[tuple[str, str, object]] = [
     ("topmarkets_export",                                      "datafy_overview_top_markets",                    parse_top_markets),
     ("marketanalysis-marketanalysistopmarkets_export",         "datafy_overview_top_markets",                    parse_top_markets),
     ("toppois_export",                                         "datafy_overview_top_pois",                       parse_top_pois),
+    ("advanced spending overview-in vs out of state",          "datafy_overview_instate_outstate",               parse_instate_outstate),
+    ("advanced spending overview-local vs visitor",            "datafy_overview_local_visitor_spend",            parse_local_visitor_spend),
+    ("advanced spending overview-peak insights",                "datafy_overview_spending_peak_insights",         parse_spending_peak_insights),
+    ("advanced spending overview-spending by year",             "datafy_overview_spending_by_month",              parse_spending_by_month),
+    ("advanced spending overview-top hotel markets",            "datafy_advanced_spending_top_markets",           parse_advanced_top_hotel_markets),
+    ("advanced spending overview-top markets",                  "datafy_advanced_spending_top_markets",           parse_advanced_top_markets),
+    ("enhanced spending density map",                           "datafy_overview_spend_density_by_zip",           parse_spend_density_by_zip),
+    ("lengthofstaydonut_export",                                "datafy_overview_los_distribution",               parse_los_distribution),
+    ("statemap_export",                                         "datafy_overview_state_origin",                   parse_state_origin),
+    ("visitationbyyear_export",                                 "datafy_overview_visitation_by_month",            parse_visitation_by_month),
+    ("visitation_export",                                       "datafy_overview_local_visitor_trips",            parse_local_visitor_trips),
+    ("weekdayvsweekend_export",                                 "datafy_overview_weekday_visitation",             parse_weekday_visitation),
 
     # ── Attribution Website ───────────────────────────────────────────────────
     ("attribution insights top polygons",                      "datafy_attribution_polygons",                    parse_attribution_polygons),
@@ -1506,6 +2020,7 @@ NEW_FILE_HANDLERS: list[tuple[str, str, object]] = [
     ("attribution insights media overview totals",             "datafy_attribution_media_kpis",                  parse_media_kpis_new),
     ("attribution insights media overview top markets",        "datafy_attribution_media_top_markets",           parse_media_top_markets_new),
     ("attribution insights media top markets",                 "datafy_attribution_media_top_markets",           parse_media_top_markets_new),
+    ("daily pixel fire report",                                 "datafy_campaign_pixel_fires_daily",              parse_campaign_pixel_fires),
 
     # ── Social ────────────────────────────────────────────────────────────────
     ("googleanalytics-devicebreakdown",                        "datafy_social_device_breakdown",                 parse_device_breakdown),
@@ -1515,6 +2030,7 @@ NEW_FILE_HANDLERS: list[tuple[str, str, object]] = [
     ("googleanalytics-acquisition-channels",                   "datafy_social_ga_channels",                      parse_ga_channels),
     ("googleanalytics-geographicbreakdown",                    "datafy_social_geo_breakdown",                    parse_geo_breakdown),
     ("googleanalytics-mostpopularpages",                       "datafy_social_top_pages",                        parse_popular_pages_new),
+    ("googleanalytics-performancevisual",                      "datafy_social_ga_performance_visual",            parse_ga_performance_visual),
 ]
 
 
