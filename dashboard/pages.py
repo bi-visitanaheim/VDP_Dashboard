@@ -94,6 +94,12 @@ PAGE_LABELS = {
 }
 ALL_PAGE_KEYS = ["overview"] + list(PAGE_TO_CATEGORY.keys())
 
+# Set by render_page() just before it dispatches to a page function, so _hero()
+# can build a breadcrumb without every one of the 13 page functions needing to
+# pass its own category/label through. Defaults to "overview" so a direct call
+# to a page function in a test/smoke-test context never raises.
+_CURRENT_PAGE = "overview"
+
 
 def _icon(key: str, size: int = 22, color: str = "") -> str:
     """Wrap an ICONS entry in a sized inline-flex span so it renders cleanly
@@ -113,6 +119,40 @@ def _icon(key: str, size: int = 22, color: str = "") -> str:
 # app.py's `if not use_classic_view:` block) rather than st.button, because a
 # button can't sit outside the sidebar column carrying inline SVG easily.
 # ═══════════════════════════════════════════════════════════════════════════
+
+def render_masthead(last_str_update: str = "", period_note: str = "") -> None:
+    """Persistent dark top bar rendered once, above render_top_nav(), on every
+    page in both the primary nav and Classic View. Carries the wordmark, two
+    real (never decorative) status pills — LIVE and the STR as-of date, both
+    computed by the caller from the actual data — and a Board Report export
+    action that triggers the browser's print dialog via the existing
+    @media print rules already used by the print/export flow elsewhere in
+    app.py. `period_note`, if given, surfaces the *real* current value of
+    render_period_selector() on pages where that control applies, rather than
+    introducing a second, competing period control that doesn't drive anything."""
+    as_of_html = (
+        f'<span class="pulse-pill">STR THROUGH {last_str_update}</span>' if last_str_update else ""
+    )
+    period_html = f'<span class="pulse-pill">{period_note}</span>' if period_note else ""
+    st.markdown(
+        f'<div class="pulse-topbar">'
+        f'<a href="?page=overview" target="_self" class="pulse-topbar-brand">'
+        f'<span class="pulse-topbar-mark">{_icon("overview", 16, "#FFFFFF")}</span>'
+        f'<span class="pulse-topbar-word">Dana Point <span>PULSE</span></span>'
+        f'</a>'
+        f'<div class="pulse-topbar-mid">'
+        f'<span class="pulse-pill live"><span class="dot"></span>LIVE</span>'
+        f'{as_of_html}{period_html}'
+        f'</div>'
+        f'<a class="pulse-topbar-cta" href="javascript:window.print()" title="Export this view to PDF">'
+        f'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+        f'stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/>'
+        f'<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>'
+        f'<rect x="6" y="14" width="12" height="8"/></svg> Board Report</a>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
 
 def render_top_nav(active_page: str) -> None:
     active_cat = "overview" if active_page == "overview" else PAGE_TO_CATEGORY.get(active_page, "hotel_operations")
@@ -170,12 +210,30 @@ def render_sub_nav(active_page: str) -> None:
 # SHARED RENDER HELPERS (reuse app.py's existing CSS classes; no new CSS)
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _breadcrumb_html() -> str:
+    """Home > Category > Page, built from _CURRENT_PAGE (set by render_page()
+    right before it dispatches). Overview has no category, so it renders as
+    a single current-page crumb rather than a dangling separator."""
+    if _CURRENT_PAGE == "overview" or _CURRENT_PAGE not in PAGE_TO_CATEGORY:
+        return '<div class="pulse-breadcrumb"><span class="current">Overview</span></div>'
+    cat = PAGE_TO_CATEGORY[_CURRENT_PAGE]
+    cat_label = CATEGORY_LABELS.get(cat, cat)
+    page_label = PAGE_LABELS.get(_CURRENT_PAGE, _CURRENT_PAGE)
+    return (
+        '<div class="pulse-breadcrumb">Home<span class="sep">/</span>'
+        f'{cat_label}<span class="sep">/</span>'
+        f'<span class="current">{page_label}</span></div>'
+    )
+
+
 def _hero(title_html: str, subtitle: str) -> None:
     """Reuses the .hero-banner / .hero-title / .hero-subtitle classes defined
     in app.py's style block (the same simple pattern used for sub-tab headers,
-    e.g. the Visitor Intelligence banner). No new CSS is introduced here."""
+    e.g. the Visitor Intelligence banner), plus a breadcrumb row above the
+    title built from whichever page render_page() last dispatched to."""
     st.markdown(
         f'<div class="hero-banner">'
+        f'{_breadcrumb_html()}'
         f'<div class="hero-title">{title_html}</div>'
         f'<div class="hero-subtitle">{subtitle}</div>'
         f'</div>',
@@ -192,19 +250,30 @@ def _framing(sentence: str) -> None:
 
 
 def _kpis(cards: list) -> None:
-    """cards: list of (label, value, delta_text_or_empty, icon_key_or_html, as_of).
+    """cards: list of (label, value, delta_text_or_empty, icon_key_or_html, as_of)
+    or (label, value, delta_text_or_empty, icon_key_or_html, as_of, href) if the
+    card should drill down to a `#anchor-id` further down the same page.
     Renders via utils.format_metric_card. Every card must carry a real as_of
     date/period reference for the specific metric it shows (STR as-of date,
     Datafy report period, trailing window, etc.) — never a blank or generic one."""
     cols = st.columns(len(cards))
     for col, card in zip(cols, cards):
-        label, value, delta, icon, as_of = (list(card) + [""] * 5)[:5]
+        label, value, delta, icon, as_of, href = (list(card) + [""] * 6)[:6]
         icon_html = _icon(icon) if icon in ICONS else icon
         with col:
             st.markdown(
-                format_metric_card(label, str(value), icon=icon_html, context=delta or "", as_of=as_of or ""),
+                format_metric_card(label, str(value), icon=icon_html, context=delta or "", as_of=as_of or "",
+                                    href=href or ""),
                 unsafe_allow_html=True,
             )
+
+
+def _anchor(anchor_id: str) -> None:
+    """Drop an invisible drill-down target so a kpi-card href="#id" from higher
+    up the same page scrolls here. Streamlit strips raw <a name> in some
+    renders, so this uses a real id'd div, which every modern browser still
+    honors for in-page hash navigation."""
+    st.markdown(f'<div id="{anchor_id}" style="position:relative; top:-70px;"></div>', unsafe_allow_html=True)
 
 
 def _headline(icon: str, title: str, main_value: str, subtitle: str, body: str,
@@ -496,9 +565,9 @@ def page_occupancy_outlook(df_kpi: pd.DataFrame, df_comp: pd.DataFrame, df_str: 
 
     _kpis([
         ("Occupancy", f"{occ_now:.1f}%", yoy_str, "occupancy", f"STR daily, as of {as_of}"),
-        (f"Compression ({q3_label or 'Q3'})", f"{q3_days if q3_days is not None else 'N/A'} days", "80%+ occupancy", "compression", f"{q3_label or 'Most recent Q3'}, STR daily"),
+        (f"Compression ({q3_label or 'Q3'})", f"{q3_days if q3_days is not None else 'N/A'} days", "80%+ occupancy", "compression", f"{q3_label or 'Most recent Q3'}, STR daily", "?page=compression"),
         ("Demand Level", demand_label, "current read", "strategic_planning", f"STR daily, as of {as_of}"),
-        ("30-Day Momentum", trend_word, trend_sub, "revenue", "Trailing 30 vs. prior 30 days"),
+        ("30-Day Momentum", trend_word, trend_sub, "revenue", "Trailing 30 vs. prior 30 days", "?page=revenue"),
     ])
 
     st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
@@ -2024,6 +2093,9 @@ def render_page(page_name: str, data: dict) -> None:
         costar, compset, costar_snap, table_counts, log, insights,
         travel_types, los
     """
+    global _CURRENT_PAGE
+    _CURRENT_PAGE = page_name if page_name in ALL_PAGE_KEYS else "overview"
+
     df_kpi = data.get("kpi", pd.DataFrame())
     df_dfy = data.get("dfy", pd.DataFrame())
     df_comp = data.get("comp", pd.DataFrame())

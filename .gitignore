@@ -31,3 +31,5 @@ data/analytics.sqlite?*
 # macOS metadata
 .DS_Store
 **/.DS_Store
+logs/*.pdf
+logs/*.html

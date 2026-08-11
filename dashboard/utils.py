@@ -110,7 +110,8 @@ def format_section_header(icon: str, title: str, subtitle: str = "") -> str:
     </div>"""
 
 
-def format_metric_card(label: str, value: str, icon: str = "", context: str = "", as_of: str = "") -> str:
+def format_metric_card(label: str, value: str, icon: str = "", context: str = "", as_of: str = "",
+                        href: str = "") -> str:
     """
     Consistent metric card for use throughout dashboard tabs. Renders through the
     site-wide light-theme `.kpi-card` / `.kpi-label` / `.kpi-value` / `.kpi-date`
@@ -125,6 +126,13 @@ def format_metric_card(label: str, value: str, icon: str = "", context: str = ""
         as_of: Optional date or period reference for this specific metric
                (e.g. "STR through Mar 28, 2026", "Trailing 90 days", "FY26 YTD").
                Every card should carry one; it renders via `.kpi-date`.
+        href: Optional anchor target (e.g. "#bd-occupancy-detail") that turns
+              the card into a real `<a>` drill-down link instead of a plain
+              `<div>`. app.py's CSS gives `a.kpi-card` a visible teal border
+              at rest plus the same hover lift as an undecorated card, so the
+              clickability reads before the user even hovers. Only pass this
+              when the anchor id actually exists further down the same page —
+              a card that links nowhere is worse than one that isn't a link.
 
     Returns:
         HTML string for metric card
@@ -132,14 +140,15 @@ def format_metric_card(label: str, value: str, icon: str = "", context: str = ""
     icon_html = f'<div class="kpi-icon-svg" style="opacity:.55;margin-bottom:2px;">{icon}</div>' if icon else ''
     context_html = f'<div class="kpi-delta-neutral">{_esc(context)}</div>' if context else ''
     date_html = f'<div class="kpi-date">{_esc(as_of)}</div>' if as_of else ''
+    tag, open_tag = ("a", f'<a class="kpi-card" href="{_esc(href)}">') if href else ("div", '<div class="kpi-card">')
 
     return (
-        f'<div class="kpi-card">'
+        f'{open_tag}'
         f'<div class="kpi-header">{icon_html}<div class="kpi-label">{_esc(label)}</div></div>'
         f'<div class="kpi-value">{_esc(value)}</div>'
         f'{context_html}'
         f'{date_html}'
-        f'</div>'
+        f'</{tag}>'
     )
 
 

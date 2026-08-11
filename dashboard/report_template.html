@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dana Point PULSE — Weekly Report ([[WEEK_LABEL]])</title>
+<style>
+  :root {
+    --teal:    #0891B2;
+    --teal-dk: #0E7490;
+    --teal-lt: #7DD3E8;
+    --maroon:  #8E1B2E;
+    --maroon-lt: #FDE2E6;
+    --ink-1:   #0F172A;
+    --ink-2:   #334155;
+    --ink-3:   #64748B;
+    --page-bg: #E7EBEF;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:#525659; font-family:'Helvetica Neue',Arial,sans-serif; }
+
+  .viewer { padding: 28px 0 60px 0; display:flex; flex-direction:column; align-items:center; gap:22px; }
+  .viewer-tag {
+    color:#fff; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    background:#111; padding:8px; width:100%; text-align:center;
+  }
+  .viewer-tag span { color:#4ADE80; }
+
+  .slide {
+    width: 1280px; height: 720px; background:#fff; position:relative;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4); overflow:hidden; flex-shrink:0;
+  }
+
+  .half { position:absolute; top:0; bottom:0; width:50%; padding: 34px 30px 30px 34px; }
+  .half.left { left:0; border-right: 1px solid #EEF2F5; }
+  .half.right { left:50%; }
+  .half-full { position:absolute; top:0; left:0; right:0; bottom:0; padding: 34px 40px 30px 40px; }
+
+  .h-eyebrow { font-size: 10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; display:flex; align-items:center; gap:6px; }
+  .h-eyebrow .line { width:20px; height:2px; display:inline-block; }
+  .h-eyebrow.maroon { color: var(--maroon); } .h-eyebrow.maroon .line { background: var(--maroon); }
+  .h-eyebrow.teal { color: var(--teal-dk); } .h-eyebrow.teal .line { background: var(--teal-dk); }
+
+  .h-title { font-family:'Helvetica Neue',Arial,sans-serif; font-style:italic; font-weight:800; font-size:27px; margin: 3px 0 1px 0; }
+  .h-title.maroon { color: var(--maroon); }
+  .h-title.teal { color: var(--teal-dk); }
+  .h-subtitle { font-size: 12px; font-weight:700; color: var(--ink-2); text-transform:uppercase; letter-spacing:.02em; }
+  .h-date { font-size:10.5px; color: var(--ink-3); margin-top:2px; }
+  .h-date .fresh-tag { color: var(--teal-dk); font-weight:700; margin-left:6px; }
+
+  .market-row { display:flex; gap:16px; margin-top:16px; height: 320px; }
+  .market-col { flex:1; }
+  .market-pill { display:inline-block; background: var(--maroon-lt); color: var(--maroon); font-size:12px; font-weight:800; padding:5px 16px; border-radius:6px; margin-bottom:8px; }
+  .market-pill.alt { background: rgba(8,145,178,0.10); color: var(--teal-dk); }
+  .market-cap { font-size:10px; font-weight:700; color: var(--ink-3); text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px; }
+  .chart-img { width:100%; height:260px; object-fit:contain; }
+
+  .exec-table { margin-top:14px; }
+  .exec-row { display:grid; grid-template-columns: repeat(4,1fr); }
+  .exec-row + .exec-row { border-top:1px solid #E2E8F0; margin-top:8px; padding-top:8px; }
+  .exec-cell { border-right:1px solid #E2E8F0; padding: 2px 10px; }
+  .exec-cell:last-child { border-right:none; }
+  .exec-cell .v { font-family:'Helvetica Neue',Arial,sans-serif; font-weight:800; font-size:26px; color: var(--teal-dk); }
+  .exec-cell .v.delta { font-size:19px; color: var(--ink-1); }
+  .exec-cell .l { font-size:9.5px; font-weight:700; color: var(--ink-3); text-transform:uppercase; letter-spacing:.02em; margin-top:2px; }
+
+  .panel { border:1px solid #E2E8F0; border-radius:10px; padding:16px 18px; }
+  .panel-hd { font-size:12.5px; font-weight:700; color: var(--ink-1); margin-bottom:2px; }
+  .panel-cap { font-size:10px; color: var(--ink-3); margin-bottom:9px; }
+
+  table.rep { width:100%; border-collapse:collapse; font-size:12px; }
+  table.rep th { text-align:left; font-size:9.5px; text-transform:uppercase; color:var(--ink-3); border-bottom:1px solid #E2E8F0; padding:6px 8px; }
+  table.rep td { padding:6px 8px; border-bottom:1px solid #E2E8F0; color:var(--ink-2); }
+  table.rep td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  table.rep td.strong { color:var(--ink-1); font-weight:700; }
+  .pill-luxury { background:rgba(8,145,178,0.12); color:#0E7490; font-size:9.5px; font-weight:700; padding:1px 7px; border-radius:999px; }
+  .pill-upper  { background:rgba(100,116,139,0.12); color:#334155; font-size:9.5px; font-weight:700; padding:1px 7px; border-radius:999px; }
+
+  .origins-legend-row { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:11.5px; }
+  .dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+
+  .stat-row { display:flex; justify-content:space-between; align-items:baseline; padding:8px 0; border-bottom:1px solid #E2E8F0; }
+  .stat-row:last-child { border-bottom:none; }
+  .stat-label { font-size:12px; color:var(--ink-2); }
+  .stat-value { font-family:'Helvetica Neue',Arial,sans-serif; font-weight:800; font-size:15px; color:var(--ink-1); }
+
+  .insight-card { border-left:3px solid var(--teal); background:#F8FAFB; border-radius:6px; padding:9px 12px; margin-bottom:9px; }
+  .insight-tag { font-size:8.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--teal-dk); }
+  .insight-body { font-size:11px; color:var(--ink-2); line-height:1.4; margin-top:3px; }
+
+  .donut-stats { display:flex; flex-direction:column; gap:10px; justify-content:center; height:100%; }
+  .donut-stat-val { font-family:'Helvetica Neue',Arial,sans-serif; font-weight:800; font-size:21px; color:var(--ink-1); }
+  .donut-stat-lbl { font-size:9.5px; color:var(--ink-3); text-transform:uppercase; letter-spacing:.03em; }
+
+  .footer-disclaimer { font-size:9px; color:var(--ink-3); line-height:1.45; }
+
+  .h-source { position:absolute; left:34px; bottom:16px; font-size:9.5px; font-weight:700; color: var(--ink-3); letter-spacing:.03em; }
+  .h-logo {
+    position:absolute; right:26px; bottom:14px; width:30px; height:30px; border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .h-logo.maroon { background: var(--maroon); }
+  .h-logo.teal { background: var(--teal); }
+  .h-page { position:absolute; right:26px; top:14px; font-size:9.5px; color: var(--ink-3); font-weight:600; }
+
+  @page { size: 13.333in 7.5in; margin: 0; }
+  @media print {
+    html, body { background:#fff; }
+    .viewer { display:block; padding:0; gap:0; }
+    .viewer-tag { display:none; }
+    .slide { box-shadow:none; page-break-after: always; width:100%; height:7.5in; }
+    .slide:last-child { page-break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="viewer">
+  <div class="viewer-tag">DANA POINT PULSE <span>&middot;</span> WEEKLY REPORT <span>&middot;</span> GENERATED [[GEN_TIMESTAMP]]</div>
+
+  <!-- PAGE 1 · EXECUTIVE SUMMARY + HOTEL PERFORMANCE OCCUPANCY -->
+  <div class="slide">
+    <div class="half left">
+      <div class="h-eyebrow teal"><span class="line"></span>EXECUTIVE SUMMARY</div>
+      <div class="h-title teal">Executive Summary</div>
+      <div class="h-date">Week of [[WEEK_LABEL]]</div>
+      <div class="exec-table">
+        <div class="exec-row">
+          <div class="exec-cell"><div class="v">[[OCC_PCT]]</div><div class="l">Occupancy</div></div>
+          <div class="exec-cell"><div class="v">[[ADR]]</div><div class="l">ADR</div></div>
+          <div class="exec-cell"><div class="v">[[REVPAR]]</div><div class="l">RevPAR</div></div>
+          <div class="exec-cell"><div class="v">[[COMPRESSION_DAYS]]</div><div class="l">[[COMPRESSION_LABEL]] Compression Days</div></div>
+        </div>
+        <div class="exec-row">
+          <div class="exec-cell"><div class="v delta">[[OCC_YOY]]</div><div class="l">YoY Occ % Change</div></div>
+          <div class="exec-cell"><div class="v delta">[[ADR_YOY]]</div><div class="l">YoY ADR % Change</div></div>
+          <div class="exec-cell"><div class="v delta">[[REVPAR_YOY]]</div><div class="l">YoY RevPAR % Change</div></div>
+          <div class="exec-cell"><div class="v delta">[[GROUP_DEMAND_SHARE]]</div><div class="l">Group Room Demand Share</div></div>
+        </div>
+      </div>
+      <div class="panel-cap" style="margin-top:20px;">Group demand share figure is an industry benchmark (STR/CBRE), pending a live STR group-segment export; see Page 6.</div>
+      <div class="panel-hd" style="margin-top:22px;">This Week's Headline</div>
+[[EXEC_HEADLINE_CARDS]]
+      <div class="h-source">SOURCE: STR</div>
+      <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
+    </div>
+    <div class="half right">
+      <div class="h-eyebrow maroon"><span class="line"></span>STR &middot; LAYER 1 TRUTH</div>
+      <div class="h-title maroon">Hotel Performance</div>
+      <div class="h-subtitle">Occupancy</div>
+      <div class="h-date">Week of [[WEEK_LABEL]]</div>
+      <div class="market-row">
+        <div class="market-col">
+          <div class="market-pill">DANA POINT</div>
+          <div class="market-cap">Occupancy % by day of week</div>
+          <img class="chart-img" src="[[CHART_OCC_DP]]">
+        </div>
+        <div class="market-col">
+          <div class="market-pill alt">6-MARKET COMP SET</div>
+          <div class="market-cap">RevPAR benchmark (STR/CBRE); Dana Point live, others benchmark</div>
+          <img class="chart-img" src="[[CHART_COMPSET]]">
+        </div>
+      </div>
+      <div class="h-source">SOURCE: STR</div>
+      <div class="h-logo maroon"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
+    </div>
+    <div class="h-page">1 / 6</div>
+  </div>
+
+  <!-- PAGE 2 · HOTEL PERFORMANCE ADR + VISITOR ORIGINS -->
+  <div class="slide">
+    <div class="half left">
+      <div class="h-eyebrow maroon"><span class="line"></span>STR &middot; LAYER 1 TRUTH</div>
+      <div class="h-title maroon">Hotel Performance</div>
+      <div class="h-subtitle">Average Daily Rate (ADR)</div>
+      <div class="h-date">Week of [[WEEK_LABEL]]</div>
+      <div class="market-row">
+        <div class="market-col">
+          <div class="market-pill">DANA POINT</div>
+          <div class="market-cap">ADR by day of week</div>
+          <img class="chart-img" src="[[CHART_ADR_DP]]">
+        </div>
+        <div class="market-col">
+          <div class="market-pill alt">COMPRESSION BY QUARTER</div>
+          <div class="market-cap">Days at 80%+ and 90%+ occupancy</div>
+          <img class="chart-img" src="[[CHART_COMPRESSION]]">
+        </div>
+      </div>
+      <div class="h-source">SOURCE: STR</div>
+      <div class="h-logo maroon"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
+    </div>
+    <div class="half right">
+      <div class="h-eyebrow teal"><span class="line"></span>DATAFY &middot; LAYER 1 CURRENT</div>
+      <div class="h-title teal">Visitor Origins</div>
+      <div class="h-subtitle">Top Feeder Markets to Dana Point</div>
+      <div class="h-date">[[DATAFY_PERIOD]] <span class="fresh-tag">*updated quarterly</span></div>
+      <div style="display:flex; gap:20px; align-items:center; margin-top:14px;">
+        <div style="flex:0 0 220px;"><img class="chart-img" style="height:220px;" src="[[CHART_ORIGINS]]"></div>
+        <div style="flex:1;">
+          <div class="panel-hd" style="margin-bottom:8px;">Top Visitation Markets</div>
+          <div>[[ORIGINS_LEGEND]]</div>
+        </div>
+      </div>
+      <div class="h-source">SOURCE: DATAFY</div>
+      <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
+    </div>
+    <div class="h-page">2 / 6</div>
+  </div>
+
+  <!-- PAGE 3 · COSTAR MARKET SEGMENTS (full page) -->
+  <div class="slide">
+    <div class="half-full">
+      <div class="h-eyebrow teal"><span class="line"></span>COSTAR &middot; LAYER 1 CURRENT</div>
+      <div class="h-title teal">Market Segments</div>
+      <div class="h-subtitle">Occupancy &amp; RevPAR by Chain Scale, Luxury Breakout</div>
+      <div class="h-date">[[COSTAR_SEGMENT_PERIOD]] &middot; CoStar Chain Scale Breakdown</div>
+      <div class="panel" style="margin-top:18px; height:480px;">
+        <div class="panel-hd">Occupancy &amp; RevPAR by Segment</div>
+        <div class="panel-cap">[[COSTAR_SEGMENT_LIST]]</div>
+        <img class="chart-img" style="height:400px;" src="[[CHART_SEGMENTS]]">
+      </div>
+      <div class="h-source">SOURCE: COSTAR</div>
+      <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
+    </div>
+    <div class="h-page">3 / 6</div>
+  </div>
+
+  <!-- PAGE 4 · COSTAR LUXURY DETAIL (full page) -->
+  <div class="slide">
+    <div class="half-full">
+      <div class="h-eyebrow teal"><span class="line"></span>COSTAR &middot; LAYER 1 CURRENT</div>
+      <div class="h-title teal">Luxury &amp; Upper-Upscale Detail</div>
+      <div class="h-subtitle">Property Detail &amp; Segment-Level Tax Estimate</div>
+      <div class="h-date">[[COSTAR_SEGMENT_PERIOD]], CoStar Competitive Set &amp; Chain Scale Breakdown</div>
+      <div style="display:flex; gap:24px; margin-top:16px; height:470px;">
+        <div class="panel" style="flex:1;">
+          <div class="panel-hd">Property Detail</div>
+          <div class="panel-cap">CoStar-tracked competitive set</div>
+          <table class="rep">
+            <thead><tr><th>Property</th><th>Segment</th><th class="num">Occ %</th><th class="num">ADR</th><th class="num">RevPAR</th></tr></thead>
+            <tbody>
+[[PROPERTY_ROWS]]
+            </tbody>
+          </table>
+        </div>
+        <div class="panel" style="flex:1;">
+          <div class="panel-hd">Segment-Level Tax Estimate</div>
+          <div class="panel-cap">TBID (1.25%) and TOT (10%) applied to CoStar-reported annual room revenue</div>
+          <table class="rep">
+            <thead><tr><th>Segment</th><th class="num">Room Rev.</th><th class="num">Share</th><th class="num">Est. TBID</th><th class="num">Est. TOT</th></tr></thead>
+            <tbody>
+[[TAX_ROWS]]
+            </tbody>
+          </table>
+          <div class="panel-cap" style="margin-top:14px;">Estimates are CoStar-implied, not reported room revenue.</div>
+        </div>
+      </div>
+      <div class="h-source">SOURCE: COSTAR</div>
+      <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
+    </div>
+    <div class="h-page">4 / 6</div>
+  </div>
+
+  <!-- PAGE 5 · DATAFY VISITOR PROFILE (full page) -->
+  <div class="slide">
+    <div class="half-full">
+      <div class="h-eyebrow teal"><span class="line"></span>DATAFY &middot; LAYER 1 CURRENT</div>
+      <div class="h-title teal">Visitor Profile &amp; Spend</div>
+      <div class="h-subtitle">Trip Composition, Length of Stay, and Category Spend</div>
+      <div class="h-date">[[DATAFY_PERIOD]], Datafy Annual Pull Deep Dive Visitation Report</div>
+      <div style="display:flex; gap:24px; margin-top:16px; height:470px;">
+        <div class="panel" style="flex:1; display:flex; gap:18px; align-items:center;">
+          <div style="flex:0 0 190px;"><img class="chart-img" style="height:190px;" src="[[CHART_TRIP]]"></div>
+          <div class="donut-stats" style="flex:1;">
+            <div><div class="donut-stat-val">[[TOTAL_TRIPS]]</div><div class="donut-stat-lbl">Total Trips</div></div>
+            <div><div class="donut-stat-val">[[AVG_LOS]]</div><div class="donut-stat-lbl">Average Length of Stay</div></div>
+            <div><div class="donut-stat-val">[[OOS_PCT]]</div><div class="donut-stat-lbl">Out-of-State Visitor Days</div></div>
+          </div>
+        </div>
+        <div class="panel" style="flex:1;">
+          <div class="panel-hd">Spend Share by Category</div>
+          <div class="panel-cap">Highest-share categories, current annual pull</div>
+          <img class="chart-img" style="height:360px;" src="[[CHART_CATEGORY]]">
+        </div>
+      </div>
+      <div class="h-source">SOURCE: DATAFY</div>
+      <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
+    </div>
+    <div class="h-page">5 / 6</div>
+  </div>
+
+  <!-- PAGE 6 · FORWARD OUTLOOK & GROUP (full page) -->
+  <div class="slide">
+    <div class="half-full">
+      <div class="h-eyebrow teal"><span class="line"></span>CROSS-DATASET &amp; GROUP INTELLIGENCE</div>
+      <div class="h-title teal">Forward Outlook &amp; Group Business</div>
+      <div class="h-subtitle">Cross-Dataset Insights, Group Demand Estimate &amp; Data Sources</div>
+      <div class="h-date">As of [[LATEST_STR_DATE]] &middot; Benchmark figures pending live STR group-segment export</div>
+      <div style="display:flex; gap:24px; margin-top:16px; height:410px;">
+        <div class="panel" style="flex:1;">
+          <div class="panel-hd">Group Business Estimate</div>
+          <div class="panel-cap">Benchmark-based, upper-upscale coastal resort market</div>
+          <div class="stat-row"><div class="stat-label">Market blended ADR / Occupancy</div><div class="stat-value">[[GROUP_ADR_OCC]]</div></div>
+          <div class="stat-row"><div class="stat-label">Estimated group demand share</div><div class="stat-value">[[GROUP_DEMAND_RANGE]]</div></div>
+          <div class="stat-row"><div class="stat-label">Estimated annual group room revenue</div><div class="stat-value">[[GROUP_REVENUE_RANGE]]</div></div>
+          <div class="stat-row"><div class="stat-label">Estimated annual group TBID</div><div class="stat-value">[[GROUP_TBID_RANGE]]</div></div>
+          <div class="stat-row"><div class="stat-label">Estimated annual group TOT</div><div class="stat-value">[[GROUP_TOT_RANGE]]</div></div>
+          <div class="stat-row"><div class="stat-label">Compression days per year (80%+ occ)</div><div class="stat-value">[[COMPRESSION_DAYS_ANNUAL]]</div></div>
+        </div>
+        <div class="panel" style="flex:1;">
+          <div class="panel-hd">Cross-Dataset Insights</div>
+          <div class="panel-cap">Require both STR and Datafy &mdash; invisible in either dataset alone</div>
+[[INSIGHT_CARDS]]
+        </div>
+      </div>
+      <div class="footer-disclaimer" style="margin-top:14px;">
+        STR, CoStar, and Datafy are treated as current-period sources. Zartico (June 2025 snapshot) is historical reference only and is never presented as current data. Group Intelligence figures are industry benchmarks (STR/CBRE 2024) pending a live STR group-segment export; TBID and TOT estimates elsewhere in this report use CoStar-implied room revenue, not reported room revenue. Prepared by GloCon Solutions LLC for Visit Dana Point.
+      </div>
+      <div class="h-source">SOURCE: CROSS-DATASET, GROUP INTELLIGENCE</div>
+      <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
+    </div>
+    <div class="h-page">6 / 6</div>
+  </div>
+</div>
+</body>
+</html>

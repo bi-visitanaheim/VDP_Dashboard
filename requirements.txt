@@ -13,6 +13,8 @@ pdfplumber>=0.11.0,<1.0.0
 beautifulsoup4>=4.12.0,<5.0.0
 pytrends>=4.9.2,<5.0.0
 streamlit-authenticator>=0.3.3,<1.0.0
+weasyprint>=62.0,<64.0
+matplotlib>=3.8.0,<4.0.0
 
 # Testing
 pytest>=8.0.0,<9.0.0
