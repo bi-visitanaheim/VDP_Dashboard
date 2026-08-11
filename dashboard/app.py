@@ -19,6 +19,8 @@ sys.path.insert(0, os.path.join(PROJECT_ROOT, "scripts"))
 LOGS_DIR = os.path.join(PROJECT_ROOT, "logs")
 PDF_PATH = os.path.join(LOGS_DIR, "weekly_report_latest.pdf")
 LOGO_PATH = os.path.join(BASE_DIR, "assets", "vdp_logo.svg")
+LOGO_NAV_PATH = os.path.join(BASE_DIR, "assets", "vdp_logo_nav.svg")
+HERO_PHOTO_PATH = os.path.join(BASE_DIR, "assets", "photos", "hero_coast.jpg")
 
 st.set_page_config(
     page_title="Dana Point PULSE — Weekly Report",
@@ -27,33 +29,56 @@ st.set_page_config(
 )
 
 
-def _logo_data_uri() -> str:
+def _file_data_uri(path: str, mime: str) -> str:
     try:
-        with open(LOGO_PATH, "rb") as fh:
+        with open(path, "rb") as fh:
             b64 = base64.b64encode(fh.read()).decode("ascii")
-        return f"data:image/svg+xml;base64,{b64}"
+        return f"data:{mime};base64,{b64}"
     except FileNotFoundError:
         return ""
+
+
+def _logo_data_uri() -> str:
+    return _file_data_uri(LOGO_PATH, "image/svg+xml")
+
+
+def _logo_nav_data_uri() -> str:
+    return _file_data_uri(LOGO_NAV_PATH, "image/svg+xml")
+
+
+def _hero_photo_data_uri() -> str:
+    return _file_data_uri(HERO_PHOTO_PATH, "image/jpeg")
 
 st.markdown(
     """
     <style>
       #MainMenu {visibility: hidden;}
       footer {visibility: hidden;}
-      .block-container { padding-top: 1.5rem; max-width: 1400px; }
+      .block-container { padding-top: 3rem; max-width: 1400px; }
       .pulse-header { display:flex; align-items:center; justify-content:space-between;
-                      padding-bottom: 12px; border-bottom: 1px solid #E2E8F0; margin-bottom: 18px; }
+                      padding-top: 6px; padding-bottom: 12px; border-bottom: 1px solid #E2E8F0; margin-bottom: 18px;
+                      overflow: visible; line-height: 1.3; }
       .pulse-header-left { display:flex; align-items:center; gap:14px; }
-      .pulse-logo-badge { background:#0E7490; border-radius:10px; width:52px; height:44px;
+      .pulse-logo-badge { background:#123C4A; border-radius:10px; width:52px; height:44px;
                            display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+      /* Destination hero band: real Dana Point photography */
+      .pulse-hero { position:relative; height:180px; border-radius:14px; overflow:hidden;
+        background-size:cover; background-position:center; margin-bottom:22px; }
+      .pulse-hero-overlay { position:absolute; inset:0;
+        background:linear-gradient(90deg, rgba(18,60,74,0.82) 0%, rgba(18,60,74,0.42) 55%, rgba(18,60,74,0.10) 100%); }
+      .pulse-hero-content { position:absolute; left:28px; top:0; bottom:0; display:flex; flex-direction:column;
+        justify-content:center; }
+      .pulse-hero-logo { width:150px; height:auto; margin-bottom:10px; }
+      .pulse-hero-tag { color:#DCEEF4; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
       .pulse-logo-badge img { width:36px; height:auto; }
-      .pulse-title { font-size: 22px; font-weight: 800; color: #0F172A; }
+      .pulse-title { font-family:Georgia,'DejaVu Serif',serif; font-style:italic; font-size: 24px; font-weight: 700; color: #0F172A; }
       .pulse-sub { font-size: 13px; color: #64748B; margin-top:2px; }
 
       /* Whale-watching loading splash */
       .whale-splash {
         position:relative; height:340px; border-radius:14px; overflow:hidden;
-        background: linear-gradient(180deg, #BEE3F0 0%, #7FC4D9 35%, #1B6E8C 70%, #0E4A5F 100%);
+        background: linear-gradient(180deg, #D2E0E9 0%, #75A9CC 35%, #255A6D 70%, #16333D 100%);
         display:flex; align-items:center; justify-content:center; flex-direction:column;
         margin: 10px 0 24px 0;
       }
@@ -123,7 +148,7 @@ WHALE_SPLASH_HTML = f"""
     <div class="splash-ring"></div>
     <svg class="tail" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
       <path d="M75 150 C 60 100, 40 90, 10 70 C 45 78, 60 65, 75 40 C 90 65, 105 78, 140 70 C 110 90, 90 100, 75 150 Z"
-            fill="#0E4A5F" stroke="#0A2F3D" stroke-width="2"/>
+            fill="#255A6D" stroke="#16333D" stroke-width="2"/>
     </svg>
   </div>
   <div class="caption">Heading out for this week&rsquo;s numbers&hellip;</div>
@@ -162,6 +187,19 @@ with col1:
     )
 with col2:
     regenerate = st.button("🔄 Regenerate", use_container_width=True)
+
+st.markdown(
+    f"""
+    <div class="pulse-hero" style="background-image:url('{_hero_photo_data_uri()}');">
+      <div class="pulse-hero-overlay"></div>
+      <div class="pulse-hero-content">
+        <img class="pulse-hero-logo" src="{_logo_nav_data_uri()}">
+        <div class="pulse-hero-tag">Dana Point, California</div>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 if regenerate:
     _generate.clear()

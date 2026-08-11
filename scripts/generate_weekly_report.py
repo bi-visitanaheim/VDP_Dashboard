@@ -32,23 +32,46 @@ PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DB_PATH = os.path.join(PROJECT_ROOT, "data", "analytics.sqlite")
 TEMPLATE_PATH = os.path.join(PROJECT_ROOT, "dashboard", "report_template.html")
 LOGO_PATH = os.path.join(PROJECT_ROOT, "dashboard", "assets", "vdp_logo.svg")
+LOGO_NAV_PATH = os.path.join(PROJECT_ROOT, "dashboard", "assets", "vdp_logo_nav.svg")
+PHOTOS_DIR = os.path.join(PROJECT_ROOT, "dashboard", "assets", "photos")
 LOGS_DIR = os.path.join(PROJECT_ROOT, "logs")
 
 
-def _logo_data_uri() -> str:
+def _svg_data_uri(path: str) -> str:
     try:
-        with open(LOGO_PATH, "rb") as fh:
+        with open(path, "rb") as fh:
             b64 = base64.b64encode(fh.read()).decode("ascii")
         return f"data:image/svg+xml;base64,{b64}"
     except FileNotFoundError:
         return ""
 
-TEAL = "#0891B2"
-TEAL_DK = "#0E7490"
-TEAL_LT = "#7DD3E8"
-MAROON = "#8E1B2E"
-MAROON_LT = "#C4536A"
-SLATE = "#94A3B8"
+
+def _logo_data_uri() -> str:
+    return _svg_data_uri(LOGO_PATH)
+
+
+def _logo_nav_data_uri() -> str:
+    return _svg_data_uri(LOGO_NAV_PATH)
+
+
+def _photo_data_uri(filename: str) -> str:
+    try:
+        with open(os.path.join(PHOTOS_DIR, filename), "rb") as fh:
+            b64 = base64.b64encode(fh.read()).decode("ascii")
+        return f"data:image/jpeg;base64,{b64}"
+    except FileNotFoundError:
+        return ""
+
+# Dana Point coastal palette, sampled from Visit Dana Point's own destination
+# photography (drone/harbor shots for the ocean navy-teal family, golden-hour
+# shots for the terracotta family). Site CSS was not reachable to pull exact
+# brand hex values, so this palette is grounded in their real imagery instead.
+TEAL = "#1D6E86"
+TEAL_DK = "#123C4A"
+TEAL_LT = "#8FC4D6"
+MAROON = "#A8461F"
+MAROON_LT = "#E08A54"
+SLATE = "#9C9186"
 
 # Benchmark figures (industry STR/CBRE benchmarks; no live STR group-segment
 # feed exists yet -- see CLAUDE.md "Group Business Estimate" methodology).
@@ -209,17 +232,18 @@ def build_report() -> str:
         occ_by_dow.append(float(row["occ_pct"].mean()) if not row.empty else 0.0)
         adr_by_dow.append(float(row["adr"].mean()) if not row.empty else 0.0)
 
-    chart_occ_dp = _bar_chart(dow_labels, [("Occupancy %", occ_by_dow)], [MAROON], "Occ %")
-    chart_adr_dp = _bar_chart(dow_labels, [("ADR $", adr_by_dow)], [MAROON], "ADR $")
+    chart_occ_dp = _bar_chart(dow_labels, [("Occupancy %", occ_by_dow)], [MAROON], "Occ %", figsize=(4.4, 6.8))
+    chart_adr_dp = _bar_chart(dow_labels, [("ADR $", adr_by_dow)], [MAROON], "ADR $", figsize=(4.4, 6.8))
 
     # comp-set chart: Dana Point (live) + 5 benchmark markets
     compset_labels = ["Dana Pt"] + list(COMPSET_BENCHMARK.keys())
     compset_vals = [round(revpar_avg, 2)] + list(COMPSET_BENCHMARK.values())
     compset_colors = [MAROON] + [SLATE] * len(COMPSET_BENCHMARK)
-    fig, ax = plt.subplots(figsize=(4.6, 2.4))
+    fig, ax = plt.subplots(figsize=(4.4, 6.8))
     ax.bar(compset_labels, compset_vals, color=compset_colors)
-    ax.set_ylabel("RevPAR $", fontsize=9)
-    ax.tick_params(labelsize=8)
+    ax.set_ylabel("RevPAR $", fontsize=10)
+    ax.tick_params(labelsize=9)
+    ax.set_xticklabels(compset_labels, fontsize=9, rotation=30, ha="right")
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     chart_compset = _fig_to_b64(fig)
@@ -233,7 +257,7 @@ def build_report() -> str:
     chart_compression = _bar_chart(
         q_labels,
         [("80%+ occ", comp_q["days_above_80_occ"].tolist()), ("90%+ occ", comp_q["days_above_90_occ"].tolist())],
-        [MAROON, MAROON_LT], "Days", legend=True,
+        [MAROON, MAROON_LT], "Days", legend=True, figsize=(4.4, 6.8),
     )
     compression_label = comp_q["quarter"].iloc[-1] if not comp_q.empty else "Q-"
     compression_days = int(comp_q["days_above_80_occ"].iloc[-1]) if not comp_q.empty else 0
@@ -308,7 +332,7 @@ def build_report() -> str:
         "SELECT dma, visitor_days_share_pct FROM datafy_overview_dma "
         "WHERE visitor_days_share_pct IS NOT NULL ORDER BY visitor_days_share_pct DESC LIMIT 10", con
     )
-    origin_colors = [TEAL_DK, TEAL, "#22A6C4", "#5CC4DC", TEAL_LT, "#A78BFA", "#8B5CF6", "#C4B5FD", "#1E293B", "#475569"]
+    origin_colors = [TEAL_DK, TEAL, "#3F97AC", "#6FB8CB", TEAL_LT, MAROON, "#C97A47", MAROON_LT, "#2A4A54", "#6B5C4E"]
     chart_origins = _pie_chart(dma["dma"].tolist(), dma["visitor_days_share_pct"].tolist(), origin_colors[: len(dma)])
     origins_legend = ""
     for i, (_, r) in enumerate(dma.iterrows()):
@@ -394,6 +418,13 @@ def build_report() -> str:
         "INSIGHT_CARDS": insight_cards,
         "EXEC_HEADLINE_CARDS": exec_headline_cards,
         "LOGO_DATA_URI": _logo_data_uri(),
+        "LOGO_NAV_DATA_URI": _logo_nav_data_uri(),
+        "COVER_PHOTO": _photo_data_uri("drone_aerial.jpg"),
+        "COVER_PHOTO_2": _photo_data_uri("hero_coast.jpg"),
+        "COVER_PHOTO_3": _photo_data_uri("whale_watching.jpg"),
+        "PHOTO_WHALE": _photo_data_uri("whale_watching.jpg"),
+        "PHOTO_HARBOR": _photo_data_uri("harbor_coastline.jpg"),
+        "PHOTO_WOODY": _photo_data_uri("classic_woody.jpg"),
     }
 
     html = open(TEMPLATE_PATH, encoding="utf-8").read()
