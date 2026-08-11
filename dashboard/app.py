@@ -54,7 +54,7 @@ st.markdown(
     <style>
       #MainMenu {visibility: hidden;}
       footer {visibility: hidden;}
-      .block-container { padding-top: 3rem; max-width: 1400px; }
+      .block-container { padding-top: 3rem; max-width: 100%; padding-left: 3rem; padding-right: 3rem; }
       .pulse-header { display:flex; align-items:center; justify-content:space-between;
                       padding-top: 6px; padding-bottom: 12px; border-bottom: 1px solid #E2E8F0; margin-bottom: 18px;
                       overflow: visible; line-height: 1.3; }
