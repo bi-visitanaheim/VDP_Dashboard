@@ -765,6 +765,39 @@ SCHEMAS: dict[str, str] = {
             share_of_users_pct  REAL,
             loaded_at           TEXT DEFAULT (datetime('now'))
         );""",
+
+    # ── New tables (August 2026 "DynamicHomePage" export set) ─────────────────
+
+    "datafy_overview_repeat_spenders": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_repeat_spenders (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            repeat_pct          REAL,
+            one_time_pct        REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_category_spend_monthly": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_category_spend_monthly (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            category            TEXT,
+            month               TEXT,
+            spend_usd           REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
+
+    "datafy_overview_top_countries": """
+        CREATE TABLE IF NOT EXISTS datafy_overview_top_countries (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            report_period_start TEXT,
+            report_period_end   TEXT,
+            country             TEXT,
+            share_pct           REAL,
+            loaded_at           TEXT DEFAULT (datetime('now'))
+        );""",
 }
 
 
@@ -1007,11 +1040,7 @@ def parse_top_pois(csv_path: str, cur, ps: str, pe: str) -> int:
         cluster = str(row.get("Cluster", "")).strip()
         if not cluster:
             continue
-        share_raw = row.get("Share of Visitor Days", "")
-        try:
-            share = float(str(share_raw).strip())
-        except ValueError:
-            share = None
+        share = _clean_pct(row.get("Share of Visitor Days", ""))
         rows_out.append({
             "report_period_start":    ps,
             "report_period_end":      pe,
@@ -1984,6 +2013,180 @@ def parse_popular_pages_new(csv_path: str, cur, ps: str, pe: str) -> int:
 # Matched via  stem_fragment in filename_lower  (case-insensitive).
 # More-specific patterns listed FIRST to prevent shorter ones from matching first.
 
+def _clean_pct_as_fraction(val) -> Optional[float]:
+    """Strip % and divide by 100, returning a 0-1 fraction to match the
+    convention already used by the legacy Advanced Spending Overview exports
+    (which shipped bare decimals like 0.338 for 33.8 percent)."""
+    if val is None:
+        return None
+    s = str(val).strip()
+    if not s:
+        return None
+    pct = s.endswith("%")
+    s = s.rstrip("%").strip()
+    try:
+        num = float(s)
+    except ValueError:
+        return None
+    return num / 100.0 if pct else num
+
+
+def parse_local_visitor_spend_pct(csv_path: str, cur, ps: str, pe: str) -> int:
+    """DynamicHomePage-Local Vs Visitor_Export*.csv (percent-string format,
+    e.g. '69.01%') -> datafy_overview_local_visitor_spend. Shares the table
+    with the legacy decimal-format Advanced Spending Overview export."""
+    table = "datafy_overview_local_visitor_spend"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    if not rows_in:
+        return 0
+    row = rows_in[0]
+    rows_out = [{
+        "report_period_start": ps,
+        "report_period_end":   pe,
+        "local_pct":           _clean_pct_as_fraction(row.get("Local", "")),
+        "visitor_pct":         _clean_pct_as_fraction(row.get("Visitor", "")),
+    }]
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_repeat_spenders(csv_path: str, cur, ps: str, pe: str) -> int:
+    """DynamicHomePage-Repeat Spenders_Export*.csv -> datafy_overview_repeat_spenders"""
+    table = "datafy_overview_repeat_spenders"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    if not rows_in:
+        return 0
+    row = rows_in[0]
+    rows_out = [{
+        "report_period_start": ps,
+        "report_period_end":   pe,
+        "repeat_pct":          _clean_num(row.get("Repeat", "")),
+        "one_time_pct":        _clean_num(row.get("One Time", "")),
+    }]
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_topboxes_demographics(csv_path: str, cur, ps: str, pe: str) -> int:
+    """DynamicHomePage-TopBoxes_Export*.csv -> datafy_overview_demographics
+    (dimension = Age/Income/Household, segment = leading group, share_pct =
+    share of that group within the dimension)."""
+    table = "datafy_overview_demographics"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        dimension = str(row.get("Demographic", "")).strip()
+        if not dimension:
+            continue
+        segment = str(row.get("Top Group/Level", "")).strip()
+        share = _clean_pct(row.get("Share of Demographic", ""))
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "dimension":           dimension,
+            "segment":             segment,
+            "share_pct":           share,
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_category_spend_monthly(csv_path: str, cur, ps: str, pe: str) -> int:
+    """DynamicHomePage-Top Spending category_Export*.csv (Name, Month, Spend
+    Volume) -> datafy_overview_category_spend_monthly. Monthly trend, unlike
+    the single-period category share tables elsewhere in this file."""
+    table = "datafy_overview_category_spend_monthly"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        category = str(row.get("Name", "")).strip()
+        month = str(row.get("Month", "")).strip()
+        if not category or not month:
+            continue
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "category":            category,
+            "month":               month,
+            "spend_usd":           _clean_money(row.get("Spend Volume", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_top_countries(csv_path: str, cur, ps: str, pe: str) -> int:
+    """TopCountries_Export*.csv -> datafy_overview_top_countries"""
+    table = "datafy_overview_top_countries"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        country = str(row.get("Country", "")).strip()
+        if not country:
+            continue
+        rows_out.append({
+            "report_period_start": ps,
+            "report_period_end":   pe,
+            "country":             country,
+            "share_pct":           _clean_pct(row.get("Share", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
+def parse_airports_new(csv_path: str, cur, ps: str, pe: str) -> int:
+    """TopJourneyOriginAirportsForDestinationAirports_Export*.csv
+    ('Full Airport Name (CODE)', 'Share of Passengers') -> datafy_overview_airports"""
+    table = "datafy_overview_airports"
+    _delete_period(cur, table, ps, pe)
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        rows_in = list(reader)
+
+    rows_out = []
+    for row in rows_in:
+        raw = str(row.get("Origin Airport", "")).strip()
+        if not raw:
+            continue
+        m = re.match(r"^(.*)\(([A-Z]{3})\)\s*$", raw)
+        if m:
+            name, code = m.group(1).strip(), m.group(2).strip()
+        else:
+            name, code = raw, None
+        rows_out.append({
+            "report_period_start":  ps,
+            "report_period_end":    pe,
+            "airport_name":         name,
+            "airport_code":         code,
+            "passengers_share_pct": _clean_pct(row.get("Share of Passengers", "")),
+        })
+
+    _insert_rows(cur, table, rows_out)
+    return len(rows_out)
+
+
 NEW_FILE_HANDLERS: list[tuple[str, str, object]] = [
     # ── Overview ──────────────────────────────────────────────────────────────
     ("overallnumbers_export",                                  "datafy_overview_total_kpis",                     parse_overall_numbers),
@@ -2005,6 +2208,20 @@ NEW_FILE_HANDLERS: list[tuple[str, str, object]] = [
     ("visitationbyyear_export",                                 "datafy_overview_visitation_by_month",            parse_visitation_by_month),
     ("visitation_export",                                       "datafy_overview_local_visitor_trips",            parse_local_visitor_trips),
     ("weekdayvsweekend_export",                                 "datafy_overview_weekday_visitation",             parse_weekday_visitation),
+
+    # ── Overview: August 2026 "DynamicHomePage" export set ─────────────────────
+    # NOTE: order matters — the "(1)" category variant must be checked before
+    # the base DMA variant since "dynamichomepage-top markets_export" is a
+    # substring of "dynamichomepage-top markets_export (1)".
+    ("dynamichomepage-top markets_export (1)",                  "datafy_overview_spending_by_category",           parse_spending_by_category),
+    ("dynamichomepage-top markets_export",                      "datafy_overview_spending_by_market",             parse_spending_by_market),
+    ("dynamichomepage-top spending category_export",            "datafy_overview_category_spend_monthly",         parse_category_spend_monthly),
+    ("dynamichomepage-topboxes_export",                         "datafy_overview_demographics",                   parse_topboxes_demographics),
+    ("dynamichomepage-repeat spenders_export",                  "datafy_overview_repeat_spenders",                parse_repeat_spenders),
+    ("dynamichomepage-in vs out of state_export",               "datafy_overview_instate_outstate",               parse_instate_outstate),
+    ("dynamichomepage-local vs visitor_export",                 "datafy_overview_local_visitor_spend",            parse_local_visitor_spend_pct),
+    ("topcountries_export",                                     "datafy_overview_top_countries",                  parse_top_countries),
+    ("topjourneyoriginairportsfordestinationairports_export",   "datafy_overview_airports",                       parse_airports_new),
 
     # ── Attribution Website ───────────────────────────────────────────────────
     ("attribution insights top polygons",                      "datafy_attribution_polygons",                    parse_attribution_polygons),

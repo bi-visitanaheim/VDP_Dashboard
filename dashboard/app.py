@@ -1,5 +1,5 @@
 """
-Dana Point PULSE — Weekly Report Viewer
+Dana Point PULSE, Weekly Report Viewer
 -----------------------------------------
 Minimal app. Its only job: generate the weekly report PDF from live STR /
 CoStar / Datafy data and display it in full.
@@ -23,7 +23,7 @@ LOGO_NAV_PATH = os.path.join(BASE_DIR, "assets", "vdp_logo_nav.svg")
 HERO_PHOTO_PATH = os.path.join(BASE_DIR, "assets", "photos", "hero_coast.jpg")
 
 st.set_page_config(
-    page_title="Dana Point PULSE — Weekly Report",
+    page_title="Dana Point PULSE, Weekly Report",
     page_icon="📄",
     layout="wide",
 )
@@ -66,14 +66,27 @@ st.markdown(
       .pulse-hero { position:relative; height:180px; border-radius:14px; overflow:hidden;
         background-size:cover; background-position:center; margin-bottom:22px; }
       .pulse-hero-overlay { position:absolute; inset:0;
-        background:linear-gradient(90deg, rgba(18,60,74,0.82) 0%, rgba(18,60,74,0.42) 55%, rgba(18,60,74,0.10) 100%); }
-      .pulse-hero-content { position:absolute; left:28px; top:0; bottom:0; display:flex; flex-direction:column;
-        justify-content:center; }
-      .pulse-hero-logo { width:150px; height:auto; margin-bottom:10px; }
-      .pulse-hero-tag { color:#DCEEF4; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; }
+        background:linear-gradient(180deg, rgba(9,32,40,0.58) 0%, rgba(9,32,40,0.72) 100%); }
+      .pulse-hero-content { position:absolute; inset:0; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; text-align:center; }
+      .pulse-hero-logo { width:170px; height:auto; margin-bottom:10px;
+        filter: drop-shadow(0 2px 10px rgba(0,0,0,0.65)) drop-shadow(0 0 2px rgba(0,0,0,0.5)); }
+      .pulse-hero-tag { color:#FFFFFF; font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.55); }
       .pulse-logo-badge img { width:36px; height:auto; }
       .pulse-title { font-family:Georgia,'DejaVu Serif',serif; font-style:italic; font-size: 24px; font-weight: 700; color: #0F172A; }
       .pulse-sub { font-size: 13px; color: #64748B; margin-top:2px; }
+
+      /* Regenerate button + filter row */
+      div[data-testid="stButton"] > button {
+        background:#1D6E86; color:#FFFFFF; border:1px solid #123C4A; border-radius:8px;
+        font-weight:600; transition: background 0.15s ease;
+      }
+      div[data-testid="stButton"] > button:hover { background:#123C4A; color:#FFFFFF; border-color:#123C4A; }
+      div[data-testid="stButton"] > button:active { background:#0E4B5C; color:#FFFFFF; }
+      .pulse-filter-row { display:flex; align-items:flex-end; gap:14px; margin-bottom:6px; }
+      div[data-testid="stDateInput"] input { border-color:#CBD9DE; }
+      div[data-testid="column"] { display:flex; align-items:center; }
 
       /* Whale-watching loading splash */
       .whale-splash {
@@ -169,7 +182,7 @@ def _pdf_generated_at() -> str:
     return "not yet generated"
 
 
-col1, col2 = st.columns([5, 1])
+col1, col2, col3 = st.columns([4, 2, 1])
 with col1:
     st.markdown(
         f"""
@@ -177,7 +190,7 @@ with col1:
           <div class="pulse-header-left">
             <div class="pulse-logo-badge"><img src="{_logo_data_uri()}"></div>
             <div>
-              <div class="pulse-title">Dana Point PULSE — Weekly Report</div>
+              <div class="pulse-title">Dana Point PULSE, Weekly Report</div>
               <div class="pulse-sub">Prepared by GloCon Solutions LLC for Visit Dana Point &nbsp;|&nbsp; Last generated: {_pdf_generated_at()}</div>
             </div>
           </div>
@@ -186,7 +199,14 @@ with col1:
         unsafe_allow_html=True,
     )
 with col2:
-    regenerate = st.button("🔄 Regenerate", use_container_width=True)
+    date_range = st.date_input(
+        "Report window",
+        value=(),
+        label_visibility="collapsed",
+        help="Filter the report to a specific date range. Full report reflow by range is in progress.",
+    )
+with col3:
+    regenerate = st.button("Regenerate", use_container_width=True)
 
 st.markdown(
     f"""

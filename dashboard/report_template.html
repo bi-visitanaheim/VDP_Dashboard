@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Dana Point PULSE — Weekly Report ([[WEEK_LABEL]])</title>
+<title>Dana Point PULSE, Weekly Report ([[WEEK_LABEL]])</title>
 <style>
   :root {
     /* Dana Point coastal palette: deep ocean navy-teal (current data) paired
@@ -54,12 +54,12 @@
   .h-date { font-size:10.5px; color: var(--ink-3); margin-top:2px; }
   .h-date .fresh-tag { color: var(--teal-dk); font-weight:700; margin-left:6px; }
 
-  .market-row { display:flex; gap:16px; margin-top:16px; height: 500px; }
-  .market-col { flex:1; }
+  .market-row { display:flex; gap:16px; margin-top:16px; height: 400px; align-items:center; }
+  .market-col { flex:1; min-width:0; }
   .market-pill { display:inline-block; background: var(--maroon-lt); color: var(--maroon); font-size:12px; font-weight:800; padding:5px 16px; border-radius:6px; margin-bottom:8px; }
   .market-pill.alt { background: rgba(29,110,134,0.10); color: var(--teal-dk); }
   .market-cap { font-size:10px; font-weight:700; color: var(--ink-3); text-transform:uppercase; letter-spacing:.03em; margin-bottom:8px; }
-  .chart-img { width:100%; height:460px; object-fit:contain; }
+  .chart-img { display:block; width:100%; height:340px; object-fit:contain; }
 
   .exec-table { margin-top:14px; }
   .exec-row { display:grid; grid-template-columns: repeat(4,1fr); }
@@ -129,6 +129,11 @@
   .dp-photo-row { display:flex; gap:12px; margin-top:22px; }
   .dp-photo-card { flex:1; border-radius:8px; overflow:hidden; position:relative; height:152px; background:#EEF2F5; }
   .dp-photo-card img { width:100%; height:100%; object-fit:cover; display:block; }
+  .dp-photo-stat {
+    position:absolute; top:8px; right:8px; background:rgba(15,23,42,0.72); color:#fff; border-radius:6px;
+    padding:4px 9px; font-size:12px; font-weight:800; line-height:1.15; text-align:right;
+  }
+  .dp-photo-stat .stat-label { display:block; font-size:7px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#DCEEF4; }
   .dp-photo-cap {
     position:absolute; left:0; right:0; bottom:0; padding:7px 9px; font-size:9.5px; font-weight:700; color:#fff;
     background:linear-gradient(0deg, rgba(15,23,42,0.78), rgba(15,23,42,0));
@@ -235,7 +240,7 @@
       <div class="h-eyebrow teal"><span class="line"></span>DATAFY &middot; LAYER 1 CURRENT</div>
       <div class="h-title teal">Visitor Origins</div>
       <div class="h-subtitle">Top Feeder Markets to Dana Point</div>
-      <div class="h-date">[[DATAFY_PERIOD]] <span class="fresh-tag">*updated quarterly</span></div>
+      <div class="h-date">[[DATAFY_PERIOD]] <span class="fresh-tag">*most recent Datafy export</span></div>
       <div style="display:flex; gap:20px; align-items:center; margin-top:14px;">
         <div style="flex:0 0 220px;"><img class="chart-img" style="height:220px;" src="[[CHART_ORIGINS]]"></div>
         <div style="flex:1;">
@@ -245,9 +250,15 @@
       </div>
       <div class="panel-hd" style="margin-top:20px;">Why Visitors Choose Dana Point</div>
       <div class="dp-photo-row">
-        <div class="dp-photo-card"><img src="[[PHOTO_WHALE]]"><div class="dp-photo-cap">Whale &amp; Dolphin Watching</div></div>
-        <div class="dp-photo-card"><img src="[[PHOTO_HARBOR]]"><div class="dp-photo-cap">Harbor &amp; Coastline</div></div>
-        <div class="dp-photo-card"><img src="[[PHOTO_WOODY]]"><div class="dp-photo-cap">Classic Sailing Tours</div></div>
+        <div class="dp-photo-card"><img src="[[PHOTO_WHALE]]">
+          <div class="dp-photo-stat"><span class="stat-label">Repeat Visitors</span>[[STAT_REPEAT]]</div>
+          <div class="dp-photo-cap">Whale &amp; Dolphin Watching</div></div>
+        <div class="dp-photo-card"><img src="[[PHOTO_HARBOR]]">
+          <div class="dp-photo-stat"><span class="stat-label">Share of Visitor Days</span>[[STAT_HARBOR]]</div>
+          <div class="dp-photo-cap">Harbor &amp; Coastline</div></div>
+        <div class="dp-photo-card"><img src="[[PHOTO_WOODY]]">
+          <div class="dp-photo-stat"><span class="stat-label">Avg. Length of Stay</span>[[STAT_LOS]]</div>
+          <div class="dp-photo-cap">Classic Sailing Tours</div></div>
       </div>
       <div class="h-source">SOURCE: DATAFY</div>
       <div class="h-logo teal"><img src="[[LOGO_DATA_URI]]" style="width:20px;height:15px;"></div>
@@ -315,7 +326,7 @@
       <div class="h-eyebrow teal"><span class="line"></span>DATAFY &middot; LAYER 1 CURRENT</div>
       <div class="h-title teal">Visitor Profile &amp; Spend</div>
       <div class="h-subtitle">Trip Composition, Length of Stay, and Category Spend</div>
-      <div class="h-date">[[DATAFY_PERIOD]], Datafy Annual Pull Deep Dive Visitation Report</div>
+      <div class="h-date">[[DATAFY_PERIOD]], Datafy Visitation Report</div>
       <div style="display:flex; gap:24px; margin-top:16px; height:470px;">
         <div class="panel" style="flex:1; display:flex; gap:18px; align-items:center;">
           <div style="flex:0 0 190px;"><img class="chart-img" style="height:190px;" src="[[CHART_TRIP]]"></div>

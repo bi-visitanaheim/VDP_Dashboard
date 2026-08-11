@@ -3,10 +3,10 @@ compute_insights.py
 -------------------
 Generates forward-looking daily insights for four audiences:
 
-  dmo      — Destination Marketing Organization / TBID board
-  city     — City of Dana Point / City Council
-  visitor  — Trip planners and incoming visitors
-  resident — Local residents of Dana Point
+  dmo: Destination Marketing Organization / TBID board
+  city: City of Dana Point / City Council
+  visitor: Trip planners and incoming visitors
+  resident: Local residents of Dana Point
 
 Reads from ALL tables in analytics.sqlite and cross-references them to
 produce time-anchored, data-driven signals.  One insight row per
@@ -207,7 +207,7 @@ def upsert_insight(
 def load_kpi_recent(conn: sqlite3.Connection, days: int = 90) -> pd.DataFrame:
     """Trailing `days` window, anchored to the latest as_of_date actually in
     kpi_daily_summary, not to date.today(). STR feeds lag the calendar (see
-    CLAUDE.md's freshness lesson from audit_app.py) — anchoring to today() on
+    CLAUDE.md's freshness lesson from audit_app.py): anchoring to today() on
     a lagged feed silently returns zero rows, which every downstream insight
     generator then reads as revpar/adr == 0 or "N/A" instead of the real
     trailing figures."""
@@ -246,8 +246,7 @@ def load_compression(conn: sqlite3.Connection) -> pd.DataFrame:
 
 def load_str_revenue(conn: sqlite3.Connection, days: int = 90) -> pd.DataFrame:
     """Trailing room revenue from fact_str_metrics for TBID/TOT calcs. Anchored
-    to the latest as_of_date actually in fact_str_metrics, not date.today() —
-    same freshness fix as load_kpi_recent (see CLAUDE.md Lessons Learned)."""
+    to the latest as_of_date actually in fact_str_metrics, not date.today():     same freshness fix as load_kpi_recent (see CLAUDE.md Lessons Learned)."""
     max_row = pd.read_sql_query(
         "SELECT MAX(as_of_date) AS m FROM fact_str_metrics WHERE source='STR' AND grain='daily'", conn
     )
@@ -550,20 +549,20 @@ def gen_dmo_demand_trend(kpi: pd.DataFrame, comp: pd.DataFrame) -> dict:
 
     headline = (
         f"RevPAR {trend_word} at {_dollar(avg_rvp)} (30-day avg); "
-        f"YOY {_pct(avg_ryoy)} — {season} position"
+        f"YOY {_pct(avg_ryoy)}: {season} position"
     )
     action = "Maintain rate discipline and lock 2-night minimums on compression dates." if (avg_ryoy or 0) >= 0 else "Launch targeted demand programs for mid-week shoulder periods."
     body = (
         f"The trailing 30-day average RevPAR is {_dollar(avg_rvp)}, "
         f"with ADR at {_dollar(avg_adr)} and occupancy at {avg_occ:.1f}%. "
         f"Year-over-year RevPAR growth is {_pct(avg_ryoy)}, signaling "
-        f"{'a healthy pricing environment — rate discipline should be maintained' if (avg_ryoy or 0) >= 0 else 'rate pressure — evaluate demand generation programs'}. "
+        f"{'a healthy pricing environment: rate discipline should be maintained' if (avg_ryoy or 0) >= 0 else 'rate pressure: evaluate demand generation programs'}. "
         f"{next_peak} "
         f"Current-quarter compression: {comp_80} days above 80% occupancy."
         + _5wh(
             who="VDP TBID board, hotel revenue managers",
             what=f"RevPAR {_dollar(avg_rvp)} ({_pct(avg_ryoy)} YOY), {comp_80} compression days QTD",
-            when=f"Next 30 days — {season} season, {q_lbl}",
+            when=f"Next 30 days: {season} season, {q_lbl}",
             where="Dana Point select portfolio (12 properties)",
             why="RevPAR trajectory sets TBID revenue and board narrative for the quarter",
             how=action,
@@ -608,7 +607,7 @@ def gen_dmo_tbid_projection(kpi: pd.DataFrame, str_rev: pd.DataFrame) -> dict:
             f"{_dollar(tot_90d)} (10% of room revenue). "
             f"Applying a {q_mult:.2f}× seasonal factor for {q_lbl}, "
             f"next-quarter TBID revenue is projected at {_dollar(next_q_tbid)}. "
-            f"Rate discipline — not volume growth — is the highest-ROI lever for both metrics."
+            f"Rate discipline: not volume growth: is the highest-ROI lever for both metrics."
         )
         basis = {"total_rev_90d": round(total_rev_90d, 2),
                  "tbid_90d": round(tbid_90d, 2), "tot_90d": round(tot_90d, 2),
@@ -619,7 +618,7 @@ def gen_dmo_tbid_projection(kpi: pd.DataFrame, str_rev: pd.DataFrame) -> dict:
         last30 = kpi.tail(30)
         avg_rvp = last30["revpar"].mean()
         avg_sup = 0  # supply not available in kpi table
-        headline = f"RevPAR trending at {_dollar(avg_rvp)} — load room revenue data for TBID projections"
+        headline = f"RevPAR trending at {_dollar(avg_rvp)}: load room revenue data for TBID projections"
         body = (
             f"Daily RevPAR averages {_dollar(avg_rvp)} over the trailing 30 days. "
             f"Run the full STR pipeline with revenue metric data to enable TBID and TOT projections. "
@@ -656,7 +655,7 @@ def gen_dmo_feeder_market(dmas: pd.DataFrame, web_kpis: dict, media_kpis: dict) 
         f"media campaigns added {int(med_trips):,} attributable trips. "
         f"Forward focus: increase shoulder-season targeting in {second} and SF Bay Area "
         f"to diversify drive-market dependency and reduce Q1 softness. "
-        f"Out-of-state visitor days represent 61% of total — protect that mix with fly-market content."
+        f"Out-of-state visitor days represent 61% of total: protect that mix with fly-market content."
     )
     dma_list = [(r["dma"], r["visitor_days_share_pct"]) for _, r in dmas.iterrows()]
     return dict(
@@ -685,13 +684,13 @@ def gen_dmo_compression_outlook(comp: pd.DataFrame, kpi: pd.DataFrame) -> dict:
 
     days_to_q3 = _days_to_event(7, 1)   # July 1 = Q3 start proxy
     headline = (
-        f"{cq} compression: {cq_80} days above 80% occ — "
+        f"{cq} compression: {cq_80} days above 80% occ: "
         f"Q3 peak ({int(avg_q3_80)}-day avg) starts in ~{days_to_q3} days"
     )
     body = (
         f"Current quarter ({cq}) has logged {cq_80} days above 80% occupancy "
         f"and {cq_90} days above 90%. "
-        f"Historical Q3 average is {avg_q3_80:.0f} days above 80% — "
+        f"Historical Q3 average is {avg_q3_80:.0f} days above 80%: "
         f"the highest compression window of the year. "
         f"Q3 peak demand is approximately {days_to_q3} days away; "
         f"revenue management teams should be implementing BAR increases and "
@@ -716,7 +715,7 @@ def gen_dmo_event_roi(media_kpis: dict, web_kpis: dict) -> dict:
     total_impact = (camp_impact or 0) + (web_impact or 0)
 
     headline = (
-        f"Ohana Fest in ~{days_to_ohana} days — "
+        f"Ohana Fest in ~{days_to_ohana} days: "
         f"combined marketing impact: {_dollar(total_impact)} est."
     )
     body = (
@@ -762,7 +761,7 @@ def gen_city_tot_revenue(str_rev: pd.DataFrame, kpi: pd.DataFrame) -> dict:
             f"in STR-verified room revenue. "
             f"Applying a {q_mult:.2f}× seasonal adjustment for {q_lbl}, "
             f"next-quarter TOT revenue is projected at {_dollar(next_q_tot)}. "
-            f"TOT flows directly to the City of Dana Point general fund — "
+            f"TOT flows directly to the City of Dana Point general fund: "
             f"a {'+' if q_mult > 1 else ''}{(q_mult-1)*100:.0f}% seasonal swing is "
             f"expected versus the trailing period. "
             f"Budget teams should anchor next-year projections to Q3 actuals, not annual averages."
@@ -773,7 +772,7 @@ def gen_city_tot_revenue(str_rev: pd.DataFrame, kpi: pd.DataFrame) -> dict:
     else:
         last30 = kpi.tail(30)
         avg_rvp = last30["revpar"].mean()
-        headline = f"RevPAR at {_dollar(avg_rvp)} — load revenue data to project TOT receipts"
+        headline = f"RevPAR at {_dollar(avg_rvp)}: load revenue data to project TOT receipts"
         body = (
             f"The current RevPAR of {_dollar(avg_rvp)} reflects active demand. "
             f"Dana Point's 10% Transient Occupancy Tax accrues on gross room revenue. "
@@ -805,18 +804,18 @@ def gen_city_infrastructure(comp: pd.DataFrame) -> dict:
     )
 
     headline = (
-        f"Next high-traffic period: {upcoming_name} in ~{upcoming_days} days — "
+        f"Next high-traffic period: {upcoming_name} in ~{upcoming_days} days: "
         f"prepare parking, transit, and coastal access resources"
     )
     body = (
-        f"Current-quarter compression: {cq_80} days above 80% hotel occupancy — "
+        f"Current-quarter compression: {cq_80} days above 80% hotel occupancy: "
         f"each such day signals elevated visitor volume across beaches, harbor, and "
         f"downtown Dana Point. "
         f"{upcoming_name} (~{upcoming_days} days away) historically triggers "
         f"90%+ occupancy and peak coastal traffic. "
         f"City departments should coordinate beach parking overflow, Harbor Drive traffic, "
         f"and Doheny State Beach access management. "
-        f"Q3 (July–Sept) generates approximately 37+ compression days on average — "
+        f"Q3 (July–Sept) generates approximately 37+ compression days on average: "
         f"the highest sustained infrastructure pressure of the year."
     )
     return dict(
@@ -837,7 +836,7 @@ def gen_city_visitor_profile(overview: dict) -> dict:
     avg_los         = overview.get("avg_length_of_stay_days") or 0
 
     headline = (
-        f"{int(total_trips):,} annual trips to Dana Point — "
+        f"{int(total_trips):,} annual trips to Dana Point: "
         f"{overnight_pct:.1f}% overnight, {out_of_state:.1f}% out-of-state"
     )
     body = (
@@ -845,7 +844,7 @@ def gen_city_visitor_profile(overview: dict) -> dict:
         f"{int(total_trips):,} total trips to Dana Point, with "
         f"{overnight_pct:.1f}% classified as overnight stays "
         f"(avg {avg_los:.1f} nights). "
-        f"{out_of_state:.1f}% of visitor-days originate from out-of-state — "
+        f"{out_of_state:.1f}% of visitor-days originate from out-of-state: "
         f"these visitors generate the highest per-trip economic impact. "
         f"{repeat_vis:.1f}% are repeat visitors, indicating strong destination loyalty. "
         f"City services, signage, and visitor programs should be calibrated for a primarily "
@@ -881,7 +880,7 @@ def gen_city_economic_impact(overview: dict, spending: pd.DataFrame) -> dict:
     )
     body = (
         f"Out-of-state visitors account for {out_of_state_spend_pct:.0f}% of total "
-        f"tourism spending in Dana Point — the highest-value economic segment. "
+        f"tourism spending in Dana Point: the highest-value economic segment. "
         f"Primary spend categories are {cats_str}. "
         f"The Ohana Fest benchmark ($18.4M destination spend, 3.2× multiplier) demonstrates "
         f"events' ability to generate genuine incremental economic activity, "
@@ -912,20 +911,20 @@ def gen_visitor_best_value(kpi: pd.DataFrame) -> dict:
 
     # Best months for value
     if q_lbl == "Q1":
-        value_window = "January through mid-March (current window) — lowest ADR and best availability"
+        value_window = "January through mid-March (current window): lowest ADR and best availability"
         action = "Book now for the best rates before spring break demand lifts pricing."
     elif q_lbl == "Q2":
         value_window = "weekday stays in April–May before summer rates take effect"
         action = "Lock in weekday rates before Memorial Day; weekends already compress."
     elif q_lbl == "Q3":
-        value_window = "October (post-Labor Day shoulder) — expect 20–30% ADR drop vs summer"
+        value_window = "October (post-Labor Day shoulder): expect 20–30% ADR drop vs summer"
         action = "Consider October or November travel for significant savings over summer pricing."
     else:
         value_window = "November through December (excluding holiday weekends)"
-        action = "Early January is the lowest-rate period in the Dana Point calendar — plan ahead."
+        action = "Early January is the lowest-rate period in the Dana Point calendar: plan ahead."
 
     headline = (
-        f"Best value window: {value_window[:60]} — avg ADR {_dollar(avg_adr)}"
+        f"Best value window: {value_window[:60]}: avg ADR {_dollar(avg_adr)}"
     )
     body = (
         f"Over the trailing data period, {pct_low:.0f}% of days showed occupancy below 70%, "
@@ -956,7 +955,7 @@ def gen_visitor_rate_outlook(kpi: pd.DataFrame) -> dict:
     q_lbl, _, next_peak = _seasonal_position()
     headline = (
         f"Hotel rates {trend_word}: avg ADR {_dollar(avg_adr_30)}, "
-        f"YOY {_pct(avg_yoy_30)} — book early for peak season"
+        f"YOY {_pct(avg_yoy_30)}: book early for peak season"
     )
     body = (
         f"Average daily hotel rates are currently {trend_word} at {_dollar(avg_adr_30)} "
@@ -984,7 +983,7 @@ def gen_visitor_upcoming_events(media_kpis: dict) -> dict:
     days_to_labor    = _days_to_event(9, 1)
 
     upcoming = sorted([
-        ("Ohana Fest (Doheny State Beach — annual Sept music festival)", days_to_ohana, 90),
+        ("Ohana Fest (Doheny State Beach: annual Sept music festival)", days_to_ohana, 90),
         ("Memorial Day weekend (high occupancy / rate premium)", days_to_memorial, 60),
         ("Fourth of July (peak compression, harbor fireworks)", days_to_fourth, 45),
         ("Labor Day weekend (final summer compression event)", days_to_labor, 45),
@@ -999,7 +998,7 @@ def gen_visitor_upcoming_events(media_kpis: dict) -> dict:
         f"Hotel rates during this period typically carry a {rate_premium}%+ premium over baseline ADR. "
         f"Ohana Fest (late September) is the marquee annual event: "
         f"$18.4M total destination spend, +$139 ADR lift, and 68% out-of-state attendees. "
-        f"If you plan to attend, book accommodations immediately — "
+        f"If you plan to attend, book accommodations immediately: "
         f"event-weekend inventory is typically exhausted 4–8 weeks in advance. "
         f"Consider properties 5–10 minutes inland for rate relief while still accessing all venues."
     )
@@ -1024,7 +1023,7 @@ def gen_visitor_booking_timing(kpi: pd.DataFrame) -> dict:
             "January–March is the softest demand period; rates are at their seasonal floor. "
             "Book immediately to lock in the lowest ADR of 2026."
         )
-        urgency = "low — book now for best rates"
+        urgency = "low: book now for best rates"
     elif q_lbl == "Q2":
         advice = (
             "Spring demand is building. "
@@ -1032,24 +1031,24 @@ def gen_visitor_booking_timing(kpi: pd.DataFrame) -> dict:
             "but weekend rates are already pricing toward summer levels. "
             "Book at least 3–4 weeks in advance."
         )
-        urgency = "moderate — act within 2 weeks for best availability"
+        urgency = "moderate: act within 2 weeks for best availability"
     elif q_lbl == "Q3":
         advice = (
             "Peak season. "
             "Most compression dates (80%+ occupancy) are already sold out or at premium BAR. "
             "Consider shoulder weekdays or book flex-cancel rates for any remaining openings."
         )
-        urgency = "high — book immediately or consider alternative dates"
+        urgency = "high: book immediately or consider alternative dates"
     else:
         advice = (
             "Fall shoulder offers good value, especially for October and early November. "
-            "December holiday weekends book fast — secure those dates now. "
+            "December holiday weekends book fast: secure those dates now. "
             "Early January is the absolute lowest-rate period in the calendar."
         )
-        urgency = "low-moderate — holiday dates are filling; January is wide open"
+        urgency = "low-moderate: holiday dates are filling; January is wide open"
 
     headline = f"Booking urgency: {urgency} | RevPAR signal: {_dollar(avg_rvp)}"
-    body = f"{advice} Current market RevPAR is {_dollar(avg_rvp)}, reflecting {season} demand patterns. Dana Point's weekend-to-weekday rate spread is 15–30 percentage points — day-of-week flexibility is the single biggest lever for value travelers."
+    body = f"{advice} Current market RevPAR is {_dollar(avg_rvp)}, reflecting {season} demand patterns. Dana Point's weekend-to-weekday rate spread is 15–30 percentage points: day-of-week flexibility is the single biggest lever for value travelers."
     return dict(
         headline=headline, body=body, priority=1, horizon_days=30,
         data_sources="kpi_daily_summary",
@@ -1082,7 +1081,7 @@ def gen_resident_peak_alert(comp: pd.DataFrame) -> dict:
     cq_80 = int(cq_row["days_above_80_occ"].iloc[0]) if not cq_row.empty else 0
 
     headline = (
-        f"Heads-up: {next_name} in ~{next_days} days — "
+        f"Heads-up: {next_name} in ~{next_days} days: "
         f"expect heavy beach, harbor & downtown traffic"
     )
     body = (
@@ -1092,7 +1091,7 @@ def gen_resident_peak_alert(comp: pd.DataFrame) -> dict:
         f"and the harbor area fills by mid-morning. "
         f"Residents are encouraged to use beach and harbor amenities on weekday mornings "
         f"during visitor-heavy weekends. "
-        f"Q3 (July–Sept) historically delivers 34+ high-occupancy days — "
+        f"Q3 (July–Sept) historically delivers 34+ high-occupancy days: "
         f"peak beach and downtown crowding lasts the full summer season."
     )
     return dict(
@@ -1117,7 +1116,7 @@ def gen_resident_economic_benefit(str_rev: pd.DataFrame, overview: dict) -> dict
         body = (
             f"Visitor hotel spending over the past 90 days generated an estimated "
             f"{_dollar(tot_90d)} in Transient Occupancy Tax for the City of Dana Point's "
-            f"general fund — funding parks, roads, public safety, and coastal programs. "
+            f"general fund: funding parks, roads, public safety, and coastal programs. "
             f"An additional {_dollar(tbid_90d)} in TBID assessments funds destination marketing "
             f"that attracts the visitors who generate this revenue. "
             f"Tourism also directly supports local restaurants, retail, and service businesses. "
@@ -1135,7 +1134,7 @@ def gen_resident_economic_benefit(str_rev: pd.DataFrame, overview: dict) -> dict
             f"Datafy data shows {int(total_trips):,} annual trips to Dana Point. "
             f"Each overnight visitor generates Transient Occupancy Tax (10% of room rate) "
             f"and TBID assessments that collectively fund city services and destination marketing. "
-            f"Tourism is Dana Point's primary economic engine — "
+            f"Tourism is Dana Point's primary economic engine: "
             f"a healthy visitor economy means lower pressure on resident tax rates "
             f"and a well-funded parks and coastal program."
         )
@@ -1170,7 +1169,7 @@ def gen_resident_quiet_windows(kpi: pd.DataFrame) -> dict:
         )
     elif q_lbl == "Q3":
         window_advice = (
-            "Peak season — beaches and harbor are busiest July–September. "
+            "Peak season: beaches and harbor are busiest July–September. "
             "Weekday mornings before 9 a.m. are the best resident access window. "
             "Ohana Fest weekend (late September) brings the highest single-weekend volume."
         )
@@ -1182,13 +1181,13 @@ def gen_resident_quiet_windows(kpi: pd.DataFrame) -> dict:
         )
 
     headline = (
-        f"Resident access: {pct_quiet:.0f}% of recent days had below 65% hotel occupancy — "
+        f"Resident access: {pct_quiet:.0f}% of recent days had below 65% hotel occupancy: "
         f"{season} conditions"
     )
     body = (
         f"{window_advice} "
         f"Over the trailing period, {pct_quiet:.0f}% of days registered hotel occupancy "
-        f"below 65% — a reliable proxy for lower beach and downtown crowding. "
+        f"below 65%: a reliable proxy for lower beach and downtown crowding. "
         f"High-occupancy days (80%+) correlate with maximum visitor density at "
         f"parking lots, Doheny State Beach, Dana Point Harbor, and Lantern District dining."
     )
@@ -1208,7 +1207,7 @@ def gen_resident_annual_impact(overview: dict, comp: pd.DataFrame) -> dict:
     total_80 = comp["days_above_80_occ"].sum() if not comp.empty else 0
 
     headline = (
-        f"{int(total_trips):,} annual visits — {total_80} total compression days across "
+        f"{int(total_trips):,} annual visits: {total_80} total compression days across "
         f"{len(comp)} quarters of STR data"
     )
     body = (
@@ -1217,7 +1216,7 @@ def gen_resident_annual_impact(overview: dict, comp: pd.DataFrame) -> dict:
         f"{out_of_state:.0f}% of visitor-days came from out-of-state, "
         f"bringing net-new economic activity into the community. "
         f"Across all tracked quarters, Dana Point hotels recorded {total_80} days of "
-        f"80%+ occupancy — each representing a day when visitor economic contribution "
+        f"80%+ occupancy: each representing a day when visitor economic contribution "
         f"is at maximum. Tourism is the city's primary economic driver, "
         f"directly benefiting residents through TOT-funded city services and "
         f"employment in hospitality, dining, and retail."
@@ -1241,7 +1240,7 @@ def gen_cross_feeder_value_gap(all_dmas: pd.DataFrame, kpi: pd.DataFrame) -> dic
     """
     STR ADR + Datafy DMA spend efficiency.
     Identifies that high-volume drive markets underperform on spend per visit
-    vs. fly markets — mis-allocation risk if campaign budgets track volume.
+    vs. fly markets: mis-allocation risk if campaign budgets track volume.
     """
     if all_dmas.empty or kpi.empty:
         return {}
@@ -1279,7 +1278,7 @@ def gen_cross_feeder_value_gap(all_dmas: pd.DataFrame, kpi: pd.DataFrame) -> dic
 
     headline = (
         f"HIDDEN SIGNAL: LA drives {la_share:.0f}% of visits but spends ${la_avg:.0f}/day "
-        f"({la_eff:.2f}× efficiency) — {top_fly_name} spends ${top_fly_avg:.0f}/day "
+        f"({la_eff:.2f}× efficiency): {top_fly_name} spends ${top_fly_avg:.0f}/day "
         f"({top_fly_eff:.2f}×)"
     )
     body = (
@@ -1287,7 +1286,7 @@ def gen_cross_feeder_value_gap(all_dmas: pd.DataFrame, kpi: pd.DataFrame) -> dic
         f"Los Angeles drives {la_share:.0f}% of visitor-days (the most of any DMA) but "
         f"spends only ${la_avg:.0f}/visitor-day ({la_eff:.2f}× spend-efficiency index). "
         f"By contrast, fly markets like {top_fly_name} average ${top_fly_avg:.0f}/visitor-day "
-        f"({top_fly_eff:.2f}× efficiency) — {(top_fly_eff/la_eff - 1)*100:.0f}% more per trip. "
+        f"({top_fly_eff:.2f}× efficiency): {(top_fly_eff/la_eff - 1)*100:.0f}% more per trip. "
         f"Current ADR of {_dollar(avg_adr)} is closer to fly-market daily spend, "
         f"suggesting these visitors are paying premium rates. "
         f"Rebalancing campaign spend toward out-of-state fly markets (NYC, LV, Dallas) "
@@ -1328,7 +1327,7 @@ def gen_cross_daytrip_conversion(overview: dict, kpi: pd.DataFrame) -> dict:
     revenue_5pct    = conversion_5pct * avg_adr
 
     headline = (
-        f"HIDDEN OPPORTUNITY: {int(day_trips):,} annual day trips never touch a hotel — "
+        f"HIDDEN OPPORTUNITY: {int(day_trips):,} annual day trips never touch a hotel: "
         f"3% conversion = {_dollar(revenue_3pct)} in incremental room revenue"
     )
     body = (
@@ -1341,7 +1340,7 @@ def gen_cross_daytrip_conversion(overview: dict, kpi: pd.DataFrame) -> dict:
         f"(1) 'Stay the Night' packages for sunset dinner + beach activities, "
         f"(2) late check-out promotions targeting same-day bookers, "
         f"(3) whale watching / harbor experience packages with hotel bundling. "
-        f"These require no new visitor acquisition — the audience is already on property."
+        f"These require no new visitor acquisition: the audience is already on property."
     )
     return dict(
         headline=headline, body=body, priority=1, horizon_days=365,
@@ -1392,7 +1391,7 @@ def gen_cross_weekday_los_gap(kpi_dow: pd.DataFrame, overview: dict) -> dict:
         f"(only {occ_gap:.1f}pp gap). Datafy's {avg_los:.1f}-day average length of stay explains this: "
         f"most visitors arrive Friday and leave Sunday, leaving Monday–Thursday "
         f"${adr_gap:.0f} below weekend ADR. "
-        f"The conventional fix — midweek discounting — sacrifices rate. "
+        f"The conventional fix: midweek discounting: sacrifices rate. "
         f"The higher-ROI lever is LOS extension: packages that reward 3+ night stays "
         f"(Fri–Mon), converting Sunday checkout to Monday checkout. "
         f"Every 0.5-day LOS increase across overnight visitors translates to "
@@ -1452,17 +1451,17 @@ def gen_cross_campaign_seasonality(comp: pd.DataFrame, channels: pd.DataFrame,
             campaign_month = str(web_period_end)
 
     headline = (
-        f"HIDDEN RISK: Q3 averages {avg_q3:.0f} compression days vs. Q1's {avg_q1:.0f} — "
+        f"HIDDEN RISK: Q3 averages {avg_q3:.0f} compression days vs. Q1's {avg_q1:.0f}: "
         f"'{top_channel}' campaigns drive {top_trips:,} trips at only {low_rate:.2f}% conversion"
     )
     body = (
         f"Cross-referencing STR compression with Datafy attribution reveals campaign timing risk. "
-        f"Q3 already averages {avg_q3:.0f} days above 80% occupancy — hotels are near capacity. "
-        f"Q1 averages only {avg_q1:.0f} compression days — a wide demand gap. "
+        f"Q3 already averages {avg_q3:.0f} days above 80% occupancy: hotels are near capacity. "
+        f"Q1 averages only {avg_q1:.0f} compression days: a wide demand gap. "
         f"Datafy shows '{top_channel}' drives the most attributed trips ({top_trips:,}) "
         f"but '{low_rate_channel}' channel has the lowest conversion rate ({low_rate:.2f}%). "
         f"If high-volume campaigns are concentrated in peak months (Q3 campaign period: {campaign_month}), "
-        f"they generate marginal incremental stays — hotels are already full. "
+        f"they generate marginal incremental stays: hotels are already full. "
         f"Shifting 20–30% of Q3 campaign spend to Q1–Q2 shoulder campaigns could generate "
         f"2–3× more incremental room nights per marketing dollar spent."
     )
@@ -1482,7 +1481,7 @@ def gen_cross_oos_adr_premium(overview: dict, kpi: pd.DataFrame, all_dmas: pd.Da
     """
     STR ADR YOY + Datafy out-of-state spend share.
     Out-of-state visitors represent premium willingness to pay but ADR growth
-    may not be fully capturing it — especially vs. fly-market avg spend.
+    may not be fully capturing it: especially vs. fly-market avg spend.
     """
     if not overview or kpi.empty:
         return {}
@@ -1510,14 +1509,14 @@ def gen_cross_oos_adr_premium(overview: dict, kpi: pd.DataFrame, all_dmas: pd.Da
 
     headline = (
         f"HIDDEN GAP: OOS visitors spend {oos_spend_index:.2f}× their visitor share "
-        f"but ADR YOY only {_pct(adr_yoy_30)} — "
+        f"but ADR YOY only {_pct(adr_yoy_30)}: "
         f"{max_spend_dma} avg ${max_spend_usd:.0f}/day vs ADR {_dollar(adr_30)}"
     )
     body = (
         f"Out-of-state visitors account for {oos_vd_pct:.1f}% of visitor-days "
         f"but {oos_spend_pct:.1f}% of total destination spending "
         f"({oos_spend_index:.2f}× spend-to-visit ratio). "
-        f"Top fly markets like {max_spend_dma} average ${max_spend_usd:.0f}/visitor-day — "
+        f"Top fly markets like {max_spend_dma} average ${max_spend_usd:.0f}/visitor-day: "
         f"{'above' if max_spend_usd > (adr_30 or 0) else 'near'} the current ADR of {_dollar(adr_30)}. "
         f"Yet ADR year-over-year growth is only {_pct(adr_yoy_30)}. "
         f"This gap signals that premium out-of-state demand is not being fully captured through rate. "
@@ -1541,8 +1540,7 @@ def gen_cross_oos_adr_premium(overview: dict, kpi: pd.DataFrame, all_dmas: pd.Da
 def gen_cross_compression_daytrip(comp: pd.DataFrame, overview: dict) -> dict:
     """
     STR compression days + Datafy day-trip %.
-    On 80%+ occupancy days, 40% of all visitors are non-hotel day trippers —
-    they consume parking, beaches, and services without generating hotel revenue.
+    On 80%+ occupancy days, 40% of all visitors are non-hotel day trippers:     they consume parking, beaches, and services without generating hotel revenue.
     This is the hidden infrastructure cost invisible in STR data alone.
     """
     if comp.empty or not overview:
@@ -1566,12 +1564,12 @@ def gen_cross_compression_daytrip(comp: pd.DataFrame, overview: dict) -> dict:
 
     headline = (
         f"HIDDEN COST: On {total_80} compression days, day trippers add "
-        f"{day_multiplier:.1f}× hotel-guest volume — "
+        f"{day_multiplier:.1f}× hotel-guest volume: "
         f"invisible in STR data, visible in parking & beach data"
     )
     body = (
         f"STR data shows {total_80} days across all quarters where hotel occupancy exceeded 80%. "
-        f"Datafy reveals that {day_trip_pct:.1f}% of all Dana Point visits are day trips — "
+        f"Datafy reveals that {day_trip_pct:.1f}% of all Dana Point visits are day trips: "
         f"meaning for every hotel guest, there are approximately {day_multiplier:.1f} additional "
         f"day visitors consuming parking, beaches, and City services on those peak days. "
         f"During Q3 peak ({worst_q3_80} days at 80%+ occupancy), total visitor density is "
@@ -1652,7 +1650,7 @@ def gen_dmo_group_national_context(
 ) -> dict:
     """
     Hidden signal: Dana Point group opportunity sized against US Travel national benchmarks.
-    $319B total group travel nationally, $126B in meetings alone — sets the macro context
+    $319B total group travel nationally, $126B in meetings alone: sets the macro context
     for VDP's local group strategy and makes the TBID case in national terms.
     """
     if not us_travel or not group:
@@ -1676,28 +1674,28 @@ def gen_dmo_group_national_context(
     avg_adr = kpi["adr"].tail(30).mean() if not kpi.empty else 0
 
     headline = (
-        f"HIDDEN OPPORTUNITY: National group travel = ${total_group_b:.0f}B/yr ({jobs_m:.0f}M jobs) — "
+        f"HIDDEN OPPORTUNITY: National group travel = ${total_group_b:.0f}B/yr ({jobs_m:.0f}M jobs): "
         f"meetings alone ${meetings_b:.0f}B, {biz_recovery:.0f}% recovered from 2019. "
         f"Dana Point est. group TBID: ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M/yr"
     )
     body = (
         f"U.S. Travel Association benchmark: group travel generates ${total_group_b:.0f}B annually "
-        f"across 4 segments — meetings & events (${meetings_b:.0f}B), live spectator (${spectator_b:.0f}B), "
+        f"across 4 segments: meetings & events (${meetings_b:.0f}B), live spectator (${spectator_b:.0f}B), "
         f"participatory sports (${sports_b:.0f}B), and leisure group travel. "
-        f"Business travelers represent just 20% of travel volume but 60% of hotel revenue — "
+        f"Business travelers represent just 20% of travel volume but 60% of hotel revenue: "
         f"the most revenue-efficient segment in any destination's mix. "
         f"Meetings & business events recovered to {int(biz_recovery)}% of 2019 levels in 2024, "
         f"projected to grow faster than transient travel through 2025. "
-        f"SMERF groups book {bk_wk_high} weeks ahead — targeting them now fills "
+        f"SMERF groups book {bk_wk_high} weeks ahead: targeting them now fills "
         f"Q1/Q4 2026 shoulder season when Dana Point ADR runs 25-30% below peak. "
         f"Dana Point estimated group TBID contribution: ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M/yr. "
         f"Each +5pp group mix shift adds ~${uplift/1000:.0f}K annual TBID. "
-        f"Current STR ADR ${avg_adr:.0f} — group negotiated rate est. ${avg_adr*0.82:.0f}, "
+        f"Current STR ADR ${avg_adr:.0f}: group negotiated rate est. ${avg_adr*0.82:.0f}, "
         f"still generating TBID at 100% margin vs. empty rooms."
         + _5wh(
             who="TBID board, VDP director of sales, hotel GMs",
             what=f"National group travel ${total_group_b:.0f}B benchmark; Dana Point TBID opportunity ${tbid_low/1e6:.1f}M-${tbid_high/1e6:.1f}M/yr",
-            when=f"Act now — SMERF/group booking window is {bk_wk_high} weeks; Q4 2026 shoulder needs group sales now",
+            when=f"Act now: SMERF/group booking window is {bk_wk_high} weeks; Q4 2026 shoulder needs group sales now",
             where="Dana Point upper-upscale and upscale hotels with meeting space (3,098 group-primary rooms)",
             why="Group demand fills shoulder season vacancies with TBID-generating room revenue at 100% margin above empty",
             how="Commission group RFP package for visitdanapoint.com. Target: 3 SMERF bookings per quarter in Q1/Q4. "
@@ -1751,7 +1749,7 @@ def gen_cross_traveler_type_mix(
     los_rev_opp = round(los_gap * avg_adr * 1_000, 0) if los_gap > 0 else 0  # per 1000 group bookings
 
     headline = (
-        f"HIDDEN GAP: Dana Point avg LOS {dp_avg_los:.1f} nights vs SMERF benchmark {smerf_los_mid:.1f} — "
+        f"HIDDEN GAP: Dana Point avg LOS {dp_avg_los:.1f} nights vs SMERF benchmark {smerf_los_mid:.1f}: "
         f"+{los_gap:.1f} night LOS gap = ${los_rev_opp/1000:.0f}K additional rev per 1,000 group bookings"
     )
     body = (
@@ -1763,14 +1761,14 @@ def gen_cross_traveler_type_mix(
         f"(at current ${avg_adr:.0f} blended ADR). "
         f"Closing the gap requires shifting from day-trip and 1-night leisure toward "
         f"multi-night group, family, and bleisure bookings. "
-        f"SMERF and family groups are the highest-LOS segments — both book in advance and "
+        f"SMERF and family groups are the highest-LOS segments: both book in advance and "
         f"stay through weekdays, the exact gap in Dana Point's occupancy pattern. "
-        f"Overnight guest share: {dp_overnight_pct:.0f}% — national SMERF benchmark suggests "
+        f"Overnight guest share: {dp_overnight_pct:.0f}%: national SMERF benchmark suggests "
         f"80%+ overnight for group stays."
         + _5wh(
             who="VDP marketing team, hotel revenue managers",
             what=f"LOS gap {los_gap:.1f} nights vs SMERF/family benchmark; ${los_rev_opp/1000:.0f}K/1K bookings opportunity",
-            when="Immediate — LOS improvement shows in STR monthly data within 90 days of group strategy launch",
+            when="Immediate: LOS improvement shows in STR monthly data within 90 days of group strategy launch",
             where="All Dana Point hotel properties, especially resort and upper-upscale with multi-night packages",
             why="Longer stays generate more ADR, more TBID, and more dining/retail spending per visitor",
             how="Create minimum 2-night packages for SMERF groups. Require 3-night minimum for peak adjacent dates. "
@@ -1836,7 +1834,7 @@ def gen_dmo_group_revenue_opportunity(
 
     headline = (
         f"GROUP REVENUE OPPORTUNITY: Est. ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M/yr TBID "
-        f"from group demand ({int(share_low*100)}–{int(share_high*100)}% of room revenue) — "
+        f"from group demand ({int(share_low*100)}–{int(share_high*100)}% of room revenue): "
         f"+${ uplift/1000:.0f}K TBID per +5pp group mix growth"
     )
     body = (
@@ -1847,14 +1845,14 @@ def gen_dmo_group_revenue_opportunity(
         f"Group negotiated rates average ~{int(discount*100)}% below blended ADR "
         f"(est. ${group_adr:.0f}/night vs. ${avg_adr:.0f} current STR blended ADR). "
         f"Each +5 percentage point shift in group mix delivers ~${uplift/1000:.0f}K incremental annual TBID. "
-        f"Group business is most valuable in Q1/Q4 shoulder when transient demand is softest — "
+        f"Group business is most valuable in Q1/Q4 shoulder when transient demand is softest: "
         f"filling those rooms at a discounted rate still generates TBID at 100% margin for VDP."
         + _5wh(
             who="TBID board, VDP director of sales, hotel GMs",
             what=f"Group demand est. {int(share_low*100)}-{int(share_high*100)}% of hotel revenue; "
                  f"TBID contribution ${tbid_low/1e6:.1f}M-${tbid_high/1e6:.1f}M/yr",
-            when="Ongoing — group booking windows are 3-12 months; action now affects Q3/Q4 2026",
-            where="Dana Point hotels — esp. upper-upscale and upscale properties with meeting space",
+            when="Ongoing: group booking windows are 3-12 months; action now affects Q3/Q4 2026",
+            where="Dana Point hotels: esp. upper-upscale and upscale properties with meeting space",
             why="TBID is funded by room revenue; growing group mix in shoulder season grows TBID without cannibalizing peak leisure",
             how="Commission a group RFP program targeting SMERF + corporate. Add group-amenity listing to visitdanapoint.com. "
                 "Await STR group-segment data for precise demand share tracking.",
@@ -1918,22 +1916,22 @@ def gen_dmo_group_displacement_risk(
         risk_tier = "HIGH"
         risk_note = (
             f"{compression_days} compression days/yr ({q3_days} in {worst_q} alone); "
-            "avoid group commitments on peak Q3 weekends — protect $500+ transient rate opportunities"
+            "avoid group commitments on peak Q3 weekends: protect $500+ transient rate opportunities"
         )
 
     headline = (
-        f"GROUP DISPLACEMENT RISK ({risk_tier}): {compression_days} compression days/yr — "
+        f"GROUP DISPLACEMENT RISK ({risk_tier}): {compression_days} compression days/yr: "
         f"group blocks on peak nights cost ~${rev_cost_per_room:.0f}/room vs. transient rate"
     )
     body = (
         f"Displacement risk assessment: {compression_days} annual compression days (80%+ market occ). "
-        f"Group negotiated ADR est. ${group_adr:.0f} vs. current STR blended ADR ${avg_adr:.0f} — "
+        f"Group negotiated ADR est. ${group_adr:.0f} vs. current STR blended ADR ${avg_adr:.0f}: "
         f"a ${rev_cost_per_room:.0f}/room/night revenue gap when groups fill rooms that transient "
         f"leisure travelers would have paid full rack rate. "
-        f"Risk tier: {risk_tier} — {risk_note}. "
+        f"Risk tier: {risk_tier}: {risk_note}. "
         f"Recommendation: concentrate group sales outreach on Q1 (4 compression days) and Q4 "
         f"shoulder seasons where group demand fills rooms that would otherwise sell at 60-70% occ. "
-        f"On Q3 weekends with 90%+ occ forecasted, do not accept group blocks — protect the transient rate."
+        f"On Q3 weekends with 90%+ occ forecasted, do not accept group blocks: protect the transient rate."
         + _5wh(
             who="Hotel GMs, revenue managers, VDP group sales team",
             what=f"{compression_days} compression days/yr; group ADR ~${adr_gap:.0f} below transient on peak dates",
@@ -1963,7 +1961,7 @@ def gen_city_group_adr_premium(
 ) -> dict:
     """
     City audience: group business and its TOT revenue implications.
-    City council cares about TOT (10% of room revenue) — group mix affects total TOT collections.
+    City council cares about TOT (10% of room revenue): group mix affects total TOT collections.
     """
     if not group:
         return {}
@@ -1982,7 +1980,7 @@ def gen_city_group_adr_premium(
 
     headline = (
         f"GROUP TOT IMPACT: ${group_tot_low/1e6:.0f}M–${group_tot_high/1e6:.0f}M/yr city TOT "
-        f"from group demand — +${ tot_uplift/1000:.0f}K TOT per +5pp group mix growth"
+        f"from group demand: +${ tot_uplift/1000:.0f}K TOT per +5pp group mix growth"
     )
     body = (
         f"Group business generates an estimated ${group_tot_low/1e6:.0f}M–${group_tot_high/1e6:.0f}M "
@@ -1990,7 +1988,7 @@ def gen_city_group_adr_premium(
         f"({int(share_low*100)}–{int(share_high*100)}% of the total hotel market). "
         f"Group negotiated ADR (est. ${group_adr:.0f}) is ~{int(group.get('benchmark_group_adr_discount_pct', 0.18)*100)}% "
         f"below blended market ADR (${avg_adr:.0f} current STR), meaning group bookings generate "
-        f"lower per-room TOT than transient leisure — but they fill shoulder-season nights that "
+        f"lower per-room TOT than transient leisure: but they fill shoulder-season nights that "
         f"would otherwise be vacant, generating TOT from rooms that would produce $0. "
         f"Each +5 percentage-point shift in group mix adds ~${tot_uplift/1000:.0f}K in annual TOT. "
         f"A city group-travel incentive program (convention center access, parking waivers, marketing co-op) "
@@ -2043,7 +2041,7 @@ def gen_city_group_demand_trend(
 
     headline = (
         f"GROUP DEMAND CAPACITY: {group_rooms:,} of {total_rooms:,} South OC rooms ({group_pct*100:.0f}%) "
-        f"in group-primary properties — est. {est_meeting_rooms} meeting spaces available"
+        f"in group-primary properties: est. {est_meeting_rooms} meeting spaces available"
     )
     body = (
         f"Supply-side group capacity: {group_rooms:,} rooms in Upper Upscale and Upscale properties "
@@ -2054,7 +2052,7 @@ def gen_city_group_demand_trend(
         f"Estimated ~{est_meeting_rooms} meeting/event spaces available across the market based on "
         f"upper-upscale room count (industry avg: 1 meeting room per 50 keys). "
         f"With {compression_days} annual compression days, Dana Point has limited group absorption capacity "
-        f"in Q3 peak — the strategic opportunity is positioning the destination as a Q1/Q4 "
+        f"in Q3 peak: the strategic opportunity is positioning the destination as a Q1/Q4 "
         f"meetings and incentive destination to reduce seasonal concentration. "
         f"NOTE: Actual group demand data will be available when STR provides group-segment exports."
         + _5wh(
@@ -2114,24 +2112,24 @@ def gen_cross_group_event_synergy(
     # Known Dana Point anchor events for group synergy
     anchor_events = [
         ("Doheny Blues Festival", "May", "spectator/leisure group"),
-        ("Ohana Fest", "Sep", "music spectator — HIGH OCC caution"),
-        ("Dana Point Tall Ships Festival", "Oct", "participatory/leisure — shoulder OK"),
+        ("Ohana Fest", "Sep", "music spectator: HIGH OCC caution"),
+        ("Dana Point Tall Ships Festival", "Oct", "participatory/leisure: shoulder OK"),
         ("Doheny Surf Classic", "Jun", "participatory sports group"),
-        ("Harbor Lantern Parade", "Dec", "leisure SMERF — shoulder fill"),
+        ("Harbor Lantern Parade", "Dec", "leisure SMERF: shoulder fill"),
     ]
     event_lines = "; ".join(
         f"{e[0]} ({e[1]}): {e[2]}" for e in anchor_events
     )
 
     headline = (
-        f"HIDDEN OPPORTUNITY — GROUP EVENT SYNERGY: "
+        f"HIDDEN OPPORTUNITY: GROUP EVENT SYNERGY: "
         f"SMERF buyers book 8–48 weeks out; targeting {safe_q_str} fills shoulder gaps "
         f"worth +${tbid_uplift/1000:.0f}K TBID per +5pp group mix shift"
     )
     body = (
         f"CROSS-SIGNAL: Dana Point events calendar × SMERF booking window × displacement risk "
         f"reveals a precision group sales calendar. SMERF groups (Social/Military/Educational/"
-        f"Religious/Fraternal) book 8–48 weeks in advance — meaning today's outreach fills "
+        f"Religious/Fraternal) book 8–48 weeks in advance: meaning today's outreach fills "
         f"{safe_q_str} shoulder nights. With {compression_days} annual compression days "
         f"concentrated in peak months, group blocks in {safe_q_str} carry ZERO displacement "
         f"cost. Each 5pp shift in group mix generates +${tbid_uplift/1000:.0f}K TBID. "
@@ -2203,14 +2201,14 @@ def gen_cross_traveler_mix_revenue_gap(
     daytrip_gap_signal = daytrip_pct > 35
 
     headline = (
-        f"HIDDEN GAP — TRAVELER MIX REVENUE LEAK: "
+        f"HIDDEN GAP: TRAVELER MIX REVENUE LEAK: "
         f"{daytrip_pct:.0f}% day-trip share and ${avg_adr:.0f} ADR suggest under-indexing on "
-        f"business and luxury segment — highest-revenue types per national benchmarks"
+        f"business and luxury segment: highest-revenue types per national benchmarks"
     )
     body = (
         f"CROSS-SIGNAL: U.S. Travel traveler type benchmarks × Dana Point Datafy visitor "
         f"profile × STR ADR reveal a revenue-mix gap. Nationally, business travelers "
-        f"represent 20% of hotel volume but 60% of revenue — {biz_multiplier:.0f}× the average "
+        f"represent 20% of hotel volume but 60% of revenue: {biz_multiplier:.0f}× the average "
         f"leisure spend. Dana Point's current profile shows "
         f"{daytrip_pct:.0f}% day-trip share and {out_of_state_pct:.0f}% out-of-state visitors "
         f"with avg LOS {avg_los:.1f} nights vs. business benchmark of 2-3 nights at highest ADR. "
@@ -2219,12 +2217,12 @@ def gen_cross_traveler_mix_revenue_gap(
         f"(moving from medium to highest revenue tier) could add est. "
         f"${avg_adr * biz_multiplier * total_trips * 0.05 / 1e6:.0f}M in incremental room revenue. "
         f"CoStar Upper Upscale (Waldorf Astoria, Ritz-Carlton) are the natural vehicles for "
-        f"this segment — VDP marketing investment should include corporate planner outreach."
+        f"this segment: VDP marketing investment should include corporate planner outreach."
         + _5wh(
             who="VDP marketing team, hotel revenue managers, corporate sales managers",
             what=f"Shift 5pp of visitor mix from leisure/day-trip to business/incentive (highest revenue tier)",
             when="Immediate: corporate planner outreach cycles are 6-18 months for large groups",
-            where="Target corporate travel managers in LA, OC, Phoenix, San Diego — drive markets within 3 hours",
+            where="Target corporate travel managers in LA, OC, Phoenix, San Diego: drive markets within 3 hours",
             why=f"Business travelers generate {biz_multiplier:.0f}× average leisure revenue; "
                 f"ADR premium alone = est. ${est_biz_adr:.0f} vs ${avg_adr:.0f} blended",
             how="Commission a meeting-planner site-inspection program. Build corporate "
@@ -2319,7 +2317,7 @@ def gen_cross_group_costar_correlation(
     lux_str = f"Luxury peer ADR ${luxury_adr:.0f}" if luxury_adr else ""
 
     headline = (
-        f"HIDDEN SIGNAL — COMP SET RATE GAP: Group ADR ${group_adr:.0f} is "
+        f"HIDDEN SIGNAL: COMP SET RATE GAP: Group ADR ${group_adr:.0f} is "
         f"${adr_gap:.0f} ({discount_pct:.0f}%) below market blended ${market_adr:.0f}; "
         f"competitive set {ari_str}, {rgi_str}"
     )
@@ -2328,7 +2326,7 @@ def gen_cross_group_costar_correlation(
         f"${adr_gap:.0f}/room/night rate gap ({discount_pct:.0f}% discount) between "
         f"estimated group ADR (${group_adr:.0f}) and market blended ADR (${market_adr:.0f}). "
         f"Competitive set {ari_str} and {rgi_str}. "
-        + (f"Luxury properties average ${luxury_adr:.0f} ADR — group blocks at ${group_adr:.0f} "
+        + (f"Luxury properties average ${luxury_adr:.0f} ADR: group blocks at ${group_adr:.0f} "
            f"represent a significant premium over SMERF alternatives, validating Dana Point "
            f"as a high-value group destination vs. inland meeting hotels. " if luxury_adr else "")
         + f"Closing the group ADR gap by $15–$25 would add ${(15 * 5120 * 0.28 * 0.0125):.0f}–"
@@ -2385,7 +2383,7 @@ def gen_cross_supply_pipeline_group_risk(
         soonest = str(dates.iloc[0]) if not dates.empty else None
 
     headline = (
-        f"HIDDEN SIGNAL — SUPPLY PIPELINE: {total_new_rooms:,} new rooms entering market "
+        f"HIDDEN SIGNAL: SUPPLY PIPELINE: {total_new_rooms:,} new rooms entering market "
         f"(est. open {soonest or 'TBD'}); group-capable share adds ~${new_group_tbid_annual/1000:.0f}K TBID/yr"
     )
     body = (
@@ -2401,7 +2399,7 @@ def gen_cross_supply_pipeline_group_risk(
         + _5wh(
             who="TBID board and city planning",
             what=f"{total_new_rooms:,} new rooms entering market; {group_new_rooms:,} estimated group-capable",
-            when=f"Beginning {soonest or 'TBD'} — TBID projections should be updated",
+            when=f"Beginning {soonest or 'TBD'}: TBID projections should be updated",
             where="Dana Point / South Orange County competitive set",
             why=f"New supply expands TBID base by ~${new_group_tbid_annual/1000:.0f}K/yr at current group ADR",
             how="Update TBID revenue projections; negotiate group rate programs with new properties pre-opening",
@@ -2454,13 +2452,13 @@ def gen_cross_competitive_set_group_gap(
         signal_color = "caution"
 
     headline = (
-        f"HIDDEN GAP — COMPETITIVE SET GROUP INDEX: "
+        f"HIDDEN GAP: COMPETITIVE SET GROUP INDEX: "
         f"Avg RGI {avg_rgi:.1f} ({signal}); {n_under}/{n_total} properties under-index on RevPAR "
-        f"— group mix correction worth ${(tbid_high-tbid_low)/1e6:.1f}M TBID upside"
+        f": group mix correction worth ${(tbid_high-tbid_low)/1e6:.1f}M TBID upside"
     )
     body = (
         f"CROSS-SIGNAL: CoStar competitive set RevPAR index (RGI) × group demand benchmarks "
-        f"show the South OC market averaging RGI {avg_rgi:.1f} — market is {signal} on RevPAR. "
+        f"show the South OC market averaging RGI {avg_rgi:.1f}: market is {signal} on RevPAR. "
         f"{n_under} of {n_total} properties index below fair share (RGI under 100), suggesting "
         f"rate compression from over-reliance on transient leisure or suboptimal group mix. "
         f"Industry benchmark group demand share of 25–32% implies ${tbid_low/1e6:.1f}M–"
@@ -2469,7 +2467,7 @@ def gen_cross_competitive_set_group_gap(
         + _5wh(
             who="VDP DMO, hotel revenue managers, TBID board",
             what=f"RGI {avg_rgi:.1f} average; {n_under} under-indexing properties need group mix support",
-            when="Immediate — group sales outreach should target Q1/Q4 shoulder bookings now",
+            when="Immediate: group sales outreach should target Q1/Q4 shoulder bookings now",
             where="Under-indexing properties in Dana Point competitive set",
             why=f"Closing group RGI gap to 100 adds up to ${(tbid_high-tbid_low)/1e6:.1f}M incremental TBID",
             how="Identify under-indexing properties; co-create group rate programs; DMO sales team support",
@@ -2519,7 +2517,7 @@ def gen_cross_channel_group_attribution(
     med_per_trip = med_impact / med_trips if med_trips > 0 else 0
 
     headline = (
-        f"HIDDEN OPPORTUNITY — GROUP CHANNEL ATTRIBUTION: "
+        f"HIDDEN OPPORTUNITY: GROUP CHANNEL ATTRIBUTION: "
         f"{top_channel.title()} channel leads with {int(top_trips):,} group trips / ${top_impact/1e3:.0f}K impact; "
         f"combined TBID attribution ${tbid_from_attr/1e3:.0f}K vs ${TBID_TARGET/1e6:.1f}M target"
     )
@@ -2530,13 +2528,13 @@ def gen_cross_channel_group_attribution(
         f"${tbid_from_attr/1e3:.0f}K in TBID-equivalent. Gap to $4.1M group TBID target: "
         f"${gap_to_target/1e3:.0f}K. "
         + (f"Media attribution shows {'higher' if med_per_trip > web_per_trip else 'lower'} "
-           f"impact per trip (${med_per_trip:.0f} vs ${web_per_trip:.0f} website) — "
+           f"impact per trip (${med_per_trip:.0f} vs ${web_per_trip:.0f} website): "
            f"{'suggesting media spend is reaching higher-value group travelers.' if med_per_trip > web_per_trip else 'website organic discovery is efficient.'} ")
         + f"To close the gap to $4.1M, {top_channel} channel investment should be prioritized."
         + _5wh(
             who="VDP marketing team and TBID board",
             what=f"${total_impact/1e3:.0f}K combined group attribution; ${gap_to_target/1e3:.0f}K gap to target",
-            when="Next campaign cycle — reallocate budget toward highest-impact channel",
+            when="Next campaign cycle: reallocate budget toward highest-impact channel",
             where=f"{top_channel.title()} channel (highest ${top_impact/1e3:.0f}K impact)",
             why=f"Closing ${gap_to_target/1e3:.0f}K group attribution gap required to hit $4.1M TBID target",
             how=f"Increase {top_channel} group-specific content and targeting; A/B test group landing pages",
@@ -2565,7 +2563,7 @@ def gen_dmo_group_channel_roi(
     media_kpis: dict[str, Any],
 ) -> dict:
     """
-    DMO insight: Group channel ROI — which attribution channel generates more TBID per dollar spent.
+    DMO insight: Group channel ROI: which attribution channel generates more TBID per dollar spent.
     Compares website organic vs media paid attribution for group travel segments.
     """
     if web_groups.empty and med_groups.empty:
@@ -2597,7 +2595,7 @@ def gen_dmo_group_channel_roi(
         f"at ${web_per_trip:.0f} impact/trip; media attribution delivers {int(med_trips):,} trips "
         f"at ${med_per_trip:.0f} impact/trip. {med_roi_str}. "
         f"Recommended group TBID target range: ${tbid_low/1e6:.1f}M–${tbid_high/1e6:.1f}M annually. "
-        f"{'Media attribution is more efficient per trip — prioritize group-targeted media spend.' if med_per_trip > web_per_trip else 'Website organic attribution is cost-efficient — invest in group landing pages and SEO.'}"
+        f"{'Media attribution is more efficient per trip: prioritize group-targeted media spend.' if med_per_trip > web_per_trip else 'Website organic attribution is cost-efficient: invest in group landing pages and SEO.'}"
         + _5wh(
             who="VDP DMO marketing team and TBID board",
             what=f"Group channel ROI: website {int(web_trips):,} trips vs media {int(med_trips):,} trips",
@@ -2710,11 +2708,11 @@ def gen_dmo_macro_demand_signal(fred: dict[str, Any], gas: dict[str, Any], kpi: 
             gas_note = (f" CA gas at ${gas_price:.2f}/gal (+${gas_yoy:.2f} YOY) adds "
                         f"headwind for LA/OC drive-market bookings.")
         elif gas_price < 4.00:
-            gas_note = (f" CA gas at ${gas_price:.2f}/gal is below the $4.00 threshold — "
+            gas_note = (f" CA gas at ${gas_price:.2f}/gal is below the $4.00 threshold: "
                         f"a tailwind for drive-market leisure demand.")
 
     headline = (
-        f"MACRO SIGNAL: Consumer Sentiment {sentiment:.1f} ({sent_tier}, {sent_dir} {abs(sent_change):.1f}pts) — "
+        f"MACRO SIGNAL: Consumer Sentiment {sentiment:.1f} ({sent_tier}, {sent_dir} {abs(sent_change):.1f}pts): "
         f"UNRATE {unemp:.1f}% | 6–8 week lead for leisure travel"
     )
     body = (
@@ -2730,7 +2728,7 @@ def gen_dmo_macro_demand_signal(fred: dict[str, Any], gas: dict[str, Any], kpi: 
         + _5wh(
             who="TBID board, revenue managers, marketing team",
             what=f"Consumer Sentiment {sentiment:.1f}, UNRATE {unemp:.1f}%, savings {savings_rate:.1f}%" if savings_rate else f"Consumer Sentiment {sentiment:.1f}, UNRATE {unemp:.1f}%",
-            when="Forward 6–8 weeks — macro signals lag leisure booking patterns",
+            when="Forward 6–8 weeks: macro signals lag leisure booking patterns",
             where="National macro indicators from Federal Reserve FRED database",
             why="Consumer sentiment predicts discretionary travel spend; unemployment predicts booking cancellation risk",
             how="Brief macro summary in monthly board deck; flag if sentiment drops more than 5pts in a single month",
@@ -2780,17 +2778,17 @@ def gen_cross_gas_demand_signal(gas: dict[str, Any], kpi: pd.DataFrame, overview
         impact_est = f"Estimated 3–5% softening in weekend drive-market occupancy over the next 2–4 weeks."
     elif gas_price > 4.00:
         risk_level = "MODERATE"
-        risk_note  = f"Gas at ${gas_price:.2f}/gal is above $4.00 — moderate friction for LA/OC day-trip conversions."
+        risk_note  = f"Gas at ${gas_price:.2f}/gal is above $4.00: moderate friction for LA/OC day-trip conversions."
         impact_est = f"Estimated 1–2% softening in leisure weekend demand; monitor booking pace."
     else:
         risk_level = "LOW"
-        risk_note  = f"Gas at ${gas_price:.2f}/gal is below $4.00 — a tailwind for drive-market leisure travel."
+        risk_note  = f"Gas at ${gas_price:.2f}/gal is below $4.00: a tailwind for drive-market leisure travel."
         impact_est = f"Favorable gas environment supports LA/OC/SD feeder market booking propensity."
 
     avg_occ_30 = kpi["occ_pct"].tail(30).mean() if not kpi.empty else 0
 
     headline = (
-        f"DRIVE-MARKET SIGNAL: CA gas ${gas_price:.2f}/gal ({gas_trend}, {risk_level} risk) — "
+        f"DRIVE-MARKET SIGNAL: CA gas ${gas_price:.2f}/gal ({gas_trend}, {risk_level} risk): "
         f"~{drive_share_est:.0f}% of Dana Point visitors are drive-market"
     )
     body = (
@@ -2798,7 +2796,7 @@ def gen_cross_gas_demand_signal(gas: dict[str, Any], kpi: pd.DataFrame, overview
         f"(4-week avg ${gas_4wk:.2f}, {gas_trend} 8-week trend, YOY {'+'  if gas_yoy >= 0 else ''}${gas_yoy:.2f}). "
         f"{risk_note} "
         f"{impact_est} "
-        f"Drive-market feeder zones (Los Angeles, Orange County, San Diego, Inland Empire — all within 120 miles) "
+        f"Drive-market feeder zones (Los Angeles, Orange County, San Diego, Inland Empire: all within 120 miles) "
         f"account for an estimated {drive_share_est:.0f}% of total Dana Point visitors. "
         f"Current 30-day avg occupancy: {avg_occ_30:.1f}%. "
         f"Rule of thumb: every $0.20/gal increase correlates with ~2–4% weekend occupancy softening "
@@ -2938,7 +2936,7 @@ def load_state_parks_recent(conn: sqlite3.Connection) -> dict[str, Any]:
 def gen_dmo_surf_beach_signal(surf: dict[str, Any], kpi: pd.DataFrame) -> dict:
     """
     NOAA NDBC surf conditions + beach quality as a forward demand signal.
-    Water temp is the #1 beach attendance driver — below 65°F = 40% drop.
+    Water temp is the #1 beach attendance driver: below 65°F = 40% drop.
     Correlates with +4-7% weekend occupancy on high-quality surf weeks.
     """
     if not surf or not surf.get("water_temp_f"):
@@ -2955,10 +2953,10 @@ def gen_dmo_surf_beach_signal(surf: dict[str, Any], kpi: pd.DataFrame) -> dict:
     # Beach-goer temperature thresholds
     if water_temp >= 68:
         temp_tier = "prime"
-        temp_note = "68°F+ is prime beach season — suits optional, peak attendance expected."
+        temp_note = "68°F+ is prime beach season: suits optional, peak attendance expected."
     elif water_temp >= 65:
         temp_tier = "good"
-        temp_note = "65–68°F is comfortable — wetsuits encouraged, attendance strong."
+        temp_note = "65–68°F is comfortable: wetsuits encouraged, attendance strong."
     elif water_temp >= 62:
         temp_tier = "moderate"
         temp_note = "62–65°F is typical late spring. Wetsuits required, 20–30% reduced beach attendance."
@@ -2975,7 +2973,7 @@ def gen_dmo_surf_beach_signal(surf: dict[str, Any], kpi: pd.DataFrame) -> dict:
             f"charter bookings, and whale-watching activity in the harbor."
         )
     elif surf_quality == "small" and wave_ht:
-        surf_impact = f"Wave height {wave_ht:.1f}ft — small, good for beginners and paddle sports."
+        surf_impact = f"Wave height {wave_ht:.1f}ft: small, good for beginners and paddle sports."
     elif surf_quality == "flat":
         surf_impact = "Flat surf favors snorkeling, kayaking, and harbor activity over surfing."
 
@@ -2990,9 +2988,9 @@ def gen_dmo_surf_beach_signal(surf: dict[str, Any], kpi: pd.DataFrame) -> dict:
         f"NOAA NDBC buoy data as of {obs_date}: Dana Point coastal water temperature is {water_temp:.1f}°F "
         f"(30-day avg {temp_30d_avg:.1f}°F, {temp_trend}). {temp_note} "
         f"{surf_impact} "
-        f"Beach and harbor activity directly drives hotel occupancy — current 30-day hotel occ is {avg_occ_30:.1f}%. "
+        f"Beach and harbor activity directly drives hotel occupancy: current 30-day hotel occ is {avg_occ_30:.1f}%. "
         f"Memorial Day weekend (in ~4 days) with {water_temp:.0f}°F water is a high-demand window. "
-        f"Recommend: monitor water temp weekly — each 2°F increase above 65°F correlates with measurable "
+        f"Recommend: monitor water temp weekly: each 2°F increase above 65°F correlates with measurable "
         f"day-trip and overnight demand uplift from LA/OC drive markets."
     )
     return dict(
@@ -3010,7 +3008,7 @@ def gen_cross_demand_index(demand_signal: dict[str, Any], kpi: pd.DataFrame) -> 
     """
     Cross-source demand signal index: synthesizes 6 data sources into a single
     forward-looking demand score (0-100) with direction and top drivers.
-    This is the PULSE score for forward demand — predictive, not descriptive.
+    This is the PULSE score for forward demand: predictive, not descriptive.
     """
     if not demand_signal or not demand_signal.get("current_score"):
         return {}
@@ -3049,7 +3047,7 @@ def gen_cross_demand_index(demand_signal: dict[str, Any], kpi: pd.DataFrame) -> 
         f"Current 30-day hotel occupancy: {avg_occ_30:.1f}%. "
         f"Historical data shows the demand index leads STR occupancy by 2–3 weeks. "
         f"A score above 65 typically correlates with above 75% occupancy in the following 2 weeks. "
-        f"Action: {'Increase rate floors — demand is tracking high.' if score >= 65 else 'Monitor rate parity — demand is moderate.' if score >= 50 else 'Activate shoulder-season promotions to stimulate demand.'}"
+        f"Action: {'Increase rate floors: demand is tracking high.' if score >= 65 else 'Monitor rate parity: demand is moderate.' if score >= 50 else 'Activate shoulder-season promotions to stimulate demand.'}"
     )
     return dict(
         headline=headline[:120], body=body, priority=1, horizon_days=21,
@@ -3096,13 +3094,13 @@ def gen_cross_statistical_correlation(correlations: list[dict], kpi: pd.DataFram
         f"Cross-source statistical analysis (Pearson correlation, n={n} weeks): "
         f"{metric_a} shows a {interp} with {metric_b} at a {lag}-week lead time. "
         f"r={r:.3f} means {metric_a} explains approximately {r_pct:.0f}% of the variance in hotel occupancy. "
-        f"{'This is statistically significant (p under 0.10).' if best.get('is_significant') else 'Sample size is growing — correlation will strengthen with more data.'} "
+        f"{'This is statistically significant (p under 0.10).' if best.get('is_significant') else 'Sample size is growing: correlation will strengthen with more data.'} "
         f"Practical implication: "
         + (f"Google search volume for Dana Point terms 2–3 weeks ago predicts this week's occupancy. "
            f"If search interest rises sharply this week, expect higher occ in 2–3 weeks. "
            f"Current 30-day occupancy: {avg_occ:.1f}%."
            if "trend" in str(best["metric_a"]).lower() else
-           f"{'Higher gas prices correlate with lower occupancy in drive markets (within 120 miles). ' if r < 0 else 'Gas prices and occupancy are co-seasonal — both peak in summer. Monitor YOY to separate seasonal from price effect. '}"
+           f"{'Higher gas prices correlate with lower occupancy in drive markets (within 120 miles). ' if r < 0 else 'Gas prices and occupancy are co-seasonal: both peak in summer. Monitor YOY to separate seasonal from price effect. '}"
            f"Current 30-day occupancy: {avg_occ:.1f}%.")
         + f" Action: Use this {lag}-week lead to adjust rate strategy proactively rather than reactively."
     )
@@ -3147,7 +3145,7 @@ def gen_visitor_beach_conditions(surf: dict[str, Any], parks: dict[str, Any]) ->
     temp_advice = (
         "You'll want a wetsuit" if water_temp < 65
         else "Light wetsuit recommended for longer sessions" if water_temp < 68
-        else "Comfortable for swimming — bring sunscreen!"
+        else "Comfortable for swimming: bring sunscreen!"
     )
 
     headline = (
@@ -3160,10 +3158,10 @@ def gen_visitor_beach_conditions(surf: dict[str, Any], parks: dict[str, Any]) ->
         f"Water temperature {water_temp:.1f}°F. {temp_advice}. "
         f"Surf: {quality_label}."
         + (f" Wave height: {wave_ht:.1f}ft nearshore." if wave_ht else "")
-        + (f" Doheny State Beach averages {doheny_daily:.0f} visitors/day in this season — arrive before 10am for parking." if doheny_daily > 3000 else "")
+        + (f" Doheny State Beach averages {doheny_daily:.0f} visitors/day in this season: arrive before 10am for parking." if doheny_daily > 3000 else "")
         + f" Doheny State Beach offers camping, tide pools, and the Doheny Marine Life Refuge. "
         f"Best time to visit: early morning (8–10am) for parking and calmer surf. "
-        f"Dana Point Harbor whale watching season runs through May — book departures 2–3 days ahead."
+        f"Dana Point Harbor whale watching season runs through May: book departures 2–3 days ahead."
     )
     return dict(
         headline=headline[:120], body=body, priority=2, horizon_days=7,
@@ -3196,18 +3194,18 @@ def gen_dmo_social_reach(social: dict[str, Any]) -> dict:
         f"(IG {ig_fol:,} · FB {fb_fol:,} · TK {tk_fol:,}); "
         f"IG avg engagement {eng_avg:.1f}%"
     )
-    eng_benchmark = "above industry benchmark (1–3%)" if eng_avg > 3.0 else "at industry standard (1–3%)" if eng_avg >= 1.0 else "below industry benchmark — review content mix"
+    eng_benchmark = "above industry benchmark (1–3%)" if eng_avg > 3.0 else "at industry standard (1–3%)" if eng_avg >= 1.0 else "below industry benchmark: review content mix"
     body = (
         f"Visit Dana Point's social channels reach {total_fol:,} combined followers: "
         f"Instagram {ig_fol:,}, Facebook {fb_fol:,}, TikTok {tk_fol:,}. "
         f"Instagram average post engagement rate is {eng_avg:.1f}% ({eng_benchmark}) across {posts} posts tracked. "
         f"Cumulative Instagram reach is {ig_reach:,} impressions. "
-        f"Social performance is a leading indicator of destination awareness — "
+        f"Social performance is a leading indicator of destination awareness: "
         f"high engagement on TikTok and Instagram correlates with increased website sessions and trip intent."
         + _5wh(
             who="VDP marketing team and TBID board",
             what=f"{total_fol:,} total followers, IG engagement {eng_avg:.1f}%, {posts} posts",
-            when="Ongoing — review monthly against campaign spend",
+            when="Ongoing: review monthly against campaign spend",
             where="Instagram, Facebook, TikTok (Later.com analytics)",
             why="Social reach is the top-of-funnel driver of destination awareness and visitor intent",
             how="Benchmark IG engagement above 3%; shift content mix toward Reels and TikTok for organic reach growth",
@@ -3389,7 +3387,7 @@ def gen_cross_daytrip_conversion_scenario(overview: dict, kpi: pd.DataFrame,
             f"${rev_10pct/1e6:.1f}M at a 10% conversion rate. "
             f"High-ROI conversion levers include 'Stay the Night' sunset packages, "
             f"same-day booking promos, and harbor experience bundles with hotel add-ons. "
-            f"This audience requires no new acquisition spending — they are already on property."
+            f"This audience requires no new acquisition spending: they are already on property."
         )
         return dict(
             headline=headline, body=body, priority=2, horizon_days=180,
@@ -3424,7 +3422,7 @@ def gen_dmo_booking_window_alert(kpi: pd.DataFrame) -> dict:
         if delta_pct > 2.0:
             trend_direction = "up"
             status = "Strong Organic Demand"
-            action = "last-minute rate floor opportunity — raise BAR and close discount channels"
+            action = "last-minute rate floor opportunity: raise BAR and close discount channels"
         elif delta_pct < -2.0:
             trend_direction = "down"
             status = "Softness Detected"
@@ -3432,10 +3430,10 @@ def gen_dmo_booking_window_alert(kpi: pd.DataFrame) -> dict:
         else:
             trend_direction = "flat"
             status = "Stable Demand Window"
-            action = "rate integrity holding — maintain current pricing strategy"
+            action = "rate integrity holding: maintain current pricing strategy"
 
         headline = (
-            f"Booking Window Signal: {status} — {action[:60]}"
+            f"Booking Window Signal: {status}: {action[:60]}"
         )
         body = (
             f"The trailing 14-day average occupancy is {occ_14day:.1f}% vs. the 30-day baseline "
@@ -3690,7 +3688,7 @@ def main() -> None:
             try:
                 result = fn()
                 if not result:
-                    print(f"  [skip] {audience}/{category} — no data")
+                    print(f"  [skip] {audience}/{category}: no data")
                     continue
                 upsert_insight(
                     cur,

@@ -50,6 +50,24 @@ def _logo_data_uri() -> str:
     return _svg_data_uri(LOGO_PATH)
 
 
+def _format_datafy_period(period_start: str, period_end: str) -> str:
+    """Label a Datafy report_period_start/end pair as 'Annual' when it spans a
+    full calendar year, otherwise as a Year-to-Date window. Avoids hardcoding
+    'Annual' for exports that are, in fact, partial-year snapshots."""
+    if not period_start or not period_end:
+        return "N/A"
+    try:
+        start = datetime.strptime(period_start[:10], "%Y-%m-%d")
+        end = datetime.strptime(period_end[:10], "%Y-%m-%d")
+    except ValueError:
+        return period_start[:4]
+    if start.month == 1 and start.day == 1 and end.month == 12 and end.day == 31 and start.year == end.year:
+        return f"{start.year} Annual"
+    if start.year == end.year:
+        return f"{start.year} Year-to-Date ({start.strftime('%b')}-{end.strftime('%b')})"
+    return f"{start.strftime('%b %Y')} to {end.strftime('%b %Y')}"
+
+
 def _logo_nav_data_uri() -> str:
     return _svg_data_uri(LOGO_NAV_PATH)
 
@@ -232,14 +250,14 @@ def build_report() -> str:
         occ_by_dow.append(float(row["occ_pct"].mean()) if not row.empty else 0.0)
         adr_by_dow.append(float(row["adr"].mean()) if not row.empty else 0.0)
 
-    chart_occ_dp = _bar_chart(dow_labels, [("Occupancy %", occ_by_dow)], [MAROON], "Occ %", figsize=(4.4, 6.8))
-    chart_adr_dp = _bar_chart(dow_labels, [("ADR $", adr_by_dow)], [MAROON], "ADR $", figsize=(4.4, 6.8))
+    chart_occ_dp = _bar_chart(dow_labels, [("Occupancy %", occ_by_dow)], [MAROON], "Occ %", figsize=(4.8, 4.2))
+    chart_adr_dp = _bar_chart(dow_labels, [("ADR $", adr_by_dow)], [MAROON], "ADR $", figsize=(4.8, 4.2))
 
     # comp-set chart: Dana Point (live) + 5 benchmark markets
     compset_labels = ["Dana Pt"] + list(COMPSET_BENCHMARK.keys())
     compset_vals = [round(revpar_avg, 2)] + list(COMPSET_BENCHMARK.values())
     compset_colors = [MAROON] + [SLATE] * len(COMPSET_BENCHMARK)
-    fig, ax = plt.subplots(figsize=(4.4, 6.8))
+    fig, ax = plt.subplots(figsize=(4.8, 4.2))
     ax.bar(compset_labels, compset_vals, color=compset_colors)
     ax.set_ylabel("RevPAR $", fontsize=10)
     ax.tick_params(labelsize=9)
@@ -257,7 +275,7 @@ def build_report() -> str:
     chart_compression = _bar_chart(
         q_labels,
         [("80%+ occ", comp_q["days_above_80_occ"].tolist()), ("90%+ occ", comp_q["days_above_90_occ"].tolist())],
-        [MAROON, MAROON_LT], "Days", legend=True, figsize=(4.4, 6.8),
+        [MAROON, MAROON_LT], "Days", legend=True, figsize=(4.8, 4.2),
     )
     compression_label = comp_q["quarter"].iloc[-1] if not comp_q.empty else "Q-"
     compression_days = int(comp_q["days_above_80_occ"].iloc[-1]) if not comp_q.empty else 0
@@ -303,43 +321,132 @@ def build_report() -> str:
             f'<td class="num">${tbid/1e6:,.2f}M</td><td class="num strong">${tot/1e6:,.2f}M</td></tr>\n'
         )
 
-    # Datafy visitor profile
-    dkpi = pd.read_sql_query(
-        "SELECT total_trips, avg_length_of_stay_days, day_trips_pct, overnight_trips_pct, "
-        "out_of_state_vd_pct, report_period_start, report_period_end FROM datafy_overview_kpis LIMIT 1", con
+    # Datafy visitor profile -- prefer the freshest export for each metric.
+    # The August 2026 "DynamicHomePage" export set covers 2026-01-01 to
+    # 2026-07-31 (a year-to-date snapshot, not a full annual pull like the
+    # legacy 2025 kpis file), so each field is sourced independently and the
+    # period label is derived rather than assumed.
+    total_kpi = pd.read_sql_query(
+        "SELECT total_trips, avg_los_days, report_period_start, report_period_end "
+        "FROM datafy_overview_total_kpis "
+        "WHERE report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_total_kpis) LIMIT 1", con
     )
-    if not dkpi.empty:
-        d = dkpi.iloc[0]
+    legacy_kpi = pd.read_sql_query(
+        "SELECT total_trips, avg_length_of_stay_days, day_trips_pct, overnight_trips_pct, "
+        "out_of_state_vd_pct, report_period_start, report_period_end FROM datafy_overview_kpis "
+        "ORDER BY report_period_end DESC LIMIT 1", con
+    )
+    los_dist = pd.read_sql_query(
+        "SELECT length_of_stay, pct_of_trips, report_period_start, report_period_end "
+        "FROM datafy_overview_los_distribution "
+        "WHERE report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_los_distribution)", con
+    )
+    inout_state = pd.read_sql_query(
+        "SELECT in_state_pct, out_of_state_pct, report_period_start, report_period_end "
+        "FROM datafy_overview_instate_outstate "
+        "WHERE report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_instate_outstate) LIMIT 1", con
+    )
+
+    freshest_period = (None, None)
+    if not total_kpi.empty:
+        d = total_kpi.iloc[0]
+        total_trips = f"{int(d['total_trips']):,}"
+        avg_los = f"{d['avg_los_days']:.1f} nights"
+        freshest_period = (d["report_period_start"], d["report_period_end"])
+    elif not legacy_kpi.empty:
+        d = legacy_kpi.iloc[0]
         total_trips = f"{int(d['total_trips']):,}"
         avg_los = f"{d['avg_length_of_stay_days']:.1f} nights"
-        oos_pct = f"{d['out_of_state_vd_pct']:.1f}%"
-        datafy_period = f"{d['report_period_start'][:4]} Annual"
-        chart_trip = _donut_chart(
-            ["Overnight Trips", "Day Trips"], [d["overnight_trips_pct"], d["day_trips_pct"]], [TEAL_DK, TEAL_LT]
-        )
+        freshest_period = (d["report_period_start"], d["report_period_end"])
     else:
-        total_trips, avg_los, oos_pct, datafy_period = "N/A", "N/A", "N/A", "N/A"
+        total_trips, avg_los = "N/A", "N/A"
+
+    if not los_dist.empty:
+        day_row = los_dist[los_dist["length_of_stay"].str.contains("Day", case=False, na=False)
+                            & ~los_dist["length_of_stay"].str.contains("Overnight", case=False, na=False)]
+        overnight_row = los_dist[los_dist["length_of_stay"].str.contains("Overnight", case=False, na=False)]
+        day_pct = float(day_row["pct_of_trips"].iloc[0]) if not day_row.empty else None
+        overnight_pct = float(overnight_row["pct_of_trips"].iloc[0]) if not overnight_row.empty else None
+        if day_pct is not None and overnight_pct is not None:
+            chart_trip = _donut_chart(["Overnight Trips", "Day Trips"], [overnight_pct, day_pct], [TEAL_DK, TEAL_LT])
+        else:
+            chart_trip = _donut_chart(["Overnight Trips", "Day Trips"],
+                                       [legacy_kpi.iloc[0]["overnight_trips_pct"], legacy_kpi.iloc[0]["day_trips_pct"]],
+                                       [TEAL_DK, TEAL_LT]) if not legacy_kpi.empty else _donut_chart(
+                                       ["Overnight", "Day"], [60, 40], [TEAL_DK, TEAL_LT])
+    elif not legacy_kpi.empty:
+        d = legacy_kpi.iloc[0]
+        chart_trip = _donut_chart(["Overnight Trips", "Day Trips"], [d["overnight_trips_pct"], d["day_trips_pct"]], [TEAL_DK, TEAL_LT])
+    else:
         chart_trip = _donut_chart(["Overnight", "Day"], [60, 40], [TEAL_DK, TEAL_LT])
 
-    cat = pd.read_sql_query(
-        "SELECT category, spend_share_pct FROM datafy_overview_category_spending "
+    if not inout_state.empty:
+        oos_pct = f"{float(inout_state.iloc[0]['out_of_state_pct']) * 100:.1f}%"
+        if freshest_period == (None, None):
+            freshest_period = (inout_state.iloc[0]["report_period_start"], inout_state.iloc[0]["report_period_end"])
+    elif not legacy_kpi.empty:
+        oos_pct = f"{legacy_kpi.iloc[0]['out_of_state_vd_pct']:.1f}%"
+    else:
+        oos_pct = "N/A"
+
+    datafy_period = _format_datafy_period(*freshest_period) if freshest_period != (None, None) else "N/A"
+
+    # Category spend share -- prefer the fresh 2026 YTD export (stored as a
+    # 0-1 fraction) over the legacy 2025 annual export (stored as 0-100).
+    cat_fresh = pd.read_sql_query(
+        "SELECT category, spend_share_pct FROM datafy_overview_spending_by_category "
+        "WHERE report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_spending_by_category) "
         "ORDER BY spend_share_pct DESC LIMIT 6", con
     )
-    chart_category = _hbar_chart(cat["category"].tolist()[::-1], cat["spend_share_pct"].tolist()[::-1], TEAL, "Spend Share %")
+    if not cat_fresh.empty:
+        cat_labels = cat_fresh["category"].tolist()[::-1]
+        cat_values = (cat_fresh["spend_share_pct"] * 100).tolist()[::-1]
+    else:
+        cat_legacy = pd.read_sql_query(
+            "SELECT category, spend_share_pct FROM datafy_overview_category_spending "
+            "ORDER BY spend_share_pct DESC LIMIT 6", con
+        )
+        cat_labels = cat_legacy["category"].tolist()[::-1]
+        cat_values = cat_legacy["spend_share_pct"].tolist()[::-1]
+    chart_category = _hbar_chart(cat_labels, cat_values, TEAL, "Spend Share %")
 
-    # visitor origins
-    dma = pd.read_sql_query(
-        "SELECT dma, visitor_days_share_pct FROM datafy_overview_dma "
-        "WHERE visitor_days_share_pct IS NOT NULL ORDER BY visitor_days_share_pct DESC LIMIT 10", con
+    # visitor origins -- prefer the fresh 2026 YTD trip-share export over the
+    # legacy 2025 annual visitor-days-share export.
+    top_mkt_fresh = pd.read_sql_query(
+        "SELECT dma, trips_share_pct AS share_pct FROM datafy_overview_top_markets "
+        "WHERE report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_top_markets) "
+        "AND trips_share_pct IS NOT NULL ORDER BY trips_share_pct DESC LIMIT 10", con
     )
+    if not top_mkt_fresh.empty:
+        dma = top_mkt_fresh
+    else:
+        dma = pd.read_sql_query(
+            "SELECT dma, visitor_days_share_pct AS share_pct FROM datafy_overview_dma "
+            "WHERE visitor_days_share_pct IS NOT NULL ORDER BY visitor_days_share_pct DESC LIMIT 10", con
+        )
     origin_colors = [TEAL_DK, TEAL, "#3F97AC", "#6FB8CB", TEAL_LT, MAROON, "#C97A47", MAROON_LT, "#2A4A54", "#6B5C4E"]
-    chart_origins = _pie_chart(dma["dma"].tolist(), dma["visitor_days_share_pct"].tolist(), origin_colors[: len(dma)])
+    chart_origins = _pie_chart(dma["dma"].tolist(), dma["share_pct"].tolist(), origin_colors[: len(dma)])
     origins_legend = ""
     for i, (_, r) in enumerate(dma.iterrows()):
         origins_legend += (
             f'<div class="origins-legend-row"><div class="dot" style="background:{origin_colors[i % len(origin_colors)]}">'
-            f'</div><div style="flex:1;">{r["dma"]}</div><div style="font-weight:700;">{r["visitor_days_share_pct"]:.1f}%</div></div>\n'
+            f'</div><div style="flex:1;">{r["dma"]}</div><div style="font-weight:700;">{r["share_pct"]:.1f}%</div></div>\n'
         )
+
+    # Real data callouts for the "Why Visitors Choose Dana Point" photo cards
+    repeat_row = pd.read_sql_query(
+        "SELECT repeat_pct FROM datafy_overview_repeat_spenders "
+        "WHERE report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_repeat_spenders) LIMIT 1", con
+    )
+    stat_repeat = f"{float(repeat_row.iloc[0]['repeat_pct']) * 100:.0f}%" if not repeat_row.empty else "N/A"
+
+    harbor_row = pd.read_sql_query(
+        "SELECT visitor_days_share_pct FROM datafy_overview_top_pois "
+        "WHERE cluster='Harbor' AND report_period_end=(SELECT MAX(report_period_end) FROM datafy_overview_top_pois) LIMIT 1", con
+    )
+    stat_harbor = f"{float(harbor_row.iloc[0]['visitor_days_share_pct']):.0f}%" if not harbor_row.empty else "N/A"
+
+    stat_los = avg_los.replace(" nights", " nights") if avg_los != "N/A" else "N/A"
 
     # executive headline: top dmo insight(s) for the front page
     exec_insights = pd.read_sql_query(
@@ -408,6 +515,9 @@ def build_report() -> str:
         "AVG_LOS": avg_los,
         "OOS_PCT": oos_pct,
         "CHART_CATEGORY": chart_category,
+        "STAT_REPEAT": stat_repeat,
+        "STAT_HARBOR": stat_harbor,
+        "STAT_LOS": stat_los,
         "LATEST_STR_DATE": latest_date.strftime("%B %-d, %Y"),
         "GROUP_ADR_OCC": GROUP_BENCHMARK["adr_occ"],
         "GROUP_DEMAND_RANGE": GROUP_BENCHMARK["demand_range"],
